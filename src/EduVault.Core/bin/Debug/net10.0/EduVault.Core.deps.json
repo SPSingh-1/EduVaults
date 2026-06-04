@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "EduVault.Core/1.0.0": {
+        "runtime": {
+          "EduVault.Core.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "EduVault.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

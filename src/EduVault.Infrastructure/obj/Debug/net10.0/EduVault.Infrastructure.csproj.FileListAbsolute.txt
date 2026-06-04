@@ -1,0 +1,15 @@
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\obj\Debug\net10.0\EduVault.Infrastructure.csproj.AssemblyReference.cache
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\obj\Debug\net10.0\EduVault.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\obj\Debug\net10.0\EduVault.Infrastructure.AssemblyInfoInputs.cache
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\obj\Debug\net10.0\EduVault.Infrastructure.AssemblyInfo.cs
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\obj\Debug\net10.0\EduVault.Infrastructure.csproj.CoreCompileInputs.cache
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\bin\Debug\net10.0\EduVault.Infrastructure.deps.json
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\bin\Debug\net10.0\EduVault.Infrastructure.dll
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\bin\Debug\net10.0\EduVault.Infrastructure.pdb
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\bin\Debug\net10.0\EduVault.Core.dll
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\bin\Debug\net10.0\EduVault.Core.pdb
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\obj\Debug\net10.0\EduVault.6565CBC6.Up2Date
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\obj\Debug\net10.0\EduVault.Infrastructure.dll
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\obj\Debug\net10.0\refint\EduVault.Infrastructure.dll
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\obj\Debug\net10.0\EduVault.Infrastructure.pdb
+D:\vite\AI\Eduvault\src\EduVault.Infrastructure\obj\Debug\net10.0\ref\EduVault.Infrastructure.dll

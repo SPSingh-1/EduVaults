@@ -1,0 +1,11 @@
+D:\vite\AI\Eduvault\src\EduVault.Core\bin\Debug\net10.0\EduVault.Core.deps.json
+D:\vite\AI\Eduvault\src\EduVault.Core\bin\Debug\net10.0\EduVault.Core.dll
+D:\vite\AI\Eduvault\src\EduVault.Core\bin\Debug\net10.0\EduVault.Core.pdb
+D:\vite\AI\Eduvault\src\EduVault.Core\obj\Debug\net10.0\EduVault.Core.GeneratedMSBuildEditorConfig.editorconfig
+D:\vite\AI\Eduvault\src\EduVault.Core\obj\Debug\net10.0\EduVault.Core.AssemblyInfoInputs.cache
+D:\vite\AI\Eduvault\src\EduVault.Core\obj\Debug\net10.0\EduVault.Core.AssemblyInfo.cs
+D:\vite\AI\Eduvault\src\EduVault.Core\obj\Debug\net10.0\EduVault.Core.csproj.CoreCompileInputs.cache
+D:\vite\AI\Eduvault\src\EduVault.Core\obj\Debug\net10.0\EduVault.Core.dll
+D:\vite\AI\Eduvault\src\EduVault.Core\obj\Debug\net10.0\refint\EduVault.Core.dll
+D:\vite\AI\Eduvault\src\EduVault.Core\obj\Debug\net10.0\EduVault.Core.pdb
+D:\vite\AI\Eduvault\src\EduVault.Core\obj\Debug\net10.0\ref\EduVault.Core.dll

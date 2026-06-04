@@ -1,0 +1,58 @@
+using System;
+using System.Threading.Tasks;
+using EduVault.Core.Entities;
+using EduVault.Core.Interfaces;
+using EduVault.Infrastructure.Data;
+
+namespace EduVault.Infrastructure.Repositories
+{
+    public class UnitOfWork : IUnitOfWork
+    {
+        private readonly EduVaultDbContext _context;
+
+        public UnitOfWork(EduVaultDbContext context)
+        {
+            _context = context;
+            Schools = new Repository<School>(_context);
+            Subscriptions = new Repository<Subscription>(_context);
+            Users = new Repository<User>(_context);
+            Teachers = new Repository<Teacher>(_context);
+            Students = new Repository<Student>(_context);
+            Classes = new Repository<Class>(_context);
+            Enrollments = new Repository<Enrollment>(_context);
+            Subjects = new Repository<Subject>(_context);
+            ClassSubjects = new Repository<ClassSubject>(_context);
+            Exams = new Repository<Exam>(_context);
+            ExamResults = new Repository<ExamResult>(_context);
+            FeeStructures = new Repository<FeeStructure>(_context);
+            Invoices = new Repository<StudentInvoice>(_context);
+            Transactions = new Repository<PaymentTransaction>(_context);
+        }
+
+        public IRepository<School> Schools { get; private set; }
+        public IRepository<Subscription> Subscriptions { get; private set; }
+        public IRepository<User> Users { get; private set; }
+        public IRepository<Teacher> Teachers { get; private set; }
+        public IRepository<Student> Students { get; private set; }
+        public IRepository<Class> Classes { get; private set; }
+        public IRepository<Enrollment> Enrollments { get; private set; }
+        public IRepository<Subject> Subjects { get; private set; }
+        public IRepository<ClassSubject> ClassSubjects { get; private set; }
+        public IRepository<Exam> Exams { get; private set; }
+        public IRepository<ExamResult> ExamResults { get; private set; }
+        public IRepository<FeeStructure> FeeStructures { get; private set; }
+        public IRepository<StudentInvoice> Invoices { get; private set; }
+        public IRepository<PaymentTransaction> Transactions { get; private set; }
+
+        public async Task<int> CompleteAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
+
+        public void Dispose()
+        {
+            _context.Dispose();
+            GC.SuppressFinalize(this);
+        }
+    }
+}
