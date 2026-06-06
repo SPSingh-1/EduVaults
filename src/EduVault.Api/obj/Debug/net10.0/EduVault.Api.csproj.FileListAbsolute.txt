@@ -1,8 +1,0 @@
-D:\vite\AI\Eduvault\src\EduVault.Api\obj\Debug\net10.0\EduVault.Api.csproj.AssemblyReference.cache
-D:\vite\AI\Eduvault\src\EduVault.Api\obj\Debug\net10.0\rpswa.dswa.cache.json
-D:\vite\AI\Eduvault\src\EduVault.Api\obj\Debug\net10.0\EduVault.Api.GeneratedMSBuildEditorConfig.editorconfig
-D:\vite\AI\Eduvault\src\EduVault.Api\obj\Debug\net10.0\EduVault.Api.AssemblyInfoInputs.cache
-D:\vite\AI\Eduvault\src\EduVault.Api\obj\Debug\net10.0\EduVault.Api.AssemblyInfo.cs
-D:\vite\AI\Eduvault\src\EduVault.Api\obj\Debug\net10.0\EduVault.Api.csproj.CoreCompileInputs.cache
-D:\vite\AI\Eduvault\src\EduVault.Api\obj\Debug\net10.0\EduVault.Api.MvcApplicationPartsAssemblyInfo.cs
-D:\vite\AI\Eduvault\src\EduVault.Api\obj\Debug\net10.0\EduVault.Api.MvcApplicationPartsAssemblyInfo.cache
