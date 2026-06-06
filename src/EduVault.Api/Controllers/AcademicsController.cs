@@ -219,7 +219,7 @@ namespace EduVault.Api.Controllers
                     EmployeeId = teacherInfo?.EmployeeId ?? string.Empty,
                     Name = $"{u.FirstName} {u.LastName}",
                     Email = u.Email,
-                    Phone = teacherInfo?.GuardianPhone ?? string.Empty, // Placeholder for contact
+                    Phone = "N/A", // Placeholder for contact
                     Department = teacherInfo?.Department ?? string.Empty,
                     Qualifications = teacherInfo?.Qualifications ?? string.Empty,
                     Joined = u.CreatedAt.ToString("MMM yyyy"),
