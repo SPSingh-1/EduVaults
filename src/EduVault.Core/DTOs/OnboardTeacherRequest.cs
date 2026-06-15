@@ -20,7 +20,8 @@ namespace EduVault.Core.DTOs
         [Required]
         public string Department { get; set; } = string.Empty;
 
-        public string OfficeLocation { get; set; } = string.Empty;
-        public string Qualifications { get; set; } = string.Empty;
+        public string? OfficeLocation { get; set; }
+        public string? Qualifications { get; set; }
+        public string? Specialization { get; set; }
     }
 }

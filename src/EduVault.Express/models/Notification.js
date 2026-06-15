@@ -7,6 +7,8 @@ const NotificationSchema = new mongoose.Schema({
   body: { type: String, required: true },
   type: { type: String, enum: ['URGENT', 'EVENT', 'GENERAL', 'BILLING'], default: 'GENERAL' },
   isRead: { type: Boolean, default: false },
+  senderName: { type: String },
+  senderRole: { type: String },
   createdAt: { type: Date, default: Date.now }
 });
 

@@ -15,6 +15,7 @@ namespace EduVault.Infrastructure.Data
         public DbSet<Teacher> Teachers { get; set; }
         public DbSet<Student> Students { get; set; }
         public DbSet<Class> Classes { get; set; }
+        public DbSet<EnrollmentClass> EnrollmentClasses { get; set; }
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<Subject> Subjects { get; set; }
         public DbSet<ClassSubject> ClassSubjects { get; set; }
@@ -23,10 +24,59 @@ namespace EduVault.Infrastructure.Data
         public DbSet<FeeStructure> FeeStructures { get; set; }
         public DbSet<StudentInvoice> Invoices { get; set; }
         public DbSet<PaymentTransaction> Transactions { get; set; }
+        public DbSet<Section> Sections { get; set; }
+        public DbSet<Room> Rooms { get; set; }
+        public DbSet<TimetablePeriod> TimetablePeriods { get; set; }
+        public DbSet<TimetableItem> TimetableItems { get; set; }
+        public DbSet<Attendance> Attendances { get; set; }
+        public DbSet<Capacity> Capacities { get; set; }
+        public DbSet<Department> Departments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // Configure Attendance
+            modelBuilder.Entity<Attendance>()
+                .HasOne(a => a.Student)
+                .WithMany()
+                .HasForeignKey(a => a.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure Section
+            modelBuilder.Entity<Section>()
+                .HasOne(s => s.School)
+                .WithMany()
+                .HasForeignKey(s => s.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure Room
+            modelBuilder.Entity<Room>()
+                .HasOne(r => r.School)
+                .WithMany()
+                .HasForeignKey(r => r.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure Capacity
+            modelBuilder.Entity<Capacity>()
+                .HasOne(c => c.School)
+                .WithMany()
+                .HasForeignKey(c => c.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure EnrollmentClass
+            modelBuilder.Entity<EnrollmentClass>()
+                .HasOne(ec => ec.School)
+                .WithMany()
+                .HasForeignKey(ec => ec.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure Department
+            modelBuilder.Entity<Department>()
+                .HasOne(d => d.School)
+                .WithMany()
+                .HasForeignKey(d => d.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Configure School
             modelBuilder.Entity<School>()
@@ -205,6 +255,25 @@ namespace EduVault.Infrastructure.Data
             modelBuilder.Entity<PaymentTransaction>()
                 .HasIndex(pt => pt.ReferenceNumber)
                 .IsUnique();
+
+            // Configure TimetableItem relationships
+            modelBuilder.Entity<TimetableItem>()
+                .HasOne(ti => ti.Class)
+                .WithMany()
+                .HasForeignKey(ti => ti.ClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TimetableItem>()
+                .HasOne(ti => ti.Subject)
+                .WithMany()
+                .HasForeignKey(ti => ti.SubjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TimetableItem>()
+                .HasOne(ti => ti.Teacher)
+                .WithMany()
+                .HasForeignKey(ti => ti.TeacherId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

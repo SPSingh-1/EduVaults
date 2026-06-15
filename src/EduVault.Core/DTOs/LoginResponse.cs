@@ -17,5 +17,6 @@ namespace EduVault.Core.DTOs
         public string LastName { get; set; } = string.Empty;
         public string Avatar { get; set; } = string.Empty;
         public Guid? SchoolId { get; set; }
+        public string SchoolName { get; set; } = string.Empty;
     }
 }

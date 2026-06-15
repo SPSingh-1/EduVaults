@@ -133,5 +133,64 @@ namespace EduVault.Api.Controllers
                 renewals = list
             });
         }
+
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetStats()
+        {
+            var schools = await _unitOfWork.Schools.GetAllAsync();
+            var subscriptions = await _unitOfWork.Subscriptions.GetAllAsync();
+
+            var totalSchools = schools.Count();
+            var activeSubscriptions = subscriptions.Count(s => s.Status == "success");
+            var monthlyRevenue = subscriptions.Where(s => s.Status == "success").Sum(s => s.Amount);
+
+            var recentActivity = schools
+                .OrderByDescending(s => s.CreatedAt)
+                .Take(5)
+                .Select(s => new {
+                    Name = s.Name,
+                    Status = s.Status,
+                    CreatedAt = s.CreatedAt
+                });
+
+            // Calculate dynamic Platform Growth (growth from last month)
+            var lastMonthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
+            var lastMonthEnd = new DateTime(lastMonthStart.Year, lastMonthStart.Month, DateTime.DaysInMonth(lastMonthStart.Year, lastMonthStart.Month), 23, 59, 59, DateTimeKind.Utc);
+            var previousSchoolsCount = schools.Count(s => s.CreatedAt <= lastMonthEnd);
+            var growthPct = 0;
+            if (previousSchoolsCount > 0)
+            {
+                growthPct = (int)Math.Round((double)(totalSchools - previousSchoolsCount) / previousSchoolsCount * 100);
+            }
+            else if (totalSchools > 0)
+            {
+                growthPct = totalSchools * 100;
+            }
+            var platformGrowth = growthPct >= 0 ? $"+{growthPct}%" : $"{growthPct}%";
+
+            // Calculate 12-Month Onboarding Trend
+            var onboardingTrend = new System.Collections.Generic.List<object>();
+            for (int i = 11; i >= 0; i--)
+            {
+                var targetDate = DateTime.UtcNow.AddMonths(-i);
+                var endOfMonth = new DateTime(targetDate.Year, targetDate.Month, DateTime.DaysInMonth(targetDate.Year, targetDate.Month), 23, 59, 59, DateTimeKind.Utc);
+                var countAtMonth = schools.Count(s => s.CreatedAt <= endOfMonth);
+                onboardingTrend.Add(new
+                {
+                    month = targetDate.ToString("MMM"),
+                    schools = countAtMonth
+                });
+            }
+
+            return Ok(new
+            {
+                totalSchools,
+                activeSubscriptions,
+                monthlyRevenue,
+                platformGrowth,
+                onboardingTrend,
+                recentActivity
+            });
+        }
     }
 }

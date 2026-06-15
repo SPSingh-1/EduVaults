@@ -1,122 +1,138 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './router/ProtectedRoute';
+import './index.css';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Marketing
+import Landing from './pages/marketing/Landing';
 
+// Auth
+import Login from './pages/auth/Login';
+import Signup from './pages/auth/Signup';
+import ForgotPassword from './pages/auth/ForgotPassword';
+
+// Layouts
+import SuperAdminLayout from './layouts/SuperAdminLayout';
+import SchoolAdminLayout from './layouts/SchoolAdminLayout';
+import { TeacherLayout } from './pages/teacher/TeacherPages';
+import { StudentLayout } from './pages/student/StudentPages';
+
+// Super Admin Pages
+import SuperAdminDashboard from './pages/super-admin/Dashboard';
+import Schools from './pages/super-admin/Schools';
+import Subscriptions from './pages/super-admin/Subscriptions';
+import Settings from './pages/super-admin/Settings';
+import Support from './pages/super-admin/Support';
+
+// School Admin Pages
+import SchoolAdminDashboard from './pages/school-admin/Dashboard';
+import Students from './pages/school-admin/Students';
+import Teachers from './pages/school-admin/Teachers';
+import Fees from './pages/school-admin/Fees';
+import { Classes, Notices, Exams, Admission } from './pages/school-admin/AdminPages';
+import Setup from './pages/school-admin/Setup';
+
+// Teacher Pages
+import {
+  TeacherDashboard,
+  TeacherClasses,
+  TeacherStudents,
+  Attendance,
+  MarksEntry,
+  Homework,
+  Remarks,
+  TeacherProfile
+} from './pages/teacher/TeacherPages';
+
+// Student Pages
+import {
+  StudentDashboard,
+  StudentAttendance,
+  StudentResults,
+  StudentFees,
+  StudentProfile,
+  StudentNotices,
+  StudentHomework,
+  StudentSchedule,
+  StudentExams
+} from './pages/student/StudentPages';
+
+export default function App() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
-      <div className="ticks"></div>
+          {/* Super Admin */}
+          <Route element={<ProtectedRoute allowedRoles={['superadmin']} />}>
+            <Route path="/super-admin" element={<SuperAdminLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<SuperAdminDashboard />} />
+              <Route path="schools" element={<Schools />} />
+              <Route path="subscriptions" element={<Subscriptions />} />
+              <Route path="users" element={<Schools />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="support" element={<Support />} />
+            </Route>
+          </Route>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          {/* School Admin */}
+          <Route element={<ProtectedRoute allowedRoles={['schooladmin']} />}>
+            <Route path="/school-admin" element={<SchoolAdminLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<SchoolAdminDashboard />} />
+              <Route path="admission" element={<Admission />} />
+              <Route path="students" element={<Students />} />
+              <Route path="teachers" element={<Teachers />} />
+              <Route path="classes" element={<Classes />} />
+              <Route path="fees" element={<Fees />} />
+              <Route path="exams" element={<Exams />} />
+              <Route path="notices" element={<Notices />} />
+              <Route path="setup" element={<Setup />} />
+            </Route>
+          </Route>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          {/* Teacher */}
+          <Route element={<ProtectedRoute allowedRoles={['teacher']} />}>
+            <Route path="/teacher" element={<TeacherLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<TeacherDashboard />} />
+              <Route path="classes" element={<TeacherClasses />} />
+              <Route path="students" element={<TeacherStudents />} />
+              <Route path="attendance" element={<Attendance />} />
+              <Route path="marks" element={<MarksEntry />} />
+              <Route path="homework" element={<Homework />} />
+              <Route path="remarks" element={<Remarks />} />
+              <Route path="notices" element={<Notices />} />
+              <Route path="profile" element={<TeacherProfile />} />
+            </Route>
+          </Route>
+
+          {/* Student */}
+          <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+            <Route path="/student" element={<StudentLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<StudentDashboard />} />
+              <Route path="schedule" element={<StudentSchedule />} />
+              <Route path="attendance" element={<StudentAttendance />} />
+              <Route path="results" element={<StudentResults />} />
+              <Route path="exams" element={<StudentExams />} />
+              <Route path="homework" element={<StudentHomework />} />
+              <Route path="fees" element={<StudentFees />} />
+              <Route path="notices" element={<StudentNotices />} />
+              <Route path="profile" element={<StudentProfile />} />
+            </Route>
+          </Route>
+
+          {/* Catch All */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
-
-export default App

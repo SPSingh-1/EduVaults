@@ -10,6 +10,7 @@ const links = [
   { icon: '💰', label: 'Fees', path: '/school-admin/fees' },
   { icon: '📋', label: 'Exams', path: '/school-admin/exams' },
   { icon: '📢', label: 'Notices', path: '/school-admin/notices' },
+  { icon: '⚙️', label: 'Setup', path: '/school-admin/setup' },
 ];
 
 const SchoolAdminLayout = () => (

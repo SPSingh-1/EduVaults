@@ -19,7 +19,10 @@ namespace EduVault.Infrastructure.Repositories
             Teachers = new Repository<Teacher>(_context);
             Students = new Repository<Student>(_context);
             Classes = new Repository<Class>(_context);
+            EnrollmentClasses = new Repository<EnrollmentClass>(_context);
             Enrollments = new Repository<Enrollment>(_context);
+            Capacities = new Repository<Capacity>(_context);
+            Departments = new Repository<Department>(_context);
             Subjects = new Repository<Subject>(_context);
             ClassSubjects = new Repository<ClassSubject>(_context);
             Exams = new Repository<Exam>(_context);
@@ -27,6 +30,9 @@ namespace EduVault.Infrastructure.Repositories
             FeeStructures = new Repository<FeeStructure>(_context);
             Invoices = new Repository<StudentInvoice>(_context);
             Transactions = new Repository<PaymentTransaction>(_context);
+            Sections = new Repository<Section>(_context);
+            Rooms = new Repository<Room>(_context);
+            Attendances = new Repository<Attendance>(_context);
         }
 
         public IRepository<School> Schools { get; private set; }
@@ -35,7 +41,10 @@ namespace EduVault.Infrastructure.Repositories
         public IRepository<Teacher> Teachers { get; private set; }
         public IRepository<Student> Students { get; private set; }
         public IRepository<Class> Classes { get; private set; }
+        public IRepository<EnrollmentClass> EnrollmentClasses { get; private set; }
         public IRepository<Enrollment> Enrollments { get; private set; }
+        public IRepository<Capacity> Capacities { get; private set; }
+        public IRepository<Department> Departments { get; private set; }
         public IRepository<Subject> Subjects { get; private set; }
         public IRepository<ClassSubject> ClassSubjects { get; private set; }
         public IRepository<Exam> Exams { get; private set; }
@@ -43,6 +52,9 @@ namespace EduVault.Infrastructure.Repositories
         public IRepository<FeeStructure> FeeStructures { get; private set; }
         public IRepository<StudentInvoice> Invoices { get; private set; }
         public IRepository<PaymentTransaction> Transactions { get; private set; }
+        public IRepository<Section> Sections { get; private set; }
+        public IRepository<Room> Rooms { get; private set; }
+        public IRepository<Attendance> Attendances { get; private set; }
 
         public async Task<int> CompleteAsync()
         {

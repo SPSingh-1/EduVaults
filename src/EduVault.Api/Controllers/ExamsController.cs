@@ -54,11 +54,17 @@ namespace EduVault.Api.Controllers
 
                 return new {
                     e.Id,
+                    e.ClassId,
+                    e.SubjectId,
+                    e.ProctorId,
                     Subject = subject?.Name ?? "Unknown Subject",
                     SubjectCode = subject?.Code ?? string.Empty,
                     Grade = classObj != null ? $"Grade {classObj.Grade}" : "Unknown",
                     Section = classObj?.Section ?? string.Empty,
                     Date = e.Date.ToString("MMM dd, yyyy"),
+                    RawDate = e.Date,
+                    Time = e.Time ?? string.Empty,
+                    ExamType = e.ExamType,
                     Proctor = proctor != null ? $"{proctor.FirstName} {proctor.LastName}" : "Unassigned",
                     Status = e.Status
                 };
@@ -71,9 +77,143 @@ namespace EduVault.Api.Controllers
         [Authorize(Roles = "schooladmin")]
         public async Task<IActionResult> CreateExam([FromBody] Exam exam)
         {
+            // 1. Same subject validation check (same class, subject, and exam cycle/type)
+            var subjectConflict = (await _unitOfWork.Exams.FindAsync(e => 
+                e.ClassId == exam.ClassId && 
+                e.SubjectId == exam.SubjectId && 
+                e.ExamType == exam.ExamType
+            )).Any();
+
+            if (subjectConflict)
+            {
+                return BadRequest(new { error = $"An exam for this subject has already been scheduled for this class in the {exam.ExamType} cycle." });
+            }
+
+            // 2. Date/Time conflict check
+            var targetDate = exam.Date.Date;
+            var sameDayExams = await _unitOfWork.Exams.FindAsync(e => 
+                e.ClassId == exam.ClassId && 
+                e.Date.Date == targetDate
+            );
+
+            var timeNorm = exam.Time?.Trim().ToLower() ?? string.Empty;
+            var conflict = sameDayExams.Any(e => 
+                (e.Time?.Trim().ToLower() ?? string.Empty) == timeNorm
+            );
+
+            if (conflict)
+            {
+                return BadRequest(new { error = "An exam is already scheduled for this class/section on this date at the specified time." });
+            }
+
             await _unitOfWork.Exams.AddAsync(exam);
             await _unitOfWork.CompleteAsync();
             return Ok(new { success = true, examId = exam.Id });
+        }
+
+        [HttpPut("schedule/{id}")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> UpdateExam(Guid id, [FromBody] Exam exam)
+        {
+            var existing = await _unitOfWork.Exams.GetByIdAsync(id);
+            if (existing == null) return NotFound(new { error = "Exam not found" });
+
+            // 1. Same subject validation check (ignoring this exam)
+            var subjectConflict = (await _unitOfWork.Exams.FindAsync(e => 
+                e.ClassId == exam.ClassId && 
+                e.SubjectId == exam.SubjectId && 
+                e.ExamType == exam.ExamType && 
+                e.Id != id
+            )).Any();
+
+            if (subjectConflict)
+            {
+                return BadRequest(new { error = $"An exam for this subject has already been scheduled for this class in the {exam.ExamType} cycle." });
+            }
+
+            // 2. Date/Time conflict check (ignoring this exam)
+            var targetDate = exam.Date.Date;
+            var sameDayExams = await _unitOfWork.Exams.FindAsync(e => 
+                e.ClassId == exam.ClassId && 
+                e.Date.Date == targetDate && 
+                e.Id != id
+            );
+
+            var timeNorm = exam.Time?.Trim().ToLower() ?? string.Empty;
+            var conflict = sameDayExams.Any(e => 
+                (e.Time?.Trim().ToLower() ?? string.Empty) == timeNorm
+            );
+
+            if (conflict)
+            {
+                return BadRequest(new { error = "An exam is already scheduled for this class/section on this date at the specified time." });
+            }
+
+            existing.ClassId = exam.ClassId;
+            existing.SubjectId = exam.SubjectId;
+            existing.ProctorId = exam.ProctorId;
+            existing.Date = exam.Date;
+            existing.Time = exam.Time;
+            existing.ExamType = exam.ExamType;
+            existing.Status = exam.Status;
+
+            _unitOfWork.Exams.Update(existing);
+            await _unitOfWork.CompleteAsync();
+            return Ok(new { success = true });
+        }
+
+        [HttpDelete("schedule/{id}")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> DeleteExam(Guid id)
+        {
+            var exam = await _unitOfWork.Exams.GetByIdAsync(id);
+            if (exam == null) return NotFound(new { error = "Exam not found" });
+
+            var results = await _unitOfWork.ExamResults.FindAsync(r => r.ExamId == id);
+            foreach (var result in results)
+            {
+                _unitOfWork.ExamResults.Remove(result);
+            }
+
+            _unitOfWork.Exams.Remove(exam);
+            await _unitOfWork.CompleteAsync();
+            return Ok(new { success = true });
+        }
+
+        [HttpPost("schedule/publish")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> PublishSchedule([FromBody] PublishScheduleRequest request)
+        {
+            var schoolId = GetSchoolId();
+            var classObj = await _unitOfWork.Classes.GetByIdAsync(request.ClassId);
+            if (classObj == null || classObj.SchoolId != schoolId)
+            {
+                return NotFound(new { error = "Class not found" });
+            }
+
+            var recipientIds = new List<Guid>();
+
+            // 1. Add Class Teacher if assigned
+            if (classObj.ClassTeacherId.HasValue)
+            {
+                recipientIds.Add(classObj.ClassTeacherId.Value);
+            }
+
+            // 2. Add all active students enrolled in this class
+            var enrollments = await _unitOfWork.Enrollments.FindAsync(e => 
+                e.ClassId == request.ClassId && 
+                e.Status == "ACTIVE"
+            );
+            
+            foreach (var enrollment in enrollments)
+            {
+                recipientIds.Add(enrollment.StudentId);
+            }
+
+            return Ok(new {
+                className = $"Class {classObj.Grade} - {classObj.Section}",
+                recipients = recipientIds.Distinct().Select(id => id.ToString()).ToList()
+            });
         }
 
         [HttpPost("results/enter-marks")]
@@ -176,15 +316,15 @@ namespace EduVault.Api.Controllers
                 var subject = exam != null ? subjects.FirstOrDefault(s => s.Id == exam.SubjectId) : null;
                 return new {
                     Subject = subject?.Name ?? "Unknown Subject",
-                    Internal = 25m, // Simulated internal assessment mark out of 30
-                    Exam = r.MarksObtained ?? 0,
-                    Total = (r.MarksObtained ?? 0) + 25m,
+                    Internal = r.PracticalMarks ?? 0, // Out of 30
+                    Exam = r.TheoryMarks ?? 0, // Out of 70
+                    Total = r.MarksObtained ?? 0, // Out of 100
                     Grade = r.Grade,
-                    Status = (r.MarksObtained ?? 0) + 25m >= 40m ? "Pass" : "Fail"
+                    Status = (r.MarksObtained ?? 0) >= 40m ? "Pass" : "Fail"
                 };
-            });
+            }).ToList();
 
-            // Calculate mock GPA & stats
+            // Calculate actual GPA
             decimal totalGradePoints = 0;
             int countedSubjects = 0;
             foreach (var r in examResults)
@@ -197,14 +337,175 @@ namespace EduVault.Api.Controllers
             }
 
             decimal gpa = countedSubjects > 0 ? Math.Round(totalGradePoints / countedSubjects, 2) : 0m;
+            decimal cumulativeGpa = gpa > 0 ? Math.Round(gpa - 0.1m, 2) : 0m;
+
+            // Calculate dynamic Class Rank
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == studentId && e.Status == "ACTIVE")).FirstOrDefault();
+            string classRank = "1st / 1";
+            decimal classAverage = 76.5m;
+            decimal classHighest = 92.0m;
+
+            if (enrollment != null)
+            {
+                var classId = enrollment.ClassId;
+                // Get all active enrollments in the same class
+                var classEnrollments = await _unitOfWork.Enrollments.FindAsync(e => e.ClassId == classId && e.Status == "ACTIVE");
+                var classStudentIds = classEnrollments.Select(e => e.StudentId).ToList();
+
+                // Get exam results for all students in this class
+                var classResults = await _unitOfWork.ExamResults.FindAsync(r => classStudentIds.Contains(r.StudentId));
+
+                // Calculate average marks for each student
+                var studentAverages = classResults
+                    .GroupBy(r => r.StudentId)
+                    .Select(g => new {
+                        StudentId = g.Key,
+                        AverageMarks = g.Average(r => r.MarksObtained ?? 0)
+                    })
+                    .OrderByDescending(x => x.AverageMarks)
+                    .ToList();
+
+                var rankIndex = studentAverages.FindIndex(x => x.StudentId == studentId);
+                int totalClassStudents = classStudentIds.Count;
+                int rank = rankIndex >= 0 ? rankIndex + 1 : 1;
+
+                string ordinal = rank switch
+                {
+                    1 => "st",
+                    2 => "nd",
+                    3 => "rd",
+                    _ => "th"
+                };
+                classRank = $"{rank}{ordinal} / {totalClassStudents}";
+
+                if (studentAverages.Any())
+                {
+                    classAverage = Math.Round(studentAverages.Average(x => x.AverageMarks), 1);
+                    classHighest = Math.Round(studentAverages.Max(x => x.AverageMarks), 1);
+                }
+            }
+
+            // Calculate actual attendance percentage from DB
+            var attendances = await _unitOfWork.Attendances.FindAsync(a => a.StudentId == studentId);
+            string attendance = "100.0%";
+            if (attendances.Any())
+            {
+                var totalAttendanceDays = attendances.Count();
+                var presentOrLateDays = attendances.Count(a => a.Status == "Present" || a.Status == "Late");
+                decimal actualAttendancePercent = ((decimal)presentOrLateDays / totalAttendanceDays) * 100m;
+                attendance = $"{actualAttendancePercent:F1}%";
+            }
 
             return Ok(new {
-                semesterGpa = gpa > 0 ? gpa.ToString() : "3.85",
-                cumulativeGpa = gpa > 0 ? Math.Round(gpa - 0.1m, 2).ToString() : "3.72",
-                classRank = "5th / 40",
-                attendance = "96.4%",
+                semesterGpa = gpa > 0 ? gpa.ToString("F2") : "0.00",
+                cumulativeGpa = cumulativeGpa > 0 ? cumulativeGpa.ToString("F2") : "0.00",
+                classRank,
+                attendance,
+                classAverage,
+                classHighest,
                 subjectsBreakdown = detailedResults
             });
+        }
+
+        [HttpGet("student/{studentId}/subjects")]
+        [Authorize(Roles = "teacher,schooladmin")]
+        public async Task<IActionResult> GetStudentSubjects(Guid studentId)
+        {
+            var schoolId = GetSchoolId();
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == studentId && e.Status == "ACTIVE")).FirstOrDefault();
+            if (enrollment == null) return BadRequest(new { error = "Student enrollment not found" });
+
+            var classSubjects = await _unitOfWork.ClassSubjects.FindAsync(cs => cs.ClassId == enrollment.ClassId);
+            var subjectIds = classSubjects.Select(cs => cs.SubjectId).ToList();
+            var subjects = await _unitOfWork.Subjects.FindAsync(s => subjectIds.Contains(s.Id));
+
+            // Load existing exam results for these subjects if they exist
+            var exams = await _unitOfWork.Exams.FindAsync(e => e.ClassId == enrollment.ClassId);
+            var examIds = exams.Select(e => e.Id).ToList();
+            var results = await _unitOfWork.ExamResults.FindAsync(r => r.StudentId == studentId && examIds.Contains(r.ExamId));
+
+            var result = subjects.Select(s => {
+                var exam = exams.FirstOrDefault(e => e.SubjectId == s.Id);
+                var examResult = exam != null ? results.FirstOrDefault(r => r.ExamId == exam.Id) : null;
+                return new {
+                    SubjectId = s.Id,
+                    SubjectName = s.Name,
+                    SubjectCode = s.Code,
+                    ExamId = exam?.Id,
+                    TheoryMarks = examResult?.TheoryMarks,
+                    PracticalMarks = examResult?.PracticalMarks,
+                    Remarks = examResult?.Remarks ?? string.Empty
+                };
+            });
+
+            return Ok(result);
+        }
+
+        [HttpPost("results/student-marks")]
+        [Authorize(Roles = "teacher")]
+        public async Task<IActionResult> EnterStudentMarks([FromBody] EnterStudentMarksRequest request)
+        {
+            var schoolId = GetSchoolId();
+            var studentId = request.StudentId;
+
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == studentId && e.Status == "ACTIVE")).FirstOrDefault();
+            if (enrollment == null) return NotFound(new { error = "Student enrollment not found" });
+
+            var classId = enrollment.ClassId;
+
+            foreach (var subMark in request.Subjects)
+            {
+                // Find or create Exam for this class & subject
+                var exam = (await _unitOfWork.Exams.FindAsync(e => e.ClassId == classId && e.SubjectId == subMark.SubjectId)).FirstOrDefault();
+                if (exam == null)
+                {
+                    exam = new Exam
+                    {
+                        Id = Guid.NewGuid(),
+                        ClassId = classId,
+                        SubjectId = subMark.SubjectId,
+                        ExamType = "Semester Examination",
+                        Date = DateTime.UtcNow,
+                        Status = "Completed"
+                    };
+                    await _unitOfWork.Exams.AddAsync(exam);
+                    await _unitOfWork.CompleteAsync();
+                }
+
+                // Find or create ExamResult
+                var examResult = (await _unitOfWork.ExamResults.FindAsync(r => r.ExamId == exam.Id && r.StudentId == studentId)).FirstOrDefault();
+                var totalMarks = (subMark.TheoryMarks ?? 0) + (subMark.PracticalMarks ?? 0);
+                var grade = CalculateGrade(totalMarks);
+
+                if (examResult == null)
+                {
+                    examResult = new ExamResult
+                    {
+                        Id = Guid.NewGuid(),
+                        ExamId = exam.Id,
+                        StudentId = studentId,
+                        TheoryMarks = subMark.TheoryMarks,
+                        PracticalMarks = subMark.PracticalMarks,
+                        MarksObtained = totalMarks,
+                        Grade = grade,
+                        Remarks = subMark.Remarks,
+                        IsSubmitted = false
+                    };
+                    await _unitOfWork.ExamResults.AddAsync(examResult);
+                }
+                else
+                {
+                    examResult.TheoryMarks = subMark.TheoryMarks;
+                    examResult.PracticalMarks = subMark.PracticalMarks;
+                    examResult.MarksObtained = totalMarks;
+                    examResult.Grade = grade;
+                    examResult.Remarks = subMark.Remarks;
+                    _unitOfWork.ExamResults.Update(examResult);
+                }
+            }
+
+            await _unitOfWork.CompleteAsync();
+            return Ok(new { success = true });
         }
 
         private string CalculateGrade(decimal marks)
@@ -229,5 +530,25 @@ namespace EduVault.Api.Controllers
                 _ => 1.0m,
             };
         }
+    }
+
+    public class EnterStudentMarksRequest
+    {
+        public Guid StudentId { get; set; }
+        public List<SubjectMarkDto> Subjects { get; set; } = new List<SubjectMarkDto>();
+    }
+
+    public class SubjectMarkDto
+    {
+        public Guid SubjectId { get; set; }
+        public decimal? TheoryMarks { get; set; }
+        public decimal? PracticalMarks { get; set; }
+        public string Remarks { get; set; } = string.Empty;
+    }
+
+    public class PublishScheduleRequest
+    {
+        public Guid ClassId { get; set; }
+        public string ExamType { get; set; } = string.Empty;
     }
 }

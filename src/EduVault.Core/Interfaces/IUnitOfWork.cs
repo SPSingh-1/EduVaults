@@ -12,7 +12,10 @@ namespace EduVault.Core.Interfaces
         IRepository<Teacher> Teachers { get; }
         IRepository<Student> Students { get; }
         IRepository<Class> Classes { get; }
+        IRepository<EnrollmentClass> EnrollmentClasses { get; }
         IRepository<Enrollment> Enrollments { get; }
+        IRepository<Capacity> Capacities { get; }
+        IRepository<Department> Departments { get; }
         IRepository<Subject> Subjects { get; }
         IRepository<ClassSubject> ClassSubjects { get; }
         IRepository<Exam> Exams { get; }
@@ -20,6 +23,9 @@ namespace EduVault.Core.Interfaces
         IRepository<FeeStructure> FeeStructures { get; }
         IRepository<StudentInvoice> Invoices { get; }
         IRepository<PaymentTransaction> Transactions { get; }
+        IRepository<Section> Sections { get; }
+        IRepository<Room> Rooms { get; }
+        IRepository<Attendance> Attendances { get; }
         Task<int> CompleteAsync();
     }
 }

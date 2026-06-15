@@ -142,6 +142,80 @@ namespace EduVault.Api.Controllers
                 amount = transaction.Amount
             });
         }
+
+        [HttpGet("my-fee-structures")]
+        [Authorize(Roles = "student")]
+        public async Task<IActionResult> GetMyFeeStructures()
+        {
+            var studentId = GetUserId();
+            var schoolId = GetSchoolId();
+
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == studentId && e.Status == "ACTIVE")).FirstOrDefault();
+            if (enrollment == null) return BadRequest(new { error = "Student has no active enrollment class" });
+
+            var classObj = await _unitOfWork.Classes.GetByIdAsync(enrollment.ClassId);
+            if (classObj == null) return BadRequest(new { error = "Class not found" });
+
+            var structures = await _unitOfWork.FeeStructures.FindAsync(fs => 
+                fs.SchoolId == schoolId && 
+                (fs.Grade == classObj.Grade || string.IsNullOrEmpty(fs.Grade) || fs.Grade.ToLower() == "all grades"));
+
+            return Ok(structures.Select(fs => new {
+                fs.Id,
+                fs.Name,
+                fs.Amount,
+                fs.Frequency,
+                Grade = string.IsNullOrEmpty(fs.Grade) ? "All Grades" : fs.Grade
+            }));
+        }
+
+        [HttpPut("structures/{id}")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> UpdateFeeStructure(Guid id, [FromBody] FeeStructure model)
+        {
+            var schoolId = GetSchoolId();
+            var feeStructure = await _unitOfWork.FeeStructures.GetByIdAsync(id);
+            if (feeStructure == null || feeStructure.SchoolId != schoolId)
+            {
+                return NotFound(new { error = "Fee structure not found" });
+            }
+
+            if (string.IsNullOrWhiteSpace(model.Name))
+            {
+                return BadRequest(new { error = "Fee name is required" });
+            }
+            if (model.Amount <= 0)
+            {
+                return BadRequest(new { error = "Amount must be greater than zero" });
+            }
+
+            feeStructure.Name = model.Name.Trim();
+            feeStructure.Grade = model.Grade?.Trim() ?? string.Empty;
+            feeStructure.Amount = model.Amount;
+            feeStructure.Frequency = model.Frequency.Trim();
+
+            _unitOfWork.FeeStructures.Update(feeStructure);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true });
+        }
+
+        [HttpDelete("structures/{id}")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> DeleteFeeStructure(Guid id)
+        {
+            var schoolId = GetSchoolId();
+            var feeStructure = await _unitOfWork.FeeStructures.GetByIdAsync(id);
+            if (feeStructure == null || feeStructure.SchoolId != schoolId)
+            {
+                return NotFound(new { error = "Fee structure not found" });
+            }
+
+            _unitOfWork.FeeStructures.Remove(feeStructure);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true });
+        }
     }
 
     public class PayInvoiceRequest

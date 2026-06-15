@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using EduVault.Core.Entities;
 using EduVault.Core.Interfaces;
 using EduVault.Core.DTOs;
@@ -34,7 +35,14 @@ namespace EduVault.Api.Controllers
 
             if (!user.IsActive)
             {
-                return Forbid("User account is deactivated");
+                return StatusCode(403, new { error = "User account is deactivated" });
+            }
+
+            string schoolName = string.Empty;
+            if (user.SchoolId.HasValue)
+            {
+                var school = await _unitOfWork.Schools.GetByIdAsync(user.SchoolId.Value);
+                schoolName = school?.Name ?? string.Empty;
             }
 
             var token = _authService.GenerateToken(user);
@@ -50,7 +58,8 @@ namespace EduVault.Api.Controllers
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     Avatar = $"{user.FirstName[0]}{user.LastName[0]}",
-                    SchoolId = user.SchoolId
+                    SchoolId = user.SchoolId,
+                    SchoolName = schoolName
                 }
             };
 
@@ -114,6 +123,28 @@ namespace EduVault.Api.Controllers
                 success = true,
                 schoolId = school.Id,
                 schoolCode = school.SchoolCode
+            });
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            var userList = await _unitOfWork.Users.FindAsync(u => u.Email == request.Email);
+            var user = userList.FirstOrDefault();
+
+            if (user == null)
+            {
+                return NotFound(new { error = "No account found with this email address." });
+            }
+
+            user.PasswordHash = _authService.HashPassword(request.NewPassword);
+            _unitOfWork.Users.Update(user);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = "Password updated successfully."
             });
         }
     }

@@ -9,6 +9,7 @@ namespace EduVault.Core.Entities
         public Guid SchoolId { get; set; }
         public string Code { get; set; } = string.Empty; // e.g. PHY101
         public string Name { get; set; } = string.Empty; // e.g. Theoretical Physics
+        public string Department { get; set; } = string.Empty;
 
         // Navigation properties
         public virtual School? School { get; set; }

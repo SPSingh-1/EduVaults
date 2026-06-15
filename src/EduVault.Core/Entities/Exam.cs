@@ -10,6 +10,7 @@ namespace EduVault.Core.Entities
         public Guid SubjectId { get; set; }
         public string ExamType { get; set; } = string.Empty; // e.g. Mid-term assessment, Final Examination
         public DateTime Date { get; set; }
+        public string? Time { get; set; }
         public Guid? ProctorId { get; set; }
         public string Status { get; set; } = "Scheduled"; // Draft, Scheduled, Ongoing, Completed
 

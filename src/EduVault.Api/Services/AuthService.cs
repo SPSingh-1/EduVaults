@@ -22,7 +22,7 @@ namespace EduVault.Api.Services
         public string GenerateToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var jwtKey = _config["Jwt:Secret"] ?? "EduVaultSuperSecretJWTKey2025!";
+            var jwtKey = _config["Jwt:Secret"] ?? "EduVaultSuperSecretJWTKey2025!WithSecureKey32BytesLength";
             var key = Encoding.ASCII.GetBytes(jwtKey);
 
             var claims = new[]
@@ -30,6 +30,9 @@ namespace EduVault.Api.Services
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role),
+                new Claim("id", user.Id.ToString()),
+                new Claim("email", user.Email),
+                new Claim("role", user.Role),
                 new Claim("firstName", user.FirstName),
                 new Claim("lastName", user.LastName),
                 new Claim("schoolId", user.SchoolId?.ToString() ?? string.Empty)
@@ -51,8 +54,7 @@ namespace EduVault.Api.Services
             byte[] salt = new byte[16];
             RandomNumberGenerator.Fill(salt);
             
-            using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000, HashAlgorithmName.SHA256);
-            byte[] hash = pbkdf2.GetBytes(20);
+            byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 10000, HashAlgorithmName.SHA256, 20);
 
             byte[] hashBytes = new byte[36];
             Array.Copy(salt, 0, hashBytes, 0, 16);
@@ -63,21 +65,24 @@ namespace EduVault.Api.Services
 
         public bool VerifyPassword(string password, string hashedPassword)
         {
+            if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(hashedPassword))
+                return false;
+
             try
             {
                 byte[] hashBytes = Convert.FromBase64String(hashedPassword);
+                if (hashBytes.Length != 36)
+                    return false;
+
                 byte[] salt = new byte[16];
                 Array.Copy(hashBytes, 0, salt, 0, 16);
 
-                using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000, HashAlgorithmName.SHA256);
-                byte[] hash = pbkdf2.GetBytes(20);
+                byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 10000, HashAlgorithmName.SHA256, 20);
 
-                for (int i = 0; i < 20; i++)
-                {
-                    if (hashBytes[i + 16] != hash[i])
-                        return false;
-                }
-                return true;
+                byte[] storedHash = new byte[20];
+                Array.Copy(hashBytes, 16, storedHash, 0, 20);
+
+                return CryptographicOperations.FixedTimeEquals(storedHash, hash);
             }
             catch
             {

@@ -8,7 +8,7 @@ const RemarkSchema = new mongoose.Schema({
   teacherId: { type: String, required: true },
   teacherName: { type: String, required: true },
   remarkText: { type: String, required: true },
-  tag: { type: String, enum: ['URGENT', 'POSITIVE', 'NEUTRAL'], default: 'NEUTRAL' },
+  tag: { type: String, enum: ['URGENT', 'POSITIVE', 'NEGATIVE', 'NEUTRAL'], default: 'NEUTRAL' },
   createdAt: { type: Date, default: Date.now }
 });
 

@@ -22,7 +22,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Configure JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Secret"] ?? "EduVaultSuperSecretJWTKey2025!";
+var jwtKey = builder.Configuration["Jwt:Secret"] ?? "EduVaultSuperSecretJWTKey2025!WithSecureKey32BytesLength";
 var key = Encoding.ASCII.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
@@ -103,7 +103,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Database Seeder - Automatically migrates and seeds Super Admin if database is empty
+// Database Startup — Schema creation and minimal bootstrap only
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -111,11 +111,8 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<EduVaultDbContext>();
         var authService = services.GetRequiredService<IAuthService>();
-        
-        // Ensure Database is created
-        context.Database.EnsureCreated();
 
-        // Seed Super Admin if not exists
+        // ─── Seed Super Admin (required for platform operation) ────────────────
         if (!context.Users.Any(u => u.Role == "superadmin"))
         {
             var superAdmin = new EduVault.Core.Entities.User
@@ -129,13 +126,37 @@ using (var scope = app.Services.CreateScope())
             };
             context.Users.Add(superAdmin);
             context.SaveChanges();
-            Console.WriteLine("Seeded default Super Admin user: superadmin@eduvault.com / Admin123!");
+            Console.WriteLine("Seeded Super Admin: superadmin@eduvault.com / Admin123!");
         }
+
+        // ─── Inline schema migration: add CustomSubjectName column if missing ──
+        try
+        {
+            var conn = context.Database.GetDbConnection();
+            if (conn.State != System.Data.ConnectionState.Open)
+                await conn.OpenAsync();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "ALTER TABLE \"TimetableItems\" ADD COLUMN IF NOT EXISTS \"CustomSubjectName\" TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+            
+            cmd.CommandText = "ALTER TABLE \"Teachers\" ADD COLUMN IF NOT EXISTS \"Specialization\" TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"Exams\" ADD COLUMN IF NOT EXISTS \"Time\" TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        catch (Exception migEx)
+        {
+            Console.WriteLine($"Migration note: {migEx.Message}");
+        }
+
+        Console.WriteLine("EduVault startup complete. All real data must be entered via the admin portal.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error seeding data: {ex.Message}");
+        Console.WriteLine($"Startup error: {ex.Message}");
     }
 }
 
 app.Run();
+
