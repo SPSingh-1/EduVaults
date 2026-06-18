@@ -31,6 +31,7 @@ namespace EduVault.Infrastructure.Data
         public DbSet<Attendance> Attendances { get; set; }
         public DbSet<Capacity> Capacities { get; set; }
         public DbSet<Department> Departments { get; set; }
+        public DbSet<PlatformSetting> PlatformSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -9,7 +9,11 @@ const roleRoutes = {
 };
 
 export const ProtectedRoute = ({ allowedRoles }) => {
-  const { user, token } = useAuth();
+  const { user, token, maintenanceActive } = useAuth();
+
+  if (maintenanceActive && user && user.role !== 'superadmin' && user.role !== 'schooladmin') {
+    return <Navigate to="/maintenance" replace />;
+  }
 
   if (!token || !user) {
     return <Navigate to="/login" replace />;

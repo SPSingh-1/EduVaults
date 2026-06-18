@@ -23,5 +23,9 @@ namespace EduVault.Core.DTOs
         [Required]
         [MinLength(6)]
         public string AdminPassword { get; set; } = string.Empty;
+
+        public string LogoUrl { get; set; } = string.Empty;
+        public string EmailDomain { get; set; } = string.Empty;
+        public string ThemeColor { get; set; } = string.Empty;
     }
 }

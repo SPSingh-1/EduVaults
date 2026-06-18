@@ -3,6 +3,27 @@ import { apiClient } from '../api/apiClient';
 
 const AuthContext = createContext(null);
 
+const adjustColor = (hex, percent) => {
+  if (!hex || hex[0] !== '#') return hex;
+  let color = hex.replace(/^\s*#|\s*$/g, '');
+  if (color.length === 3) {
+    color = color.replace(/(.)/g, '$1$1');
+  }
+  let r = parseInt(color.substr(0, 2), 16);
+  let g = parseInt(color.substr(2, 2), 16);
+  let b = parseInt(color.substr(4, 2), 16);
+
+  r = Math.max(0, Math.min(255, r + percent));
+  g = Math.max(0, Math.min(255, g + percent));
+  b = Math.max(0, Math.min(255, b + percent));
+
+  const rHex = r.toString(16).padStart(2, '0');
+  const gHex = g.toString(16).padStart(2, '0');
+  const bHex = b.toString(16).padStart(2, '0');
+
+  return `#${rHex}${gHex}${bHex}`;
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -18,6 +39,39 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    if (user && user.themeColor) {
+      const mainColor = user.themeColor;
+      root.style.setProperty('--color-primary', mainColor);
+      root.style.setProperty('--color-primary-light', adjustColor(mainColor, 20));
+      root.style.setProperty('--color-primary-dark', adjustColor(mainColor, -20));
+    } else {
+      root.style.setProperty('--color-primary', '#1a2744');
+      root.style.setProperty('--color-primary-light', '#243457');
+      root.style.setProperty('--color-primary-dark', '#111b33');
+    }
+  }, [user]);
+
+  const [maintenanceActive, setMaintenanceActive] = useState(false);
+
+  const checkMaintenance = async () => {
+    try {
+      const res = await apiClient.get('/auth/settings');
+      if (res.data && res.data.maintenanceMode) {
+        setMaintenanceActive(true);
+      } else {
+        setMaintenanceActive(false);
+      }
+    } catch (err) {
+      console.error('Error loading settings in AuthContext:', err);
+    }
+  };
+
+  useEffect(() => {
+    checkMaintenance();
+  }, [user]);
+
   const login = async (email, password) => {
     try {
       const response = await apiClient.post('/auth/login', { email, password });
@@ -28,6 +82,15 @@ export const AuthProvider = ({ children }) => {
       
       setToken(jwtToken);
       setUser(userData);
+      
+      // Recheck maintenance status on login
+      if (userData.role !== 'superadmin' && userData.role !== 'schooladmin') {
+        const settingsRes = await apiClient.get('/auth/settings');
+        if (settingsRes.data && settingsRes.data.maintenanceMode) {
+          setMaintenanceActive(true);
+        }
+      }
+      
       return { success: true, role: userData.role };
     } catch (error) {
       console.error('Login error:', error);
@@ -51,10 +114,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('eduvault_user');
     setToken(null);
     setUser(null);
+    setMaintenanceActive(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, registerSchool }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, registerSchool, maintenanceActive, checkMaintenance }}>
       {!loading && children}
     </AuthContext.Provider>
   );

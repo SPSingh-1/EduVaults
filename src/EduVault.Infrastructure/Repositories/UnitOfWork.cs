@@ -33,6 +33,7 @@ namespace EduVault.Infrastructure.Repositories
             Sections = new Repository<Section>(_context);
             Rooms = new Repository<Room>(_context);
             Attendances = new Repository<Attendance>(_context);
+            PlatformSettings = new Repository<PlatformSetting>(_context);
         }
 
         public IRepository<School> Schools { get; private set; }
@@ -55,6 +56,7 @@ namespace EduVault.Infrastructure.Repositories
         public IRepository<Section> Sections { get; private set; }
         public IRepository<Room> Rooms { get; private set; }
         public IRepository<Attendance> Attendances { get; private set; }
+        public IRepository<PlatformSetting> PlatformSettings { get; private set; }
 
         public async Task<int> CompleteAsync()
         {

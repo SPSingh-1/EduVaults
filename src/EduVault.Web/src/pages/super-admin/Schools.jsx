@@ -15,7 +15,10 @@ const Schools = () => {
     website: '',
     adminName: '',
     adminEmail: '',
-    adminPassword: ''
+    adminPassword: '',
+    logoUrl: '/logo.jpeg',
+    emailDomain: '',
+    themeColor: '#1a2744'
   });
   const [added, setAdded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -52,7 +55,10 @@ const Schools = () => {
         website: '',
         adminName: '',
         adminEmail: '',
-        adminPassword: ''
+        adminPassword: '',
+        logoUrl: '/logo.jpeg',
+        emailDomain: '',
+        themeColor: '#1a2744'
       });
       fetchSchools();
       setTimeout(() => setAdded(false), 5000);
@@ -174,9 +180,15 @@ const Schools = () => {
                   <input value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} placeholder="City, State" className="input" />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Website</label>
-                <input value={form.website} onChange={e => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://www.school.edu" className="input" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">School Email Domain *</label>
+                  <input value={form.emailDomain} onChange={e => setForm(p => ({ ...p, emailDomain: e.target.value }))} placeholder="e.g. greenwood.edu" className="input" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Website</label>
+                  <input value={form.website} onChange={e => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://www.school.edu" className="input" />
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1">
@@ -185,7 +197,27 @@ const Schools = () => {
                 </div>
                 <div className="col-span-1">
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Admin Email *</label>
-                  <input type="email" value={form.adminEmail} onChange={e => setForm(p => ({ ...p, adminEmail: e.target.value }))} placeholder="admin@school.edu" className="input" />
+                  <input 
+                    type="email" 
+                    value={form.adminEmail} 
+                    onChange={e => {
+                      const email = e.target.value;
+                      const parts = email.split('@');
+                      const domain = parts.length > 1 ? parts[1] : '';
+                      setForm(p => {
+                        const oldEmailParts = p.adminEmail.split('@');
+                        const oldDomain = oldEmailParts.length > 1 ? oldEmailParts[1] : '';
+                        const shouldUpdateDomain = !p.emailDomain || p.emailDomain === oldDomain;
+                        return {
+                          ...p,
+                          adminEmail: email,
+                          emailDomain: shouldUpdateDomain ? domain : p.emailDomain
+                        };
+                      });
+                    }} 
+                    placeholder="admin@school.edu" 
+                    className="input" 
+                  />
                 </div>
                 <div className="col-span-1">
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Admin Password *</label>

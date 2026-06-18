@@ -2,8 +2,12 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using EduVault.Core.Entities;
 using EduVault.Core.Interfaces;
 using EduVault.Core.DTOs;
@@ -16,10 +20,14 @@ namespace EduVault.Api.Controllers
     public class BillingController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IConfiguration _configuration;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public BillingController(IUnitOfWork unitOfWork)
+        public BillingController(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpClientFactory httpClientFactory)
         {
             _unitOfWork = unitOfWork;
+            _configuration = configuration;
+            _httpClientFactory = httpClientFactory;
         }
 
         private Guid GetSchoolId()
@@ -41,12 +49,22 @@ namespace EduVault.Api.Controllers
         {
             var schoolId = GetSchoolId();
             var structures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId);
-            return Ok(structures.Select(fs => new {
-                fs.Id,
-                fs.Name,
-                fs.Amount,
-                fs.Frequency,
-                Grade = string.IsNullOrEmpty(fs.Grade) ? "All Grades" : fs.Grade
+            var students = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student");
+
+            return Ok(structures.Select(fs => {
+                var studentUser = fs.StudentId.HasValue ? students.FirstOrDefault(u => u.Id == fs.StudentId.Value) : null;
+                return new {
+                    fs.Id,
+                    fs.Name,
+                    fs.Amount,
+                    fs.Frequency,
+                    Grade = string.IsNullOrEmpty(fs.Grade) ? "All Grades" : fs.Grade,
+                    fs.Installments,
+                    fs.StudentId,
+                    StudentName = studentUser != null ? $"{studentUser.FirstName} {studentUser.LastName}" : null,
+                    SubmissionTime = string.IsNullOrEmpty(fs.SubmissionTime) ? "Immediate" : fs.SubmissionTime,
+                    fs.Breakdown
+                };
             }));
         }
 
@@ -55,7 +73,110 @@ namespace EduVault.Api.Controllers
         public async Task<IActionResult> CreateFeeStructure([FromBody] FeeStructure feeStructure)
         {
             feeStructure.SchoolId = GetSchoolId();
+            if (feeStructure.Installments <= 0) feeStructure.Installments = 1;
+
             await _unitOfWork.FeeStructures.AddAsync(feeStructure);
+            await _unitOfWork.CompleteAsync();
+
+            // ─── Auto-generate stagered installment invoices ───
+            decimal installmentAmount = Math.Round(feeStructure.Amount / feeStructure.Installments, 2);
+
+            if (feeStructure.StudentId.HasValue)
+            {
+                // Student-specific override
+                // Remove existing class-wide invoices for this student for the SAME fee name
+                var classWideStructures = await _unitOfWork.FeeStructures.FindAsync(fs => 
+                    fs.SchoolId == feeStructure.SchoolId && 
+                    fs.Name == feeStructure.Name && 
+                    !fs.StudentId.HasValue);
+                
+                var classWideStructureIds = classWideStructures.Select(fs => fs.Id).ToList();
+                if (classWideStructureIds.Any())
+                {
+                    var existingInvoices = await _unitOfWork.Invoices.FindAsync(i => 
+                        i.StudentId == feeStructure.StudentId.Value && 
+                        classWideStructureIds.Contains(i.FeeStructureId));
+                    
+                    foreach (var inv in existingInvoices)
+                    {
+                        _unitOfWork.Invoices.Remove(inv);
+                    }
+                }
+
+                for (int step = 1; step <= feeStructure.Installments; step++)
+                {
+                    var invoice = new StudentInvoice
+                    {
+                        StudentId = feeStructure.StudentId.Value,
+                        FeeStructureId = feeStructure.Id,
+                        Amount = installmentAmount,
+                        IssueDate = DateTime.UtcNow,
+                        DueDate = DateTime.UtcNow.AddDays(30 * step),
+                        Status = "Pending"
+                    };
+                    await _unitOfWork.Invoices.AddAsync(invoice);
+                }
+            }
+            else
+            {
+                // Class-wide rule
+                var schoolId = GetSchoolId();
+                var cleanGradeStr = feeStructure.Grade?.Replace("Class ", "").Trim() ?? string.Empty;
+                string gradePart = cleanGradeStr;
+                string sectionPart = "";
+                
+                if (cleanGradeStr.Contains("-"))
+                {
+                    var parts = cleanGradeStr.Split('-', 2);
+                    gradePart = parts[0].Trim();
+                    sectionPart = parts[1].Trim();
+                }
+                else if (cleanGradeStr.Contains(" "))
+                {
+                    var parts = cleanGradeStr.Split(' ', 2);
+                    gradePart = parts[0].Trim();
+                    sectionPart = parts[1].Trim();
+                }
+
+                if (sectionPart.StartsWith("Section ", StringComparison.OrdinalIgnoreCase))
+                {
+                    sectionPart = sectionPart.Substring(8).Trim();
+                }
+
+                var classes = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId && 
+                    c.Grade == gradePart && 
+                    (string.IsNullOrEmpty(sectionPart) || c.Section == sectionPart || c.Section == $"Section {sectionPart}"));
+                var classIds = classes.Select(c => c.Id).ToList();
+
+                var enrollments = await _unitOfWork.Enrollments.FindAsync(e => classIds.Contains(e.ClassId) && e.Status == "ACTIVE");
+                var studentIds = enrollments.Select(e => e.StudentId).Distinct().ToList();
+
+                foreach (var studentId in studentIds)
+                {
+                    // Skip if student has a specific override for this fee name
+                    var hasOverride = (await _unitOfWork.FeeStructures.FindAsync(fs => 
+                        fs.SchoolId == schoolId && 
+                        fs.StudentId == studentId && 
+                        fs.Name == feeStructure.Name)).Any();
+                    
+                    if (hasOverride) continue;
+
+                    for (int step = 1; step <= feeStructure.Installments; step++)
+                    {
+                        var invoice = new StudentInvoice
+                        {
+                            StudentId = studentId,
+                            FeeStructureId = feeStructure.Id,
+                            Amount = installmentAmount,
+                            IssueDate = DateTime.UtcNow,
+                            DueDate = DateTime.UtcNow.AddDays(30 * step),
+                            Status = "Pending"
+                        };
+                        await _unitOfWork.Invoices.AddAsync(invoice);
+                    }
+                }
+            }
+
             await _unitOfWork.CompleteAsync();
             return Ok(new { success = true, feeStructureId = feeStructure.Id });
         }
@@ -87,10 +208,11 @@ namespace EduVault.Api.Controllers
             }
             else
             {
-                // School Admin view
-                var invoices = await _unitOfWork.Invoices.GetAllAsync();
-                var structures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId);
+                // School Admin view - securely filtered to students in this school
                 var studentUsers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student");
+                var studentIds = studentUsers.Select(u => u.Id).ToList();
+                var invoices = await _unitOfWork.Invoices.FindAsync(i => studentIds.Contains(i.StudentId));
+                var structures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId);
 
                 var list = invoices.Select(i => {
                     var structObj = structures.FirstOrDefault(fs => fs.Id == i.FeeStructureId);
@@ -104,7 +226,7 @@ namespace EduVault.Api.Controllers
                         Status = i.Status
                     };
                 });
-                return Ok(list);
+                return Ok(list.OrderByDescending(i => i.Date));
             }
         }
 
@@ -211,10 +333,251 @@ namespace EduVault.Api.Controllers
                 return NotFound(new { error = "Fee structure not found" });
             }
 
+            // Remove all unpaid invoices generated by this structure
+            var invoices = await _unitOfWork.Invoices.FindAsync(i => i.FeeStructureId == id && i.Status != "Paid");
+            foreach (var inv in invoices)
+            {
+                _unitOfWork.Invoices.Remove(inv);
+            }
+
             _unitOfWork.FeeStructures.Remove(feeStructure);
             await _unitOfWork.CompleteAsync();
 
             return Ok(new { success = true });
+        }
+
+        [HttpPost("create-order")]
+        [Authorize(Roles = "student")]
+        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)
+        {
+            var invoice = await _unitOfWork.Invoices.GetByIdAsync(request.InvoiceId);
+            if (invoice == null) return NotFound(new { error = "Invoice not found" });
+
+            if (invoice.Status == "Paid") return BadRequest(new { error = "Invoice is already paid" });
+
+            var keyId = _configuration["Razorpay:KeyId"] ?? "";
+            var keySecret = _configuration["Razorpay:KeySecret"] ?? "";
+
+            if (string.IsNullOrEmpty(keyId) || string.IsNullOrEmpty(keySecret) || keySecret == "yourKeySecretHere")
+            {
+                // Return a mock order ID if credentials are not configured to allow testing
+                return Ok(new {
+                    orderId = $"order_mock_{Guid.NewGuid().ToString().Substring(0, 8)}",
+                    amount = (int)Math.Round(invoice.Amount * 100),
+                    currency = "INR",
+                    keyId = "rzp_test_mockKeyId",
+                    invoiceId = invoice.Id,
+                    isMock = true
+                });
+            }
+
+            try
+            {
+                var authString = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{keyId}:{keySecret}"));
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.razorpay.com/v1/orders");
+                httpRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authString);
+
+                var orderRequest = new
+                {
+                    amount = (int)Math.Round(invoice.Amount * 100), // in paise
+                    currency = "INR",
+                    receipt = invoice.Id.ToString()
+                };
+
+                httpRequest.Content = new StringContent(JsonSerializer.Serialize(orderRequest), Encoding.UTF8, "application/json");
+
+                var client = _httpClientFactory.CreateClient();
+                var response = await client.SendAsync(httpRequest);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errContent = await response.Content.ReadAsStringAsync();
+                    return BadRequest(new { error = $"Razorpay order creation failed: {errContent}" });
+                }
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(responseContent);
+                var orderId = doc.RootElement.GetProperty("id").GetString();
+
+                return Ok(new {
+                    orderId = orderId,
+                    amount = (int)Math.Round(invoice.Amount * 100),
+                    currency = "INR",
+                    keyId = keyId,
+                    invoiceId = invoice.Id,
+                    isMock = false
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"Error calling Razorpay: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("verify-payment")]
+        [Authorize(Roles = "student")]
+        public async Task<IActionResult> VerifyPayment([FromBody] VerifyPaymentRequest request)
+        {
+            var invoice = await _unitOfWork.Invoices.GetByIdAsync(request.InvoiceId);
+            if (invoice == null) return NotFound(new { error = "Invoice not found" });
+
+            if (invoice.Status == "Paid") return BadRequest(new { error = "Invoice is already paid" });
+
+            var keySecret = _configuration["Razorpay:KeySecret"] ?? "";
+
+            // If it's a mock checkout or keys are not set, allow instant success
+            bool isVerified = false;
+            if (request.RazorpayOrderId.StartsWith("order_mock_") || string.IsNullOrEmpty(keySecret) || keySecret == "yourKeySecretHere")
+            {
+                isVerified = true;
+            }
+            else
+            {
+                isVerified = VerifySignature(request.RazorpayOrderId, request.RazorpayPaymentId, request.RazorpaySignature, keySecret);
+            }
+
+            if (!isVerified)
+            {
+                return BadRequest(new { error = "Payment signature verification failed. Invalid transaction." });
+            }
+
+            // Record transaction
+            var transaction = new PaymentTransaction
+            {
+                InvoiceId = request.InvoiceId,
+                ReferenceNumber = request.RazorpayPaymentId,
+                Amount = invoice.Amount,
+                PaymentMethod = "Razorpay",
+                TransactionDate = DateTime.UtcNow,
+                Status = "success"
+            };
+
+            await _unitOfWork.Transactions.AddAsync(transaction);
+
+            // Update invoice
+            invoice.Status = "Paid";
+            _unitOfWork.Invoices.Update(invoice);
+
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true, referenceNumber = transaction.ReferenceNumber });
+        }
+
+        [HttpGet("student-ledger")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> GetStudentLedger()
+        {
+            var schoolId = GetSchoolId();
+            var studentUsers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student");
+            var studentIds = studentUsers.Select(u => u.Id).ToList();
+
+            var invoices = await _unitOfWork.Invoices.FindAsync(i => studentIds.Contains(i.StudentId));
+            var enrollments = await _unitOfWork.Enrollments.FindAsync(e => studentIds.Contains(e.StudentId));
+            var classes = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
+
+            var ledger = studentUsers.Select(student => {
+                var studentInvoices = invoices.Where(i => i.StudentId == student.Id).ToList();
+                var totalBilled = studentInvoices.Sum(i => i.Amount);
+                var totalPaid = studentInvoices.Where(i => i.Status == "Paid").Sum(i => i.Amount);
+                var remainingDue = totalBilled - totalPaid;
+
+                var studentEnrollment = enrollments.FirstOrDefault(e => e.StudentId == student.Id && e.Status == "ACTIVE");
+                var classObj = studentEnrollment != null ? classes.FirstOrDefault(c => c.Id == studentEnrollment.ClassId) : null;
+                var className = classObj != null ? $"{classObj.Grade}-{classObj.Section}" : "Not Assigned";
+
+                string status = "No Invoices";
+                if (studentInvoices.Any())
+                {
+                    if (remainingDue == 0) status = "Paid";
+                    else if (totalPaid > 0) status = "Partial";
+                    else status = "Pending";
+                }
+
+                return new {
+                    StudentId = student.Id,
+                    StudentName = $"{student.FirstName} {student.LastName}",
+                    ClassName = className,
+                    TotalBilled = totalBilled,
+                    TotalPaid = totalPaid,
+                    RemainingDue = remainingDue,
+                    Status = status
+                };
+            }).OrderBy(l => l.StudentName).ToList();
+
+            return Ok(ledger);
+        }
+
+        [HttpGet("transactions")]
+        [Authorize(Roles = "schooladmin,student")]
+        public async Task<IActionResult> GetTransactions()
+        {
+            var schoolId = GetSchoolId();
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            if (role == "student")
+            {
+                var userId = GetUserId();
+                var invoices = await _unitOfWork.Invoices.FindAsync(i => i.StudentId == userId);
+                var invoiceIds = invoices.Select(inv => inv.Id).ToList();
+                var transactions = await _unitOfWork.Transactions.FindAsync(t => invoiceIds.Contains(t.InvoiceId));
+                var feeStructures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId);
+
+                var list = transactions.Select(t => {
+                    var invoice = invoices.FirstOrDefault(inv => inv.Id == t.InvoiceId);
+                    var feeStruct = invoice != null ? feeStructures.FirstOrDefault(fs => fs.Id == invoice.FeeStructureId) : null;
+                    return new {
+                        t.Id,
+                        t.ReferenceNumber,
+                        t.Amount,
+                        t.PaymentMethod,
+                        Date = t.TransactionDate.ToString("MMM dd, yyyy HH:mm"),
+                        t.Status,
+                        FeeName = feeStruct?.Name ?? "School Fee"
+                    };
+                }).OrderByDescending(t => t.Date).ToList();
+
+                return Ok(list);
+            }
+            else
+            {
+                // Admin view
+                var studentUsers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student");
+                var studentIds = studentUsers.Select(u => u.Id).ToList();
+                var invoices = await _unitOfWork.Invoices.FindAsync(i => studentIds.Contains(i.StudentId));
+                var invoiceIds = invoices.Select(inv => inv.Id).ToList();
+                var transactions = await _unitOfWork.Transactions.FindAsync(t => invoiceIds.Contains(t.InvoiceId));
+                var feeStructures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId);
+
+                var list = transactions.Select(t => {
+                    var invoice = invoices.FirstOrDefault(inv => inv.Id == t.InvoiceId);
+                    var student = invoice != null ? studentUsers.FirstOrDefault(u => u.Id == invoice.StudentId) : null;
+                    var feeStruct = invoice != null ? feeStructures.FirstOrDefault(fs => fs.Id == invoice.FeeStructureId) : null;
+                    return new {
+                        t.Id,
+                        t.ReferenceNumber,
+                        t.Amount,
+                        t.PaymentMethod,
+                        Date = t.TransactionDate.ToString("MMM dd, yyyy HH:mm"),
+                        t.Status,
+                        StudentName = student != null ? $"{student.FirstName} {student.LastName}" : "Unknown Student",
+                        FeeName = feeStruct?.Name ?? "School Fee"
+                    };
+                }).OrderByDescending(t => t.Date).ToList();
+
+                return Ok(list);
+            }
+        }
+
+        private bool VerifySignature(string orderId, string paymentId, string signature, string keySecret)
+        {
+            var payload = $"{orderId}|{paymentId}";
+            var keyBytes = Encoding.UTF8.GetBytes(keySecret);
+            using (var hmac = new System.Security.Cryptography.HMACSHA256(keyBytes))
+            {
+                var hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
+                var generatedSignature = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+                return string.Equals(generatedSignature, signature, StringComparison.OrdinalIgnoreCase);
+            }
         }
     }
 
@@ -222,5 +585,18 @@ namespace EduVault.Api.Controllers
     {
         public Guid InvoiceId { get; set; }
         public string PaymentMethod { get; set; } = "Visa";
+    }
+
+    public class CreateOrderRequest
+    {
+        public Guid InvoiceId { get; set; }
+    }
+
+    public class VerifyPaymentRequest
+    {
+        public Guid InvoiceId { get; set; }
+        public string RazorpayOrderId { get; set; } = string.Empty;
+        public string RazorpayPaymentId { get; set; } = string.Empty;
+        public string RazorpaySignature { get; set; } = string.Empty;
     }
 }

@@ -26,6 +26,7 @@ namespace EduVault.Core.Interfaces
         IRepository<Section> Sections { get; }
         IRepository<Room> Rooms { get; }
         IRepository<Attendance> Attendances { get; }
+        IRepository<PlatformSetting> PlatformSettings { get; }
         Task<int> CompleteAsync();
     }
 }

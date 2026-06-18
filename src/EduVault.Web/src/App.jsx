@@ -10,6 +10,7 @@ import Landing from './pages/marketing/Landing';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import ForgotPassword from './pages/auth/ForgotPassword';
+import Maintenance from './pages/auth/Maintenance';
 
 // Layouts
 import SuperAdminLayout from './layouts/SuperAdminLayout';
@@ -31,6 +32,7 @@ import Teachers from './pages/school-admin/Teachers';
 import Fees from './pages/school-admin/Fees';
 import { Classes, Notices, Exams, Admission } from './pages/school-admin/AdminPages';
 import Setup from './pages/school-admin/Setup';
+import Reports from './pages/school-admin/Reports';
 
 // Teacher Pages
 import {
@@ -67,6 +69,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/maintenance" element={<Maintenance />} />
 
           {/* Super Admin */}
           <Route element={<ProtectedRoute allowedRoles={['superadmin']} />}>
@@ -92,6 +95,7 @@ export default function App() {
               <Route path="classes" element={<Classes />} />
               <Route path="fees" element={<Fees />} />
               <Route path="exams" element={<Exams />} />
+              <Route path="reports" element={<Reports />} />
               <Route path="notices" element={<Notices />} />
               <Route path="setup" element={<Setup />} />
             </Route>

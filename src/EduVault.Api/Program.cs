@@ -20,6 +20,7 @@ builder.Services.AddDbContext<EduVaultDbContext>(options =>
 // Register repositories and services
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddHttpClient();
 
 // Configure JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Secret"] ?? "EduVaultSuperSecretJWTKey2025!WithSecureKey32BytesLength";
@@ -144,6 +145,54 @@ using (var scope = app.Services.CreateScope())
 
             cmd.CommandText = "ALTER TABLE \"Exams\" ADD COLUMN IF NOT EXISTS \"Time\" TEXT NULL;";
             await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"FeeStructures\" ADD COLUMN IF NOT EXISTS \"Installments\" INTEGER NOT NULL DEFAULT 1;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"FeeStructures\" ADD COLUMN IF NOT EXISTS \"StudentId\" UUID NULL;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"FeeStructures\" ADD COLUMN IF NOT EXISTS \"SubmissionTime\" TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"FeeStructures\" ADD COLUMN IF NOT EXISTS \"Breakdown\" TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"Classes\" ADD COLUMN IF NOT EXISTS \"AreMarksPublished\" BOOLEAN NOT NULL DEFAULT FALSE;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"Schools\" ADD COLUMN IF NOT EXISTS \"LogoUrl\" TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"Schools\" ADD COLUMN IF NOT EXISTS \"EmailDomain\" TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"Schools\" ADD COLUMN IF NOT EXISTS \"ThemeColor\" TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS ""PlatformSettings"" (
+                    ""Id"" UUID PRIMARY KEY,
+                    ""OrgName"" TEXT NOT NULL,
+                    ""LogoUrl"" TEXT NULL,
+                    ""PrimaryColor"" TEXT NULL,
+                    ""MaintenanceMode"" BOOLEAN NOT NULL DEFAULT FALSE,
+                    ""MaintenanceMessage"" TEXT NULL,
+                    ""BackupFrequency"" TEXT NULL,
+                    ""BackupTime"" TEXT NULL,
+                    ""BackupTarget"" TEXT NULL
+                );";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "SELECT COUNT(*) FROM \"PlatformSettings\";";
+            var settingsCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            if (settingsCount == 0)
+            {
+                cmd.CommandText = @"
+                    INSERT INTO ""PlatformSettings"" (""Id"", ""OrgName"", ""LogoUrl"", ""PrimaryColor"", ""MaintenanceMode"", ""MaintenanceMessage"", ""BackupFrequency"", ""BackupTime"", ""BackupTarget"")
+                    VALUES ('" + Guid.NewGuid() + @"', 'SuperAdmin Global', '/logo.jpeg', '#1a2744', false, 'Scheduled maintenance in progress. We''ll be back shortly.', 'Daily', '02:00 AM', 'Amazon S3: production-vault-01');";
+                await cmd.ExecuteNonQueryAsync();
+            }
         }
         catch (Exception migEx)
         {

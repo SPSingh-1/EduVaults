@@ -3,18 +3,18 @@ import { useState, useEffect } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
-import { 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  Cell 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  Cell
 } from 'recharts';
 
 const teacherLinks = [
@@ -75,7 +75,7 @@ export const TeacherDashboard = () => {
   return (
     <div>
       <Topbar title="Teacher Dashboard" subtitle="Academic Year 2023-24" />
-      
+
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
           { label: 'My Classes', value: stats?.totalClasses ?? '0', sub: stats?.myClassesToday || 'No classes today', icon: '🏫' },
@@ -147,21 +147,19 @@ export const TeacherDashboard = () => {
           <div className="flex bg-gray-100 p-0.5 rounded-lg">
             <button
               onClick={() => setScheduleView('today')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                scheduleView === 'today'
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${scheduleView === 'today'
                   ? 'bg-white text-primary shadow-sm'
                   : 'text-gray-500 hover:text-primary'
-              }`}
+                }`}
             >
               Today's Schedule
             </button>
             <button
               onClick={() => setScheduleView('weekly')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                scheduleView === 'weekly'
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${scheduleView === 'weekly'
                   ? 'bg-white text-primary shadow-sm'
                   : 'text-gray-500 hover:text-primary'
-              }`}
+                }`}
             >
               Weekly Timetable
             </button>
@@ -190,15 +188,15 @@ export const TeacherDashboard = () => {
                       <td className="table-td text-center text-sm font-semibold text-blue-600">{item.subjectName}</td>
                       <td className="table-td text-center">
                         {item.isRescheduled ? (
-                          <span 
-                            title={item.remark} 
+                          <span
+                            title={item.remark}
                             className="badge badge-danger text-2xs font-semibold cursor-help"
                           >
                             {item.remark && item.remark.length > 30 ? item.remark.slice(0, 30) + '...' : item.remark}
                           </span>
                         ) : (
-                          <span 
-                            title={item.remark || 'Regular Class'} 
+                          <span
+                            title={item.remark || 'Regular Class'}
                             className="text-xs text-gray-400 cursor-help"
                           >
                             {item.remark ? (item.remark.length > 30 ? item.remark.slice(0, 30) + '...' : item.remark) : 'Regular Class'}
@@ -246,8 +244,8 @@ export const TeacherDashboard = () => {
                   {dayItems.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {dayItems.map((item, idx) => (
-                        <div 
-                          key={item.id || idx} 
+                        <div
+                          key={item.id || idx}
                           className="p-3 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-between hover:border-blue-200 transition-colors shadow-sm"
                         >
                           <div>
@@ -263,16 +261,16 @@ export const TeacherDashboard = () => {
                           </div>
                           <div>
                             {item.isRescheduled ? (
-                              <span 
-                                className="badge badge-danger text-2xs font-semibold cursor-help" 
+                              <span
+                                className="badge badge-danger text-2xs font-semibold cursor-help"
                                 title={item.remark}
                               >
                                 {item.remark && item.remark.length > 15 ? item.remark.slice(0, 15) + '...' : item.remark || 'Rescheduled'}
                               </span>
                             ) : (
                               item.remark && (
-                                <span 
-                                  className="text-2xs text-gray-400 italic cursor-help" 
+                                <span
+                                  className="text-2xs text-gray-400 italic cursor-help"
                                   title={item.remark}
                                 >
                                   {item.remark.length > 15 ? item.remark.slice(0, 15) + '...' : item.remark}
@@ -305,7 +303,7 @@ export const TeacherClasses = () => {
   const [showRemarkModal, setShowRemarkModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [activeItem, setActiveItem] = useState(null);
-  
+
   const [remarkText, setRemarkText] = useState('');
   const [cancelReason, setCancelReason] = useState('');
 
@@ -349,7 +347,7 @@ export const TeacherClasses = () => {
       const finalRemark = isCancelled
         ? (remarkText.startsWith('Cancelled:') ? remarkText : `Cancelled: ${remarkText}`)
         : remarkText;
-      
+
       await apiClient.post(`/academics/timetable/remark/${activeItem.id}`, { remark: finalRemark });
       setShowRemarkModal(false);
       setRemarkText('');
@@ -391,7 +389,7 @@ export const TeacherClasses = () => {
   return (
     <div>
       <Topbar title="My Assigned Classes" subtitle="Manage schedules, remarks, and cancellations" />
-      
+
       {loading ? (
         <div className="card text-center py-12 text-gray-400 text-sm">Loading classroom mappings...</div>
       ) : (
@@ -417,7 +415,7 @@ export const TeacherClasses = () => {
             <h3 className="font-display font-semibold text-primary text-base mb-4">
               📅 Timetable Schedule: Class {selectedClass?.grade} - {selectedClass?.section}
             </h3>
-            
+
             <div className="grid grid-cols-6 gap-2 mb-2 text-center text-xs font-bold text-gray-400">
               <div className="py-2 border border-transparent">Time</div>
               {days.map(d => <div key={d} className="py-2 border border-transparent">{d}</div>)}
@@ -428,20 +426,19 @@ export const TeacherClasses = () => {
                 <div className="flex flex-col items-center justify-center p-2 bg-gray-50 border border-gray-100 rounded-lg text-2xs font-bold text-gray-500">
                   <span>Period {period}</span>
                 </div>
-                
+
                 {days.map(day => {
                   const cell = schedule.find(s => s.periodNumber === period && s.dayOfWeek === day);
                   const isCancelled = cell?.isRescheduled && cell?.remark?.startsWith('Cancelled');
                   return (
                     <div
                       key={day}
-                      className={`p-3 border rounded-xl flex flex-col justify-between min-h-[90px] text-left relative ${
-                        isCancelled
+                      className={`p-3 border rounded-xl flex flex-col justify-between min-h-[90px] text-left relative ${isCancelled
                           ? 'border-red-200 bg-red-50/50'
                           : cell
-                          ? 'border-blue-200 bg-blue-50/30'
-                          : 'border-dashed border-gray-200 bg-gray-50/20'
-                      }`}
+                            ? 'border-blue-200 bg-blue-50/30'
+                            : 'border-dashed border-gray-200 bg-gray-50/20'
+                        }`}
                     >
                       {cell ? (
                         <>
@@ -449,26 +446,25 @@ export const TeacherClasses = () => {
                             <div className="text-xs font-bold text-primary leading-tight">{cell.subjectName}</div>
                             <div className="text-[10px] text-gray-400 mt-0.5">{cell.teacherName}</div>
                             {cell.remark && (
-                              <div 
+                              <div
                                 title={cell.remark}
-                                className={`text-[10px] leading-snug font-medium mt-1.5 p-1 px-2 rounded-md border cursor-help transition-all ${
-                                  isCancelled 
-                                    ? 'text-red-700 bg-red-50 border-red-100' 
+                                className={`text-[10px] leading-snug font-medium mt-1.5 p-1 px-2 rounded-md border cursor-help transition-all ${isCancelled
+                                    ? 'text-red-700 bg-red-50 border-red-100'
                                     : 'text-blue-700 bg-blue-50 border-blue-100'
-                                }`}
+                                  }`}
                               >
                                 💬 {cell.remark.length > 30 ? cell.remark.slice(0, 30) + '...' : cell.remark}
                               </div>
                             )}
                           </div>
-                          
+
                           <div className="flex gap-2 mt-3 border-t border-gray-100 pt-2 no-print">
                             <button
-                              onClick={() => { 
-                                setActiveItem(cell); 
+                              onClick={() => {
+                                setActiveItem(cell);
                                 const isCancelledClass = cell.isRescheduled && cell.remark?.startsWith('Cancelled');
-                                setRemarkText(isCancelledClass ? cell.remark.replace(/^Cancelled:\s*/, '') : cell.remark || ''); 
-                                setShowRemarkModal(true); 
+                                setRemarkText(isCancelledClass ? cell.remark.replace(/^Cancelled:\s*/, '') : cell.remark || '');
+                                setShowRemarkModal(true);
                               }}
                               className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-colors"
                             >
@@ -553,11 +549,11 @@ export const TeacherStudents = () => {
   const [classes, setClasses] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
-  
+
   const [showViewModal, setShowViewModal] = useState(false);
   const [showRemarkModal, setShowRemarkModal] = useState(false);
   const [viewStudent, setViewStudent] = useState(null);
-  
+
   const [remarkText, setRemarkText] = useState('');
   const [tag, setTag] = useState('NEUTRAL');
   const [savingRemark, setSavingRemark] = useState(false);
@@ -568,7 +564,7 @@ export const TeacherStudents = () => {
       setClasses(clsRes.data);
 
       const studRes = await apiClient.get('/academics/students');
-      
+
       // Filter roster to show students matching classes taught by the teacher
       const taughtClassIds = clsRes.data.map(c => c.id);
       const taughtStudents = studRes.data.filter(s => taughtClassIds.includes(s.classId));
@@ -615,7 +611,7 @@ export const TeacherStudents = () => {
   return (
     <div>
       <Topbar title="Students Roster" subtitle="Directory of students enrolled in your class sections" />
-      
+
       <div className="card">
         <div className="flex items-center gap-4 mb-5">
           <div className="flex-1 relative">
@@ -741,15 +737,14 @@ export const TeacherStudents = () => {
                       key={t}
                       type="button"
                       onClick={() => setTag(t)}
-                      className={`py-2 rounded-lg text-xs font-bold border-2 transition-all ${
-                        tag === t
+                      className={`py-2 rounded-lg text-xs font-bold border-2 transition-all ${tag === t
                           ? t === 'POSITIVE'
                             ? 'border-green-500 bg-green-50 text-green-700'
                             : t === 'NEGATIVE'
-                            ? 'border-red-500 bg-red-50 text-red-700'
-                            : 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                              ? 'border-red-500 bg-red-50 text-red-700'
+                              : 'border-yellow-500 bg-yellow-50 text-yellow-700'
                           : 'border-gray-200 text-gray-400'
-                      }`}
+                        }`}
                     >
                       {t}
                     </button>
@@ -825,7 +820,7 @@ export const Attendance = () => {
       // Map API records directly to student state (names come from API)
       const mapped = records.map(r => {
         let lateMins = '';
-        let cleanRemark = '';
+        let cleanRemark;
         if (r.status === 'Late' && r.remarks) {
           const match = r.remarks.match(/^Late by (\d+) mins\.?\s*(.*)/);
           if (match) { lateMins = match[1]; cleanRemark = match[2]; }
@@ -1009,19 +1004,17 @@ export const Attendance = () => {
             {students.map((s, idx) => (
               <div
                 key={s.id}
-                className={`bg-white rounded-xl border shadow-sm px-5 py-4 flex flex-wrap items-center gap-4 transition-all ${
-                  s.status === 'Absent' ? 'border-red-100 bg-red-50/30'
-                  : s.status === 'Late' ? 'border-amber-100 bg-amber-50/30'
-                  : 'border-gray-100'
-                } ${attendanceSaved && !isEditing ? 'opacity-80' : ''}`}
+                className={`bg-white rounded-xl border shadow-sm px-5 py-4 flex flex-wrap items-center gap-4 transition-all ${s.status === 'Absent' ? 'border-red-100 bg-red-50/30'
+                    : s.status === 'Late' ? 'border-amber-100 bg-amber-50/30'
+                      : 'border-gray-100'
+                  } ${attendanceSaved && !isEditing ? 'opacity-80' : ''}`}
               >
                 {/* Student Info */}
                 <div className="flex items-center gap-3 flex-1 min-w-[180px]">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm ${
-                    s.status === 'Absent' ? 'bg-red-100 text-red-600'
-                    : s.status === 'Late' ? 'bg-amber-100 text-amber-700'
-                    : 'bg-green-100 text-green-700'
-                  }`}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm ${s.status === 'Absent' ? 'bg-red-100 text-red-600'
+                      : s.status === 'Late' ? 'bg-amber-100 text-amber-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}>
                     {s.name ? s.name[0].toUpperCase() : '?'}
                   </div>
                   <div>
@@ -1042,9 +1035,8 @@ export const Attendance = () => {
                       type="button"
                       disabled={attendanceSaved && !isEditing}
                       onClick={() => setStatus(s.id, key)}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold border-2 transition-all min-w-[72px] ${
-                        s.status === key ? activeClass : inactiveClass
-                      } ${attendanceSaved && !isEditing ? 'cursor-not-allowed opacity-60' : ''}`}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold border-2 transition-all min-w-[72px] ${s.status === key ? activeClass : inactiveClass
+                        } ${attendanceSaved && !isEditing ? 'cursor-not-allowed opacity-60' : ''}`}
                     >
                       {key}
                     </button>
@@ -1115,14 +1107,39 @@ export const MarksEntry = () => {
   const [subjectsList, setSubjectsList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [savingProgress, setSavingProgress] = useState(false);
+  const [isClassTeacher, setIsClassTeacher] = useState(true);
+  const [teacherClasses, setTeacherClasses] = useState([]);
+  const [selectedExamType, setSelectedExamType] = useState('Semester Examination');
+
+  // States for marks entry popup
+  const [showMarksPopup, setShowMarksPopup] = useState(false);
+  const [popupForm, setPopupForm] = useState({ subjectId: '', theoryMarks: '', practicalMarks: '', remarks: '' });
+  const [globalSubjects, setGlobalSubjects] = useState([]);
 
   const fetchRosterData = async () => {
     try {
+      const classesRes = await apiClient.get('/academics/teacher/classes');
+      const classesData = Array.isArray(classesRes.data) ? classesRes.data : [];
+      setTeacherClasses(classesData);
+      const classTeacherClasses = classesData.filter(c => c.isClassTeacher || c.IsClassTeacher);
+      setIsClassTeacher(classTeacherClasses.length > 0);
+
+      const classTeacherClassIds = classTeacherClasses.map(c => c.id);
+
       const res = await apiClient.get('/academics/students');
-      setStudents(res.data);
-      if (res.data.length > 0) {
-        setSelectedStudentId(res.data[0].id);
+      const studentsData = Array.isArray(res.data) ? res.data : [];
+      const filteredStudents = studentsData.filter(s => classTeacherClassIds.includes(s.classId));
+
+      setStudents(filteredStudents);
+      if (filteredStudents.length > 0) {
+        setSelectedStudentId(filteredStudents[0].id);
+      } else {
+        setSelectedStudentId('');
       }
+
+      // Fetch global subjects as fallback
+      const subRes = await apiClient.get('/academics/subjects');
+      setGlobalSubjects(Array.isArray(subRes.data) ? subRes.data : []);
     } catch (err) {
       console.error(err);
     }
@@ -1136,7 +1153,7 @@ export const MarksEntry = () => {
     if (!selectedStudentId) return;
     try {
       setLoading(true);
-      const res = await apiClient.get(`/exams/student/${selectedStudentId}/subjects`);
+      const res = await apiClient.get(`/exams/student/${selectedStudentId}/subjects?examType=${selectedExamType}`);
       setSubjectsList(res.data);
     } catch (err) {
       console.error(err);
@@ -1147,7 +1164,7 @@ export const MarksEntry = () => {
 
   useEffect(() => {
     loadStudentGrades();
-  }, [selectedStudentId]);
+  }, [selectedStudentId, selectedExamType]);
 
   const updateSubjectField = (subjId, field, val) => {
     setSubjectsList(prev => prev.map(s => s.subjectId === subjId ? { ...s, [field]: val } : s));
@@ -1159,6 +1176,7 @@ export const MarksEntry = () => {
     try {
       const payload = {
         studentId: selectedStudentId,
+        examType: selectedExamType,
         subjects: subjectsList.map(s => ({
           subjectId: s.subjectId,
           theoryMarks: s.theoryMarks === '' || s.theoryMarks === null ? null : parseFloat(s.theoryMarks),
@@ -1166,31 +1184,27 @@ export const MarksEntry = () => {
           remarks: s.remarks || ''
         }))
       };
-      
+
       await apiClient.post('/exams/results/student-marks', payload);
-      
+
       // Send notices via Express auxiliary service to Student & Admin
       const studentObj = students.find(s => s.id === selectedStudentId);
       const teacherUser = JSON.parse(localStorage.getItem('eduvault_user'));
       const teacherName = teacherUser ? `${teacherUser.firstName} ${teacherUser.lastName}` : 'Class Teacher';
-      
-      // 1. Send notice to Student
-      await expressClient.post('/notifications', {
-        recipientId: selectedStudentId,
-        title: '📖 Report Card Update',
-        body: `Your teacher ${teacherName} has updated your theory/practical grades for this semester. Check the Results portal.`,
-        type: 'GENERAL'
-      });
 
-      // 2. Send notice to School Admin
-      await expressClient.post('/notifications', {
-        recipientId: 'SCHOOLADMINS',
-        title: '📋 Student Progress Saved',
-        body: `Academic progress report updated for student ${studentObj?.name || 'Bhavesh Jangid'} by teacher ${teacherName}.`,
-        type: 'GENERAL'
-      });
+      try {
+        // Send notice to School Admin for review/approval
+        await expressClient.post('/notifications', {
+          recipientId: 'SCHOOLADMINS',
+          title: '📋 Student Marks Submitted for Review',
+          body: `Semester grades updated for student ${studentObj?.name || 'Student'} by teacher ${teacherName}. Pending administrative approval and release.`,
+          type: 'GENERAL'
+        });
+      } catch (e) {
+        console.error('Failed to send notifications through auxiliary service', e);
+      }
 
-      alert('Student theory and practical marks saved successfully! Notifications pushed to student and portal admin.');
+      alert('Student theory and practical marks saved successfully! Submitted to admin for review.');
       loadStudentGrades();
     } catch (err) {
       console.error(err);
@@ -1200,20 +1214,107 @@ export const MarksEntry = () => {
     }
   };
 
+  const handlePopupSubjectChange = (subjectId) => {
+    const existing = subjectsList.find(s => s.subjectId === subjectId);
+    setPopupForm({
+      subjectId,
+      theoryMarks: existing && existing.theoryMarks !== null ? existing.theoryMarks.toString() : '',
+      practicalMarks: existing && existing.practicalMarks !== null ? existing.practicalMarks.toString() : '',
+      remarks: existing ? (existing.remarks || '') : ''
+    });
+  };
+
+  const handleSavePopupMarks = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!selectedStudentId || !popupForm.subjectId) return;
+
+    setSubjectsList(prev => {
+      const exists = prev.some(s => s.subjectId === popupForm.subjectId);
+      if (exists) {
+        return prev.map(s => s.subjectId === popupForm.subjectId ? {
+          ...s,
+          theoryMarks: popupForm.theoryMarks === '' ? null : parseFloat(popupForm.theoryMarks),
+          practicalMarks: popupForm.practicalMarks === '' ? null : parseFloat(popupForm.practicalMarks),
+          remarks: popupForm.remarks || ''
+        } : s);
+      } else {
+        const gSub = globalSubjects.find(s => s.id === popupForm.subjectId);
+        return [...prev, {
+          subjectId: popupForm.subjectId,
+          subjectName: gSub?.name || 'Unknown',
+          subjectCode: gSub?.code || '',
+          theoryMarks: popupForm.theoryMarks === '' ? null : parseFloat(popupForm.theoryMarks),
+          practicalMarks: popupForm.practicalMarks === '' ? null : parseFloat(popupForm.practicalMarks),
+          remarks: popupForm.remarks || ''
+        }];
+      }
+    });
+
+    setShowMarksPopup(false);
+    setPopupForm({ subjectId: '', theoryMarks: '', practicalMarks: '', remarks: '' });
+  };
+
+  const selectedStudent = students.find(s => s.id === selectedStudentId);
+  const classForSelectedStudent = selectedStudent ? teacherClasses.find(c => c.id === selectedStudent.classId) : null;
+  const isApproved = classForSelectedStudent?.areMarksPublished === true || classForSelectedStudent?.AreMarksPublished === true;
+
+  if (!isClassTeacher) {
+    return (
+      <div>
+        <Topbar title="Student Marks Entry" />
+        <div className="card max-w-xl mx-auto mt-8 text-center p-8 border border-amber-100 bg-amber-50/20 rounded-2xl">
+          <div className="text-4xl mb-3">⚠️</div>
+          <h3 className="font-display font-bold text-lg text-primary mb-2">Access Denied</h3>
+          <p className="text-gray-500 text-sm leading-relaxed mb-5">
+            Marks entry is restricted to Class Teachers only. You are not currently assigned as a Class Teacher (Advisor) for any active class sections.
+          </p>
+          <div className="inline-block px-3 py-1.5 rounded-lg bg-amber-100/50 text-amber-800 text-xs font-semibold">
+            Advisor Assignment Required
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <Topbar title="Student Marks Entry" />
+      
+      {isApproved && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-5 py-3 text-sm text-amber-800 flex items-center gap-2 font-medium">
+          ⚠️ Reports for this class have been approved and published by the administration. Editing is locked.
+        </div>
+      )}
+
       <div className="card">
-        <div className="flex items-center gap-4 mb-5 border-b border-gray-50 pb-4">
-          <div className="w-80">
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Select Student from Class Roster</label>
-            <select value={selectedStudentId} onChange={e => setSelectedStudentId(e.target.value)} className="input text-sm">
-              <option value="">Choose student...</option>
-              {students.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.class} {s.section})</option>
-              ))}
-            </select>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-5 border-b border-gray-50 pb-4">
+          <div className="flex flex-wrap items-center gap-4 flex-1">
+            <div className="w-72">
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Select Student from Class Roster</label>
+              <select value={selectedStudentId} onChange={e => setSelectedStudentId(e.target.value)} className="input text-sm">
+                <option value="">Choose student...</option>
+                {students.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.class} {s.section})</option>
+                ))}
+              </select>
+            </div>
+            <div className="w-72">
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Select Examination Type</label>
+              <select value={selectedExamType} onChange={e => setSelectedExamType(e.target.value)} className="input text-sm">
+                <option value="Semester Examination">Semester Examination</option>
+                <option value="Mid-term assessment">Mid-term assessment</option>
+                <option value="Final Examination">Final Examination</option>
+              </select>
+            </div>
           </div>
+          {selectedStudentId && !isApproved && (
+            <button
+              onClick={() => setShowMarksPopup(true)}
+              className="btn-primary text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-1.5 mt-5"
+            >
+              <span>+ Enter Subject Mark</span>
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -1245,10 +1346,11 @@ export const MarksEntry = () => {
                           type="number"
                           min="0"
                           max="70"
+                          disabled={isApproved}
                           value={s.theoryMarks ?? ''}
                           onChange={e => updateSubjectField(s.subjectId, 'theoryMarks', e.target.value)}
                           placeholder="e.g. 55"
-                          className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center m-auto focus:ring-1 focus:ring-primary/20"
+                          className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center m-auto focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-100"
                         />
                       </td>
                       <td className="table-td">
@@ -1256,19 +1358,21 @@ export const MarksEntry = () => {
                           type="number"
                           min="0"
                           max="30"
+                          disabled={isApproved}
                           value={s.practicalMarks ?? ''}
                           onChange={e => updateSubjectField(s.subjectId, 'practicalMarks', e.target.value)}
                           placeholder="e.g. 25"
-                          className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center m-auto focus:ring-1 focus:ring-primary/20"
+                          className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center m-auto focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-100"
                         />
                       </td>
                       <td className="table-td text-center font-bold text-primary text-sm">{total}</td>
                       <td className="table-td">
                         <input
+                          disabled={isApproved}
                           value={s.remarks || ''}
                           onChange={e => updateSubjectField(s.subjectId, 'remarks', e.target.value)}
                           placeholder="Feedback remark..."
-                          className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-primary/20"
+                          className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-100"
                         />
                       </td>
                     </tr>
@@ -1282,7 +1386,7 @@ export const MarksEntry = () => {
               </tbody>
             </table>
 
-            {subjectsList.length > 0 && (
+            {subjectsList.length > 0 && !isApproved && (
               <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
                 <button onClick={handleSaveMarks} disabled={savingProgress} className="btn-primary text-sm">
                   {savingProgress ? 'Saving Student Progress...' : '💾 Save Student Progress'}
@@ -1292,6 +1396,108 @@ export const MarksEntry = () => {
           </div>
         )}
       </div>
+
+      {/* Enter Subject Mark Popup Modal */}
+      {showMarksPopup && selectedStudentId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+              <div>
+                <h3 className="font-display font-bold text-base">✏️ Enter Subject Mark</h3>
+                <p className="text-blue-200 text-xxs">
+                  Student: {students.find(s => s.id === selectedStudentId)?.name || 'Select student'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMarksPopup(false);
+                  setPopupForm({ subjectId: '', theoryMarks: '', practicalMarks: '', remarks: '' });
+                }}
+                className="text-white hover:text-blue-200 text-lg"
+              >
+                ✖
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePopupMarks} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Select Subject *</label>
+                <select
+                  required
+                  value={popupForm.subjectId}
+                  onChange={e => handlePopupSubjectChange(e.target.value)}
+                  className="input text-sm"
+                >
+                  <option value="">Choose Subject</option>
+                  {globalSubjects.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {s.code ? `(${s.code.toUpperCase()})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Theory Marks (Max 70)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="70"
+                    value={popupForm.theoryMarks}
+                    onChange={e => setPopupForm(p => ({ ...p, theoryMarks: e.target.value }))}
+                    placeholder="e.g. 55"
+                    className="input text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Practical Marks (Max 30)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="30"
+                    value={popupForm.practicalMarks}
+                    onChange={e => setPopupForm(p => ({ ...p, practicalMarks: e.target.value }))}
+                    placeholder="e.g. 25"
+                    className="input text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Subject Remarks</label>
+                <input
+                  value={popupForm.remarks}
+                  onChange={e => setPopupForm(p => ({ ...p, remarks: e.target.value }))}
+                  placeholder="Feedback / remark..."
+                  className="input text-sm"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMarksPopup(false);
+                    setPopupForm({ subjectId: '', theoryMarks: '', practicalMarks: '', remarks: '' });
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-500 font-semibold text-xs hover:bg-gray-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingProgress || !popupForm.subjectId}
+                  className="btn-primary text-xs font-bold py-2.5 px-4 rounded-xl"
+                >
+                  {savingProgress ? 'Saving...' : '💾 Save Marks'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1299,12 +1505,12 @@ export const MarksEntry = () => {
 // --- Student Remarks Feed ---
 export const Remarks = () => {
   const [remarksFeed, setRemarksFeed] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [showNew, setShowNew] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState('');
-  const [remarkText, setRemarkText] = useState('');
-  const [tag, setTag] = useState('NEUTRAL');
-  const [loading, setLoading] = useState(false);
+      const [students, setStudents] = useState([]);
+      const [showNew, setShowNew] = useState(false);
+      const [selectedStudent, setSelectedStudent] = useState('');
+      const [remarkText, setRemarkText] = useState('');
+      const [tag, setTag] = useState('NEUTRAL');
+      const [loading, setLoading] = useState(false);
 
   const fetchFeed = async () => {
     try {
@@ -1317,149 +1523,148 @@ export const Remarks = () => {
         setSelectedStudent(studRes.data[0].id);
       }
     } catch (err) {
-      console.error(err);
+        console.error(err);
     }
   };
 
   useEffect(() => {
-    fetchFeed();
+        fetchFeed();
   }, []);
 
   const handleSaveRemark = async (e) => {
-    e.preventDefault();
-    if (!selectedStudent || !remarkText) return;
-    setLoading(true);
-    try {
+        e.preventDefault();
+      if (!selectedStudent || !remarkText) return;
+      setLoading(true);
+      try {
       const studentObj = students.find(s => s.id === selectedStudent);
       await expressClient.post('/remarks', {
         studentId: selectedStudent,
-        studentName: studentObj?.name || 'Unknown',
-        classInfo: `${studentObj?.class || 'Grade 10'} - ${studentObj?.section || 'Section A'}`,
-        remarkText,
-        tag
+      studentName: studentObj?.name || 'Unknown',
+      classInfo: `${studentObj?.class || 'Grade 10'} - ${studentObj?.section || 'Section A'}`,
+      remarkText,
+      tag
       });
       setShowNew(false);
       setRemarkText('');
       fetchFeed();
     } catch (err) {
-      console.error('Error saving remark:', err);
+        console.error('Error saving remark:', err);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
-  return (
-    <div>
-      <Topbar title="Student Remarks Feed" />
-      <div className="card mb-4">
-        <div className="flex justify-between mb-4">
-          <h3 className="font-display font-semibold text-primary">Academic Remarks Feed</h3>
-          <button onClick={() => setShowNew(true)} className="btn-primary text-xs">+ Add Remark</button>
-        </div>
-        <div className="space-y-3">
-          {remarksFeed.map((r, i) => (
-            <div key={r._id || i} className="border border-gray-100 rounded-xl p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0">
-                  {r.studentName ? r.studentName[0] : '?'}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <div>
-                      <span className="font-semibold text-sm text-primary">{r.studentName}</span>
-                      <span className="text-xs text-gray-400 ml-2">{r.classInfo}</span>
+      return (
+      <div>
+        <Topbar title="Student Remarks Feed" />
+        <div className="card mb-4">
+          <div className="flex justify-between mb-4">
+            <h3 className="font-display font-semibold text-primary">Academic Remarks Feed</h3>
+            <button onClick={() => setShowNew(true)} className="btn-primary text-xs">+ Add Remark</button>
+          </div>
+          <div className="space-y-3">
+            {remarksFeed.map((r, i) => (
+              <div key={r._id || i} className="border border-gray-100 rounded-xl p-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0">
+                    {r.studentName ? r.studentName[0] : '?'}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <span className="font-semibold text-sm text-primary">{r.studentName}</span>
+                        <span className="text-xs text-gray-400 ml-2">{r.classInfo}</span>
+                      </div>
+                      <span className="text-xs text-gray-400">{new Date(r.createdAt).toLocaleString()}</span>
                     </div>
-                    <span className="text-xs text-gray-400">{new Date(r.createdAt).toLocaleString()}</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{r.remarkText}</p>
-                  <div className="mt-2">
-                    <span className={`badge ${r.tag === 'URGENT' ? 'badge-danger' : r.tag === 'POSITIVE' ? 'badge-success' : r.tag === 'NEGATIVE' ? 'bg-red-100 text-red-800' : 'badge-gray'}`}>
-                      ● {r.tag}
-                    </span>
+                    <p className="text-sm text-gray-600">{r.remarkText}</p>
+                    <div className="mt-2">
+                      <span className={`badge ${r.tag === 'URGENT' ? 'badge-danger' : r.tag === 'POSITIVE' ? 'badge-success' : r.tag === 'NEGATIVE' ? 'bg-red-100 text-red-800' : 'badge-gray'}`}>
+                        ● {r.tag}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-          {remarksFeed.length === 0 && (
-            <div className="text-center py-6 text-gray-400 text-sm">No remarks logged for this classroom.</div>
-          )}
+            ))}
+            {remarksFeed.length === 0 && (
+              <div className="text-center py-6 text-gray-400 text-sm">No remarks logged for this classroom.</div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {showNew && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleSaveRemark} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="font-display font-bold text-primary text-xl">Add New Remark</h3>
-              <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-primary">✖</button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Select Student *</label>
-                <select required value={selectedStudent} onChange={e => setSelectedStudent(e.target.value)} className="input">
-                  <option value="">Select student...</option>
-                  {students.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.class})</option>
-                  ))}
-                </select>
+        {showNew && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <form onSubmit={handleSaveRemark} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="font-display font-bold text-primary text-xl">Add New Remark</h3>
+                <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-primary">✖</button>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-2">Remark Type / Tag</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['POSITIVE', 'NEGATIVE', 'URGENT', 'NEUTRAL'].map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setTag(t)}
-                      className={`py-2 rounded-lg text-xs font-bold border-2 transition-all ${
-                        tag === t
-                          ? t === 'POSITIVE'
-                            ? 'border-green-500 bg-green-50 text-green-700'
-                            : t === 'NEGATIVE'
-                            ? 'border-red-500 bg-red-50 text-red-700'
-                            : t === 'URGENT'
-                            ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
-                            : 'border-primary bg-primary/10 text-primary'
-                          : 'border-gray-200 text-gray-400'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Select Student *</label>
+                  <select required value={selectedStudent} onChange={e => setSelectedStudent(e.target.value)} className="input">
+                    <option value="">Select student...</option>
+                    {students.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.class})</option>
+                    ))}
+                  </select>
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-2">Remark Type / Tag</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['POSITIVE', 'NEGATIVE', 'URGENT', 'NEUTRAL'].map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setTag(t)}
+                        className={`py-2 rounded-lg text-xs font-bold border-2 transition-all ${tag === t
+                            ? t === 'POSITIVE'
+                              ? 'border-green-500 bg-green-50 text-green-700'
+                              : t === 'NEGATIVE'
+                                ? 'border-red-500 bg-red-50 text-red-700'
+                                : t === 'URGENT'
+                                  ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                                  : 'border-primary bg-primary/10 text-primary'
+                            : 'border-gray-200 text-gray-400'
+                          }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Remark Text *</label><textarea required value={remarkText} onChange={e => setRemarkText(e.target.value)} placeholder="Write your remark here..." className="input h-28 resize-none text-sm" /></div>
               </div>
-              <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Remark Text *</label><textarea required value={remarkText} onChange={e => setRemarkText(e.target.value)} placeholder="Write your remark here..." className="input h-28 resize-none text-sm" /></div>
-            </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
-              <button type="button" onClick={() => setShowNew(false)} className="btn-outline text-xs">Cancel</button>
-              <button type="submit" disabled={loading} className="btn-primary text-xs">
-                {loading ? 'Saving...' : 'Save Remark'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-    </div>
-  );
+              <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
+                <button type="button" onClick={() => setShowNew(false)} className="btn-outline text-xs">Cancel</button>
+                <button type="submit" disabled={loading} className="btn-primary text-xs">
+                  {loading ? 'Saving...' : 'Save Remark'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
+      );
 };
 
 // --- Homework Page ---
 export const Homework = () => {
   const [homeworks, setHomeworks] = useState([]);
-  const [classes, setClasses] = useState([]);
-  const [showNew, setShowNew] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+      const [classes, setClasses] = useState([]);
+      const [showNew, setShowNew] = useState(false);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState('');
 
-  // Form state
-  const [title, setTitle] = useState('');
-  const [classSelector, setClassSelector] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [instructions, setInstructions] = useState('');
+      // Form state
+      const [title, setTitle] = useState('');
+      const [classSelector, setClassSelector] = useState('');
+      const [dueDate, setDueDate] = useState('');
+      const [instructions, setInstructions] = useState('');
 
-  // Dropdown menu state
-  const [openMenuId, setOpenMenuId] = useState(null);
+      // Dropdown menu state
+      const [openMenuId, setOpenMenuId] = useState(null);
 
   // Close dropdown when clicking outside — use capture phase so it fires before child handlers
   useEffect(() => {
@@ -1469,7 +1674,7 @@ export const Homework = () => {
         setOpenMenuId(null);
       }
     };
-    document.addEventListener('click', handleClickOutside);
+      document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
@@ -1485,36 +1690,36 @@ export const Homework = () => {
         setClassSelector(clsRes.data[0].id);
       }
     } catch (err) {
-      console.error('Error fetching homeworks:', err);
+        console.error('Error fetching homeworks:', err);
     }
   };
 
   useEffect(() => {
-    fetchHomeworksAndClasses();
+        fetchHomeworksAndClasses();
   }, []);
 
   const handleCreate = async (e) => {
-    e.preventDefault();
-    if (!title || !dueDate || !instructions || !classSelector) {
-      setError('Please fill in all fields.');
+        e.preventDefault();
+      if (!title || !dueDate || !instructions || !classSelector) {
+        setError('Please fill in all fields.');
       return;
     }
-    setError('');
-    setLoading(true);
-    try {
+      setError('');
+      setLoading(true);
+      try {
       // Find class by ID for accurate enrolled count
       const matchedClassObj = classes.find(c => c.id === classSelector);
       const totalStudents = matchedClassObj ? (matchedClassObj.enrolled || 0) : 0;
       const formattedClassName = matchedClassObj
-        ? `Class ${matchedClassObj.grade} - ${matchedClassObj.section}`
-        : `Class ${classSelector}`;
+      ? `Class ${matchedClassObj.grade} - ${matchedClassObj.section}`
+      : `Class ${classSelector}`;
 
       await expressClient.post('/homework', {
         title,
         className: formattedClassName,
-        dueDate,
-        instructions,
-        totalStudents
+      dueDate,
+      instructions,
+      totalStudents
       });
       setShowNew(false);
       setTitle('');
@@ -1522,62 +1727,62 @@ export const Homework = () => {
       setDueDate('');
       fetchHomeworksAndClasses();
     } catch (err) {
-      console.error(err);
+        console.error(err);
       setError('Failed to create assignment.');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
   const handleSimulateSubmit = async (id) => {
-    setOpenMenuId(null);
-    try {
-      await expressClient.put(`/homework/${id}/submit`);
+        setOpenMenuId(null);
+      try {
+        await expressClient.put(`/homework/${id}/submit`);
       fetchHomeworksAndClasses();
     } catch (err) {
-      console.error(err);
+        console.error(err);
       alert('Failed to log submission.');
     }
   };
 
   const handleUpdateStatus = async (id, status) => {
-    setOpenMenuId(null);
-    try {
-      await expressClient.put(`/homework/${id}/status`, { status });
+        setOpenMenuId(null);
+      try {
+        await expressClient.put(`/homework/${id}/status`, { status });
       fetchHomeworksAndClasses();
     } catch (err) {
-      console.error(err);
+        console.error(err);
       alert('Failed to update homework status.');
     }
   };
 
   const handleSyncCount = async (id, className) => {
-    setOpenMenuId(null);
-    try {
+        setOpenMenuId(null);
+      try {
       // Find the matching class by name to get current enrolled count
       const match = classes.find(c =>
-        `Class ${c.grade} - ${c.section}` === className ||
-        `Class ${c.grade}` === className ||
-        `Class ${c.grade} ${c.section}` === className
+      `Class ${c.grade} - ${c.section}` === className ||
+      `Class ${c.grade}` === className ||
+      `Class ${c.grade} ${c.section}` === className
       );
       const totalStudents = match ? (match.enrolled || 0) : 0;
-      await expressClient.put(`/homework/${id}/sync-count`, { totalStudents });
+      await expressClient.put(`/homework/${id}/sync-count`, {totalStudents});
       fetchHomeworksAndClasses();
     } catch (err) {
-      console.error(err);
+        console.error(err);
       alert('Failed to sync enrollment count.');
     }
   };
 
   const handleDeleteHomework = async (id) => {
-    setOpenMenuId(null);
-    if (window.confirm('Are you sure you want to delete this homework assignment?')) {
+        setOpenMenuId(null);
+      if (window.confirm('Are you sure you want to delete this homework assignment?')) {
       try {
         await expressClient.delete(`/homework/${id}`);
-        fetchHomeworksAndClasses();
+      fetchHomeworksAndClasses();
       } catch (err) {
         console.error(err);
-        alert('Failed to delete homework.');
+      alert('Failed to delete homework.');
       }
     }
   };
@@ -1586,147 +1791,147 @@ export const Homework = () => {
   const pendingCount = homeworks.filter(h => h.status === 'Pending Review').length;
   const completedCount = homeworks.filter(h => h.status === 'Completed').length;
 
-  return (
-    <div>
-      <Topbar title="Assigned Homework" subtitle="Dashboard › Homework"
-        actions={<button onClick={() => { setError(''); setShowNew(true); }} className="btn-primary text-sm">+ Create New Homework</button>} />
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {[
-          { l: 'Active Assignments', v: activeCount.toString(), sub: 'Current term', icon: '📋' },
-          { l: 'Pending Review', v: pendingCount.toString(), sub: 'Needs attention', icon: '⚠️', warn: pendingCount > 0 },
-          { l: 'Completed', v: completedCount.toString(), sub: 'Archived assignments', icon: '✅' }
-        ].map(s => (
-          <div key={s.l} className="stat-card flex items-center gap-3">
-            <span className="text-2xl">{s.icon}</span>
-            <div>
-              <div className="font-display text-2xl font-bold text-primary">{s.v}</div>
-              <div className="text-xs text-gray-500">{s.l}</div>
-              <div className={`text-xs font-medium ${s.warn ? 'text-yellow-500' : 'text-blue-500'}`}>{s.sub}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="card">
-        <table className="w-full">
-          <thead><tr className="border-b border-gray-100">{['Assignment & Class', 'Due Date', 'Submissions', 'Status', 'Actions'].map(h => <th key={h} className="table-th">{h}</th>)}</tr></thead>
-          <tbody>
-            {homeworks.map((h, i) => {
-              // Parse submissions: prefer numeric fields, fall back to parsing "X/Y" string
-              const subStr = (h.submissions || '0/0').split('/');
-              const submittedFallback = parseInt(subStr[0]) || 0;
-              const totalFallback = parseInt(subStr[1]) || 0;
-              const submitted = (typeof h.submittedCount === 'number') ? h.submittedCount : submittedFallback;
-              const total = (typeof h.totalStudents === 'number' && h.totalStudents > 0) ? h.totalStudents : totalFallback;
-              const pct = total > 0 ? Math.min(100, Math.round((submitted / total) * 100)) : 0;
-              const menuId = h._id || i;
-              return (
-                <tr key={menuId} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="table-td"><div className="font-semibold text-sm text-primary">{h.title}</div><div className="text-xs text-gray-400">{h.className}</div></td>
-                  <td className="table-td text-sm text-gray-500">📅 {new Date(h.dueDate).toLocaleDateString()}</td>
-                  <td className="table-td">
-                    <div className="text-xs font-semibold mb-1 text-gray-700">{submitted}/{total}</div>
-                    <div className="h-2 bg-gray-100 rounded-full w-28 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : pct >= 70 ? 'bg-blue-500' : 'bg-yellow-400'}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <div className="text-xs text-gray-400 mt-0.5">{pct}% submitted</div>
-                  </td>
-                  <td className="table-td"><span className={h.status === 'Active' ? 'badge-info' : h.status === 'Pending Review' ? 'badge-warning' : 'badge-success'}>{h.status}</span></td>
-                  <td className="table-td relative" data-hw-menu>
-                    <button
-                      data-hw-menu
-                      onClick={() => setOpenMenuId(openMenuId === menuId ? null : menuId)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors font-bold text-lg"
-                    >⋮</button>
-                    {openMenuId === menuId && (
-                      <div data-hw-menu className="absolute right-0 top-10 z-50 bg-white border border-gray-200 rounded-xl shadow-xl w-52 py-1">
-                        <button
-                          onClick={() => handleSimulateSubmit(h._id)}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                        >📥 Log Submission</button>
-                        <button
-                          onClick={() => handleSyncCount(h._id, h.className)}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
-                        >🔢 Sync Enrollment Count</button>
-                        {h.status !== 'Completed' && (
-                          <button
-                            onClick={() => handleUpdateStatus(h._id, 'Completed')}
-                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
-                          >✅ Mark Completed</button>
-                        )}
-                        {h.status !== 'Active' && (
-                          <button
-                            onClick={() => handleUpdateStatus(h._id, 'Active')}
-                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                          >🔄 Mark Active</button>
-                        )}
-                        <div className="border-t border-gray-100 my-1" />
-                        <button
-                          onClick={() => handleDeleteHomework(h._id)}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors"
-                        >🗑️ Delete</button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-            {homeworks.length === 0 && (
-              <tr>
-                <td colSpan="5" className="text-center py-6 text-gray-400 text-sm">No assignments posted yet.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {showNew && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleCreate} className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="font-display font-bold text-primary text-xl">Create New Homework</h3>
-              <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-primary">✖</button>
-            </div>
-            <div className="p-6 space-y-4">
-              {error && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{error}</div>}
-              <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Assignment Title *</label><input required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Read Physics Chapter 2" className="input text-sm" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Select Target Class *</label>
-                  <select value={classSelector} onChange={e => setClassSelector(e.target.value)} className="input text-sm">
-                    <option value="">Choose Class...</option>
-                    {classes.map(c => (
-                      <option key={c.id} value={c.id}>Class {c.grade} - {c.section} ({c.enrolled} enrolled)</option>
-                    ))}
-                  </select>
-                </div>
-                <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Due Date *</label><input required type="date" value={dueDate} min={new Date().toISOString().split('T')[0]} onChange={e => setDueDate(e.target.value)} className="input text-sm" /></div>
+      return (
+      <div>
+        <Topbar title="Assigned Homework" subtitle="Dashboard › Homework"
+          actions={<button onClick={() => { setError(''); setShowNew(true); }} className="btn-primary text-sm">+ Create New Homework</button>} />
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {[
+            { l: 'Active Assignments', v: activeCount.toString(), sub: 'Current term', icon: '📋' },
+            { l: 'Pending Review', v: pendingCount.toString(), sub: 'Needs attention', icon: '⚠️', warn: pendingCount > 0 },
+            { l: 'Completed', v: completedCount.toString(), sub: 'Archived assignments', icon: '✅' }
+          ].map(s => (
+            <div key={s.l} className="stat-card flex items-center gap-3">
+              <span className="text-2xl">{s.icon}</span>
+              <div>
+                <div className="font-display text-2xl font-bold text-primary">{s.v}</div>
+                <div className="text-xs text-gray-500">{s.l}</div>
+                <div className={`text-xs font-medium ${s.warn ? 'text-yellow-500' : 'text-blue-500'}`}>{s.sub}</div>
               </div>
-              <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Instructions *</label><textarea required value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Provide detailed steps, links, or instructions..." className="input h-24 resize-none text-sm" /></div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
-              <button type="button" onClick={() => setShowNew(false)} className="btn-outline text-xs">Cancel</button>
-              <button type="submit" disabled={loading} className="btn-primary text-xs">
-                {loading ? 'Creating assignment...' : 'Create Assignment'}
-              </button>
-            </div>
-          </form>
+          ))}
         </div>
-      )}
-    </div>
-  );
+        <div className="card">
+          <table className="w-full">
+            <thead><tr className="border-b border-gray-100">{['Assignment & Class', 'Due Date', 'Submissions', 'Status', 'Actions'].map(h => <th key={h} className="table-th">{h}</th>)}</tr></thead>
+            <tbody>
+              {homeworks.map((h, i) => {
+                // Parse submissions: prefer numeric fields, fall back to parsing "X/Y" string
+                const subStr = (h.submissions || '0/0').split('/');
+                const submittedFallback = parseInt(subStr[0]) || 0;
+                const totalFallback = parseInt(subStr[1]) || 0;
+                const submitted = (typeof h.submittedCount === 'number') ? h.submittedCount : submittedFallback;
+                const total = (typeof h.totalStudents === 'number' && h.totalStudents > 0) ? h.totalStudents : totalFallback;
+                const pct = total > 0 ? Math.min(100, Math.round((submitted / total) * 100)) : 0;
+                const menuId = h._id || i;
+                return (
+                  <tr key={menuId} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="table-td"><div className="font-semibold text-sm text-primary">{h.title}</div><div className="text-xs text-gray-400">{h.className}</div></td>
+                    <td className="table-td text-sm text-gray-500">📅 {new Date(h.dueDate).toLocaleDateString()}</td>
+                    <td className="table-td">
+                      <div className="text-xs font-semibold mb-1 text-gray-700">{submitted}/{total}</div>
+                      <div className="h-2 bg-gray-100 rounded-full w-28 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : pct >= 70 ? 'bg-blue-500' : 'bg-yellow-400'}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">{pct}% submitted</div>
+                    </td>
+                    <td className="table-td"><span className={h.status === 'Active' ? 'badge-info' : h.status === 'Pending Review' ? 'badge-warning' : 'badge-success'}>{h.status}</span></td>
+                    <td className="table-td relative" data-hw-menu>
+                      <button
+                        data-hw-menu
+                        onClick={() => setOpenMenuId(openMenuId === menuId ? null : menuId)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors font-bold text-lg"
+                      >⋮</button>
+                      {openMenuId === menuId && (
+                        <div data-hw-menu className="absolute right-0 top-10 z-50 bg-white border border-gray-200 rounded-xl shadow-xl w-52 py-1">
+                          <button
+                            onClick={() => handleSimulateSubmit(h._id)}
+                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                          >📥 Log Submission</button>
+                          <button
+                            onClick={() => handleSyncCount(h._id, h.className)}
+                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                          >🔢 Sync Enrollment Count</button>
+                          {h.status !== 'Completed' && (
+                            <button
+                              onClick={() => handleUpdateStatus(h._id, 'Completed')}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                            >✅ Mark Completed</button>
+                          )}
+                          {h.status !== 'Active' && (
+                            <button
+                              onClick={() => handleUpdateStatus(h._id, 'Active')}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                            >🔄 Mark Active</button>
+                          )}
+                          <div className="border-t border-gray-100 my-1" />
+                          <button
+                            onClick={() => handleDeleteHomework(h._id)}
+                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors"
+                          >🗑️ Delete</button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {homeworks.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="text-center py-6 text-gray-400 text-sm">No assignments posted yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {showNew && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <form onSubmit={handleCreate} className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="font-display font-bold text-primary text-xl">Create New Homework</h3>
+                <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-primary">✖</button>
+              </div>
+              <div className="p-6 space-y-4">
+                {error && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{error}</div>}
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Assignment Title *</label><input required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Read Physics Chapter 2" className="input text-sm" /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Select Target Class *</label>
+                    <select value={classSelector} onChange={e => setClassSelector(e.target.value)} className="input text-sm">
+                      <option value="">Choose Class...</option>
+                      {classes.map(c => (
+                        <option key={c.id} value={c.id}>Class {c.grade} - {c.section} ({c.enrolled} enrolled)</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Due Date *</label><input required type="date" value={dueDate} min={new Date().toISOString().split('T')[0]} onChange={e => setDueDate(e.target.value)} className="input text-sm" /></div>
+                </div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Instructions *</label><textarea required value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Provide detailed steps, links, or instructions..." className="input h-24 resize-none text-sm" /></div>
+              </div>
+              <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
+                <button type="button" onClick={() => setShowNew(false)} className="btn-outline text-xs">Cancel</button>
+                <button type="submit" disabled={loading} className="btn-primary text-xs">
+                  {loading ? 'Creating assignment...' : 'Create Assignment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
+      );
 };
 
 // --- Teacher Profile ---
 export const TeacherProfile = () => {
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState('');
-  const [form, setForm] = useState({ firstName: '', lastName: '', qualifications: '', officeLocation: '' });
+      const [loading, setLoading] = useState(true);
+      const [editing, setEditing] = useState(false);
+      const [saving, setSaving] = useState(false);
+      const [saveMsg, setSaveMsg] = useState('');
+      const [form, setForm] = useState({firstName: '', lastName: '', qualifications: '', officeLocation: '' });
 
   const loadProfile = async () => {
     try {
@@ -1734,186 +1939,186 @@ export const TeacherProfile = () => {
       setProfile(res.data);
       setForm({
         firstName: res.data.firstName || '',
-        lastName: res.data.lastName || '',
-        qualifications: res.data.qualifications || '',
-        officeLocation: res.data.officeLocation || '',
+      lastName: res.data.lastName || '',
+      qualifications: res.data.qualifications || '',
+      officeLocation: res.data.officeLocation || '',
       });
     } catch (err) {
-      console.error('Failed to load DB teacher profile:', err);
+        console.error('Failed to load DB teacher profile:', err);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
-  useEffect(() => { loadProfile(); }, []);
+  useEffect(() => {loadProfile(); }, []);
 
   const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setSaveMsg('');
-    try {
-      await apiClient.patch('/academics/teacher/profile', {
-        firstName: form.firstName,
-        lastName: form.lastName,
-        qualifications: form.qualifications,
-        officeLocation: form.officeLocation,
-      });
+        e.preventDefault();
+      setSaving(true);
+      setSaveMsg('');
+      try {
+        await apiClient.patch('/academics/teacher/profile', {
+          firstName: form.firstName,
+          lastName: form.lastName,
+          qualifications: form.qualifications,
+          officeLocation: form.officeLocation,
+        });
       await loadProfile();
       setEditing(false);
       setSaveMsg('Profile updated successfully!');
       setTimeout(() => setSaveMsg(''), 3000);
     } catch (err) {
-      console.error('Failed to save profile:', err);
+        console.error('Failed to save profile:', err);
       setSaveMsg('Failed to save. Please try again.');
     } finally {
-      setSaving(false);
+        setSaving(false);
     }
   };
 
   const handleCancel = () => {
-    setForm({
-      firstName: profile?.firstName || '',
-      lastName: profile?.lastName || '',
-      qualifications: profile?.qualifications || '',
-      officeLocation: profile?.officeLocation || '',
-    });
-    setEditing(false);
+        setForm({
+          firstName: profile?.firstName || '',
+          lastName: profile?.lastName || '',
+          qualifications: profile?.qualifications || '',
+          officeLocation: profile?.officeLocation || '',
+        });
+      setEditing(false);
   };
 
-  if (loading) return (
-    <div>
-      <Topbar title="My Profile" />
-      <div className="card text-center py-12 text-gray-400 text-sm">Loading profile details...</div>
-    </div>
-  );
+      if (loading) return (
+      <div>
+        <Topbar title="My Profile" />
+        <div className="card text-center py-12 text-gray-400 text-sm">Loading profile details...</div>
+      </div>
+      );
 
-  return (
-    <div>
-      <Topbar title="My Profile" />
-      <div className="card max-w-3xl">
+      return (
+      <div>
+        <Topbar title="My Profile" />
+        <div className="card max-w-3xl">
 
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6 pb-6 border-b border-gray-100">
-          <div className="flex items-center gap-5">
-            <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center text-3xl font-bold text-accent">
-              {profile?.firstName ? `${profile.firstName[0]}${profile.lastName[0]}` : '👤'}
-            </div>
-            <div>
-              <h2 className="font-display text-2xl font-bold text-primary">{profile?.firstName} {profile?.lastName}</h2>
-              <p className="text-accent font-semibold text-sm mt-0.5">{profile?.department || 'Faculty'}</p>
-              <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                <span>👩‍🏫 Faculty Account</span>
-                <span>📧 {profile?.email}</span>
-                <span>🆔 Employee ID: #{profile?.employeeId}</span>
+          {/* Header */}
+          <div className="flex items-start justify-between mb-6 pb-6 border-b border-gray-100">
+            <div className="flex items-center gap-5">
+              <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center text-3xl font-bold text-accent">
+                {profile?.firstName ? `${profile.firstName[0]}${profile.lastName[0]}` : '👤'}
+              </div>
+              <div>
+                <h2 className="font-display text-2xl font-bold text-primary">{profile?.firstName} {profile?.lastName}</h2>
+                <p className="text-accent font-semibold text-sm mt-0.5">{profile?.department || 'Faculty'}</p>
+                <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                  <span>👩‍🏫 Faculty Account</span>
+                  <span>📧 {profile?.email}</span>
+                  <span>🆔 Employee ID: #{profile?.employeeId}</span>
+                </div>
               </div>
             </div>
-          </div>
-          {!editing ? (
-            <button onClick={() => setEditing(true)} className="btn-outline text-xs flex items-center gap-1.5">
-              ✏️ Edit Profile
-            </button>
-          ) : (
-            <div className="flex gap-2">
-              <button onClick={handleCancel} className="btn-outline text-xs">Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="btn-primary text-xs">
-                {saving ? 'Saving...' : '💾 Save Changes'}
+            {!editing ? (
+              <button onClick={() => setEditing(true)} className="btn-outline text-xs flex items-center gap-1.5">
+                ✏️ Edit Profile
               </button>
-            </div>
-          )}
-        </div>
-
-        {saveMsg && (
-          <div className={`mb-4 text-xs font-semibold rounded-lg px-4 py-2.5 ${saveMsg.includes('success') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
-            {saveMsg}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-8 text-sm">
-          {/* Left column */}
-          <div>
-            <h3 className="font-display font-bold text-xs uppercase tracking-wider text-primary/60 mb-3.5">🏢 Administrative Assignment</h3>
-            <div className="space-y-3">
-              {/* Name — editable */}
-              <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                <span className="text-xs text-gray-400 font-semibold uppercase">First Name</span>
-                {editing ? (
-                  <input value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
-                ) : (
-                  <span className="font-semibold text-primary">{profile?.firstName}</span>
-                )}
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                <span className="text-xs text-gray-400 font-semibold uppercase">Last Name</span>
-                {editing ? (
-                  <input value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
-                ) : (
-                  <span className="font-semibold text-primary">{profile?.lastName}</span>
-                )}
-              </div>
-              {/* Department — read only */}
-              <div className="flex justify-between py-2 border-b border-gray-50">
-                <span className="text-xs text-gray-400 font-semibold uppercase">Department</span>
-                <span className="font-semibold text-primary">{profile?.department}</span>
-              </div>
-              {/* Office Room — editable */}
-              <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                <span className="text-xs text-gray-400 font-semibold uppercase">Office Room</span>
-                {editing ? (
-                  <input value={form.officeLocation} onChange={e => setForm(f => ({ ...f, officeLocation: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
-                ) : (
-                  <span className="font-medium text-gray-700">{profile?.officeLocation}</span>
-                )}
-              </div>
-              {/* Joining Date — read only */}
-              <div className="flex justify-between py-2 border-b border-gray-50">
-                <span className="text-xs text-gray-400 font-semibold uppercase">Contract Joined</span>
-                <div className="flex items-center gap-1">
-                  <span className="font-medium text-gray-700">{profile?.joined}</span>
-                  <span className="text-xs text-gray-400 ml-1" title="Set by admin — cannot be changed">🔒</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right column */}
-          <div>
-            <h3 className="font-display font-bold text-xs uppercase tracking-wider text-primary/60 mb-3.5">💼 Qualifications & Payout</h3>
-            <div className="space-y-3">
-              {/* Qualifications — editable */}
-              <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                <span className="text-xs text-gray-400 font-semibold uppercase">Qualifications</span>
-                {editing ? (
-                  <input value={form.qualifications} onChange={e => setForm(f => ({ ...f, qualifications: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
-                ) : (
-                  <span className="font-medium text-gray-700">{profile?.qualifications}</span>
-                )}
-              </div>
-              {/* Salary — read only */}
-              <div className="flex justify-between py-2 border-b border-gray-50">
-                <span className="text-xs text-gray-400 font-semibold uppercase">Monthly Salary</span>
-                <div className="flex items-center gap-1">
-                  <span className="font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded text-xs">Rs. {profile?.salary?.toLocaleString() ?? '0'}</span>
-                  <span className="text-xs text-gray-400" title="Set by admin — cannot be changed">🔒</span>
-                </div>
-              </div>
-              {/* Status — read only */}
-              <div className="flex justify-between py-2 border-b border-gray-50">
-                <span className="text-xs text-gray-400 font-semibold uppercase">Staff Status</span>
-                <div className="flex items-center gap-1">
-                  <span className="font-bold text-green-600">{profile?.isActive ? 'ACTIVE' : 'ON LEAVE'}</span>
-                  <span className="text-xs text-gray-400" title="Set by admin — cannot be changed">🔒</span>
-                </div>
-              </div>
-            </div>
-
-            {editing && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-600 leading-relaxed">
-                🔒 <strong>Salary</strong>, <strong>Department</strong>, <strong>Status</strong>, and <strong>Joining Date</strong> are managed by the school admin and cannot be changed here.
+            ) : (
+              <div className="flex gap-2">
+                <button onClick={handleCancel} className="btn-outline text-xs">Cancel</button>
+                <button onClick={handleSave} disabled={saving} className="btn-primary text-xs">
+                  {saving ? 'Saving...' : '💾 Save Changes'}
+                </button>
               </div>
             )}
           </div>
+
+          {saveMsg && (
+            <div className={`mb-4 text-xs font-semibold rounded-lg px-4 py-2.5 ${saveMsg.includes('success') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+              {saveMsg}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-8 text-sm">
+            {/* Left column */}
+            <div>
+              <h3 className="font-display font-bold text-xs uppercase tracking-wider text-primary/60 mb-3.5">🏢 Administrative Assignment</h3>
+              <div className="space-y-3">
+                {/* Name — editable */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                  <span className="text-xs text-gray-400 font-semibold uppercase">First Name</span>
+                  {editing ? (
+                    <input value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
+                  ) : (
+                    <span className="font-semibold text-primary">{profile?.firstName}</span>
+                  )}
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                  <span className="text-xs text-gray-400 font-semibold uppercase">Last Name</span>
+                  {editing ? (
+                    <input value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
+                  ) : (
+                    <span className="font-semibold text-primary">{profile?.lastName}</span>
+                  )}
+                </div>
+                {/* Department — read only */}
+                <div className="flex justify-between py-2 border-b border-gray-50">
+                  <span className="text-xs text-gray-400 font-semibold uppercase">Department</span>
+                  <span className="font-semibold text-primary">{profile?.department}</span>
+                </div>
+                {/* Office Room — editable */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                  <span className="text-xs text-gray-400 font-semibold uppercase">Office Room</span>
+                  {editing ? (
+                    <input value={form.officeLocation} onChange={e => setForm(f => ({ ...f, officeLocation: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
+                  ) : (
+                    <span className="font-medium text-gray-700">{profile?.officeLocation}</span>
+                  )}
+                </div>
+                {/* Joining Date — read only */}
+                <div className="flex justify-between py-2 border-b border-gray-50">
+                  <span className="text-xs text-gray-400 font-semibold uppercase">Contract Joined</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium text-gray-700">{profile?.joined}</span>
+                    <span className="text-xs text-gray-400 ml-1" title="Set by admin — cannot be changed">🔒</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right column */}
+            <div>
+              <h3 className="font-display font-bold text-xs uppercase tracking-wider text-primary/60 mb-3.5">💼 Qualifications & Payout</h3>
+              <div className="space-y-3">
+                {/* Qualifications — editable */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                  <span className="text-xs text-gray-400 font-semibold uppercase">Qualifications</span>
+                  {editing ? (
+                    <input value={form.qualifications} onChange={e => setForm(f => ({ ...f, qualifications: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
+                  ) : (
+                    <span className="font-medium text-gray-700">{profile?.qualifications}</span>
+                  )}
+                </div>
+                {/* Salary — read only */}
+                <div className="flex justify-between py-2 border-b border-gray-50">
+                  <span className="text-xs text-gray-400 font-semibold uppercase">Monthly Salary</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded text-xs">Rs. {profile?.salary?.toLocaleString() ?? '0'}</span>
+                    <span className="text-xs text-gray-400" title="Set by admin — cannot be changed">🔒</span>
+                  </div>
+                </div>
+                {/* Status — read only */}
+                <div className="flex justify-between py-2 border-b border-gray-50">
+                  <span className="text-xs text-gray-400 font-semibold uppercase">Staff Status</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold text-green-600">{profile?.isActive ? 'ACTIVE' : 'ON LEAVE'}</span>
+                    <span className="text-xs text-gray-400" title="Set by admin — cannot be changed">🔒</span>
+                  </div>
+                </div>
+              </div>
+
+              {editing && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-600 leading-relaxed">
+                  🔒 <strong>Salary</strong>, <strong>Department</strong>, <strong>Status</strong>, and <strong>Joining Date</strong> are managed by the school admin and cannot be changed here.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
+      );
 };

@@ -18,5 +18,8 @@ namespace EduVault.Core.DTOs
         public string Avatar { get; set; } = string.Empty;
         public Guid? SchoolId { get; set; }
         public string SchoolName { get; set; } = string.Empty;
+        public string LogoUrl { get; set; } = string.Empty;
+        public string EmailDomain { get; set; } = string.Empty;
+        public string ThemeColor { get; set; } = string.Empty;
     }
 }

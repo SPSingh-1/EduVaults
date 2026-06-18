@@ -301,13 +301,43 @@ namespace EduVault.Api.Controllers
         }
 
         [HttpGet("student/performance")]
-        [Authorize(Roles = "student")]
-        public async Task<IActionResult> GetStudentPerformance()
+        [Authorize(Roles = "student,schooladmin")]
+        public async Task<IActionResult> GetStudentPerformance([FromQuery] Guid? studentId)
         {
-            var studentId = GetUserId();
+            var userId = GetUserId();
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            Guid targetStudentId = userId;
+
+            if (role == "schooladmin")
+            {
+                if (!studentId.HasValue)
+                {
+                    return BadRequest(new { error = "Student ID is required for school admin" });
+                }
+                targetStudentId = studentId.Value;
+            }
+            else
+            {
+                targetStudentId = userId;
+            }
+
             var schoolId = GetSchoolId();
 
-            var examResults = await _unitOfWork.ExamResults.FindAsync(er => er.StudentId == studentId);
+            // Check if published for student role
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == targetStudentId && e.Status == "ACTIVE")).FirstOrDefault();
+            if (enrollment != null)
+            {
+                var classObj = await _unitOfWork.Classes.GetByIdAsync(enrollment.ClassId);
+                if (classObj != null && !classObj.AreMarksPublished && role == "student")
+                {
+                    return Ok(new {
+                        areMarksPublished = false,
+                        message = "Report cards for your class section have not been officially published by the administration yet."
+                    });
+                }
+            }
+
+            var examResults = await _unitOfWork.ExamResults.FindAsync(er => er.StudentId == targetStudentId);
             var exams = await _unitOfWork.Exams.GetAllAsync();
             var subjects = await _unitOfWork.Subjects.FindAsync(s => s.SchoolId == schoolId);
 
@@ -340,7 +370,6 @@ namespace EduVault.Api.Controllers
             decimal cumulativeGpa = gpa > 0 ? Math.Round(gpa - 0.1m, 2) : 0m;
 
             // Calculate dynamic Class Rank
-            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == studentId && e.Status == "ACTIVE")).FirstOrDefault();
             string classRank = "1st / 1";
             decimal classAverage = 76.5m;
             decimal classHighest = 92.0m;
@@ -365,7 +394,7 @@ namespace EduVault.Api.Controllers
                     .OrderByDescending(x => x.AverageMarks)
                     .ToList();
 
-                var rankIndex = studentAverages.FindIndex(x => x.StudentId == studentId);
+                var rankIndex = studentAverages.FindIndex(x => x.StudentId == targetStudentId);
                 int totalClassStudents = classStudentIds.Count;
                 int rank = rankIndex >= 0 ? rankIndex + 1 : 1;
 
@@ -386,7 +415,7 @@ namespace EduVault.Api.Controllers
             }
 
             // Calculate actual attendance percentage from DB
-            var attendances = await _unitOfWork.Attendances.FindAsync(a => a.StudentId == studentId);
+            var attendances = await _unitOfWork.Attendances.FindAsync(a => a.StudentId == targetStudentId);
             string attendance = "100.0%";
             if (attendances.Any())
             {
@@ -397,6 +426,7 @@ namespace EduVault.Api.Controllers
             }
 
             return Ok(new {
+                areMarksPublished = true,
                 semesterGpa = gpa > 0 ? gpa.ToString("F2") : "0.00",
                 cumulativeGpa = cumulativeGpa > 0 ? cumulativeGpa.ToString("F2") : "0.00",
                 classRank,
@@ -409,18 +439,29 @@ namespace EduVault.Api.Controllers
 
         [HttpGet("student/{studentId}/subjects")]
         [Authorize(Roles = "teacher,schooladmin")]
-        public async Task<IActionResult> GetStudentSubjects(Guid studentId)
+        public async Task<IActionResult> GetStudentSubjects(Guid studentId, [FromQuery] string examType = "Semester Examination")
         {
             var schoolId = GetSchoolId();
             var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == studentId && e.Status == "ACTIVE")).FirstOrDefault();
             if (enrollment == null) return BadRequest(new { error = "Student enrollment not found" });
 
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (role == "teacher")
+            {
+                var userId = GetUserId();
+                var classObj = await _unitOfWork.Classes.GetByIdAsync(enrollment.ClassId);
+                if (classObj == null || classObj.ClassTeacherId != userId)
+                {
+                    return StatusCode(403, new { error = "Access Denied: Only the assigned Class Teacher can view subjects for this student." });
+                }
+            }
+
             var classSubjects = await _unitOfWork.ClassSubjects.FindAsync(cs => cs.ClassId == enrollment.ClassId);
             var subjectIds = classSubjects.Select(cs => cs.SubjectId).ToList();
             var subjects = await _unitOfWork.Subjects.FindAsync(s => subjectIds.Contains(s.Id));
 
-            // Load existing exam results for these subjects if they exist
-            var exams = await _unitOfWork.Exams.FindAsync(e => e.ClassId == enrollment.ClassId);
+            // Load existing exam results for these subjects if they exist, filtering by examType
+            var exams = await _unitOfWork.Exams.FindAsync(e => e.ClassId == enrollment.ClassId && e.ExamType == examType);
             var examIds = exams.Select(e => e.Id).ToList();
             var results = await _unitOfWork.ExamResults.FindAsync(r => r.StudentId == studentId && examIds.Contains(r.ExamId));
 
@@ -453,10 +494,24 @@ namespace EduVault.Api.Controllers
 
             var classId = enrollment.ClassId;
 
+            // Check if requesting teacher is the class teacher
+            var userId = GetUserId();
+            var classObj = await _unitOfWork.Classes.GetByIdAsync(classId);
+            if (classObj == null || classObj.ClassTeacherId != userId)
+            {
+                return StatusCode(403, new { error = "Access Denied: Only the assigned Class Teacher can enter marks." });
+            }
+
+            // Check if class marks are already published
+            if (classObj.AreMarksPublished)
+            {
+                return BadRequest(new { error = "Access Denied: Reports are already approved/published by administration and cannot be modified." });
+            }
+
             foreach (var subMark in request.Subjects)
             {
-                // Find or create Exam for this class & subject
-                var exam = (await _unitOfWork.Exams.FindAsync(e => e.ClassId == classId && e.SubjectId == subMark.SubjectId)).FirstOrDefault();
+                // Find or create Exam for this class & subject and examType
+                var exam = (await _unitOfWork.Exams.FindAsync(e => e.ClassId == classId && e.SubjectId == subMark.SubjectId && e.ExamType == request.ExamType)).FirstOrDefault();
                 if (exam == null)
                 {
                     exam = new Exam
@@ -464,7 +519,7 @@ namespace EduVault.Api.Controllers
                         Id = Guid.NewGuid(),
                         ClassId = classId,
                         SubjectId = subMark.SubjectId,
-                        ExamType = "Semester Examination",
+                        ExamType = request.ExamType,
                         Date = DateTime.UtcNow,
                         Status = "Completed"
                     };
@@ -535,6 +590,7 @@ namespace EduVault.Api.Controllers
     public class EnterStudentMarksRequest
     {
         public Guid StudentId { get; set; }
+        public string ExamType { get; set; } = "Semester Examination";
         public List<SubjectMarkDto> Subjects { get; set; } = new List<SubjectMarkDto>();
     }
 

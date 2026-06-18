@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { apiClient } from '../../api/apiClient';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -11,11 +12,126 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const [logo, setLogo] = useState('/logo.jpeg');
+  const [orgName, setOrgName] = useState('EduVault');
+  const [themeColor, setThemeColor] = useState('#1a2744');
+  const [globalSettings, setGlobalSettings] = useState(null);
+
   const roleRoutes = {
     superadmin: '/super-admin/dashboard',
     schooladmin: '/school-admin/dashboard',
     teacher: '/teacher/dashboard',
     student: '/student/dashboard',
+  };
+
+  const applyTheme = (color) => {
+    const root = document.documentElement;
+    
+    const hexToRgbSpace = (hex) => {
+      if (!hex || hex[0] !== '#') return hex;
+      let colorStr = hex.replace(/^\s*#|\s*$/g, '');
+      if (colorStr.length === 3) {
+        colorStr = colorStr.replace(/(.)/g, '$1$1');
+      }
+      let r = parseInt(colorStr.substr(0, 2), 16);
+      let g = parseInt(colorStr.substr(2, 2), 16);
+      let b = parseInt(colorStr.substr(4, 2), 16);
+      return `${r} ${g} ${b}`;
+    };
+
+    const adjustColorLocal = (hex, percent) => {
+      if (!hex || hex[0] !== '#') return hex;
+      let colorStr = hex.replace(/^\s*#|\s*$/g, '');
+      if (colorStr.length === 3) {
+        colorStr = colorStr.replace(/(.)/g, '$1$1');
+      }
+      let r = parseInt(colorStr.substr(0, 2), 16);
+      let g = parseInt(colorStr.substr(2, 2), 16);
+      let b = parseInt(colorStr.substr(4, 2), 16);
+
+      r = Math.max(0, Math.min(255, r + percent));
+      g = Math.max(0, Math.min(255, g + percent));
+      b = Math.max(0, Math.min(255, b + percent));
+
+      const rHex = r.toString(16).padStart(2, '0');
+      const gHex = g.toString(16).padStart(2, '0');
+      const bHex = b.toString(16).padStart(2, '0');
+
+      return `#${rHex}${gHex}${bHex}`;
+    };
+    
+    root.style.setProperty('--color-primary', hexToRgbSpace(color));
+    root.style.setProperty('--color-primary-light', hexToRgbSpace(adjustColorLocal(color, 20)));
+    root.style.setProperty('--color-primary-dark', hexToRgbSpace(adjustColorLocal(color, -20)));
+  };
+
+  const resetToGlobal = () => {
+    if (globalSettings) {
+      setLogo(globalSettings.logoUrl || '/logo.jpeg');
+      setOrgName(globalSettings.orgName || 'EduVault');
+      if (globalSettings.primaryColor) {
+        setThemeColor(globalSettings.primaryColor);
+        applyTheme(globalSettings.primaryColor);
+      }
+    } else {
+      setLogo('/logo.jpeg');
+      setOrgName('EduVault');
+      setThemeColor('#1a2744');
+      applyTheme('#1a2744');
+    }
+  };
+
+  useEffect(() => {
+    const fetchGlobalBranding = async () => {
+      try {
+        const res = await apiClient.get('/auth/settings');
+        if (res.data) {
+          setGlobalSettings(res.data);
+          setLogo(res.data.logoUrl || '/logo.jpeg');
+          setOrgName(res.data.orgName || 'EduVault');
+          if (res.data.primaryColor) {
+            setThemeColor(res.data.primaryColor);
+            applyTheme(res.data.primaryColor);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading global branding:', err);
+      }
+    };
+    fetchGlobalBranding();
+  }, []);
+
+  const handleEmailChange = async (val) => {
+    setEmail(val);
+    if (!val) {
+      resetToGlobal();
+      return;
+    }
+    const parts = val.split('@');
+    if (parts.length === 2 && parts[1]) {
+      const domain = parts[1].toLowerCase();
+      const genericDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com'];
+      if (genericDomains.includes(domain) || domain.length < 4 || !domain.includes('.')) {
+        resetToGlobal();
+        return;
+      }
+      
+      try {
+        const res = await apiClient.get(`/auth/school-branding?domain=${domain}`);
+        if (res.data) {
+          setLogo(res.data.logoUrl || '/logo.jpeg');
+          setOrgName(res.data.name || 'EduVault');
+          if (res.data.themeColor) {
+            setThemeColor(res.data.themeColor);
+            applyTheme(res.data.themeColor);
+          }
+        }
+      } catch (err) {
+        resetToGlobal();
+      }
+    } else {
+      resetToGlobal();
+    }
   };
 
   const handleLogin = async (e) => {
@@ -35,11 +151,11 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4 shadow-xl">
-            <span className="text-3xl"><img src="/logo.jpeg" alt="EduVault Logo" className="w-12 h-12 rounded-full" /></span>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary rounded-full mb-4 shadow-xl overflow-hidden border-2 border-white">
+            <img src={logo} alt="EduVault Logo" className="w-full h-full object-cover" />
           </div>
-          <h1 className="font-display text-2xl font-bold text-primary">EduVault</h1>
+          <h1 className="font-display text-2xl font-bold text-primary">{orgName}</h1>
           <p className="text-gray-500 text-sm">Manage your institution with ease</p>
         </div>
 
@@ -56,7 +172,7 @@ const Login = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">Email Address</label>
-              <input type="email" placeholder="name@school.edu" value={email} onChange={e => setEmail(e.target.value)} className="input" required />
+              <input type="email" placeholder="name@school.edu" value={email} onChange={e => handleEmailChange(e.target.value)} className="input" required />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">

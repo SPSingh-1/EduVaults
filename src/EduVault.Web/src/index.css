@@ -1,35 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Sora:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  * { box-sizing: border-box; }
-  body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6fb; color: #1a2744; }
-  h1,h2,h3,h4 { font-family: 'Sora', sans-serif; }
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: #f4f6fb;
+    color: #1a2744;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: 'Sora', sans-serif;
+  }
 }
 
 @layer components {
-  .sidebar { @apply bg-primary text-white w-64 min-h-screen flex flex-col fixed left-0 top-0 z-30; }
-  .sidebar-link { @apply flex items-center gap-3 px-5 py-3 text-sm font-medium text-blue-200 hover:bg-white/10 hover:text-white rounded-lg mx-2 transition-all cursor-pointer; }
-  .sidebar-link.active { @apply bg-white/15 text-white; }
-  .main-content { @apply ml-64 min-h-screen p-6; }
-  .stat-card { @apply bg-white rounded-xl p-5 shadow-sm border border-gray-100; }
-  .btn-primary { @apply bg-primary text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-primary-light transition-all flex items-center gap-2; }
-  .btn-accent { @apply bg-accent text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-accent-light transition-all flex items-center gap-2; }
-  .btn-outline { @apply border border-primary/20 text-primary px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-primary/5 transition-all flex items-center gap-2; }
-  .badge { @apply px-2.5 py-0.5 rounded-full text-xs font-semibold; }
-  .badge-success { @apply badge bg-green-100 text-green-700; }
-  .badge-warning { @apply badge bg-yellow-100 text-yellow-700; }
-  .badge-danger { @apply badge bg-red-100 text-red-700; }
-  .badge-info { @apply badge bg-blue-100 text-blue-700; }
-  .badge-gray { @apply badge bg-gray-100 text-gray-600; }
-  .input { @apply w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all; }
-  .table-th { @apply text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-4; }
-  .table-td { @apply py-3.5 px-4 text-sm; }
-  .page-title { @apply font-display text-2xl font-bold text-primary; }
-  .card { @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6; }
+  .sidebar {
+    @apply bg-primary text-white w-64 min-h-screen flex flex-col fixed left-0 top-0 z-30;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-5 py-3 text-sm font-medium text-blue-200 hover:bg-white/10 hover:text-white rounded-lg mx-2 transition-all cursor-pointer;
+  }
+
+  .sidebar-link.active {
+    @apply bg-white/15 text-white;
+  }
+
+  .main-content {
+    @apply ml-64 min-h-screen p-6;
+  }
+
+  .stat-card {
+    @apply bg-white rounded-xl p-5 shadow-sm border border-gray-100;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-primary-light transition-all flex items-center gap-2;
+  }
+
+  .btn-accent {
+    @apply bg-accent text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-accent-light transition-all flex items-center gap-2;
+  }
+
+  .btn-outline {
+    @apply border border-primary/20 text-primary px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-primary/5 transition-all flex items-center gap-2;
+  }
+
+  .badge {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .badge-success {
+    @apply badge bg-green-100 text-green-700;
+  }
+
+  .badge-warning {
+    @apply badge bg-yellow-100 text-yellow-700;
+  }
+
+  .badge-danger {
+    @apply badge bg-red-100 text-red-700;
+  }
+
+  .badge-info {
+    @apply badge bg-blue-100 text-blue-700;
+  }
+
+  .badge-gray {
+    @apply badge bg-gray-100 text-gray-600;
+  }
+
+  .input {
+    @apply w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all;
+  }
+
+  .table-th {
+    @apply text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-4;
+  }
+
+  .table-td {
+    @apply py-3.5 px-4 text-sm;
+  }
+
+  .page-title {
+    @apply font-display text-2xl font-bold text-primary;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
+  }
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #f1f5f9; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}

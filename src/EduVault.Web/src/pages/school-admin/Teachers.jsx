@@ -70,7 +70,7 @@ const Teachers = () => {
     }
   }, []);
 
-  const resetForm = () => {
+  function resetForm() {
     setForm({
       firstName: '',
       lastName: '',

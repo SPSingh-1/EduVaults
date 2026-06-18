@@ -9,6 +9,7 @@ const links = [
   { icon: '🏛', label: 'Classes', path: '/school-admin/classes' },
   { icon: '💰', label: 'Fees', path: '/school-admin/fees' },
   { icon: '📋', label: 'Exams', path: '/school-admin/exams' },
+  { icon: '📈', label: 'Reports', path: '/school-admin/reports' },
   { icon: '📢', label: 'Notices', path: '/school-admin/notices' },
   { icon: '⚙️', label: 'Setup', path: '/school-admin/setup' },
 ];

@@ -67,7 +67,8 @@ namespace EduVault.Api.Controllers
                     Pct = c.Capacity > 0 ? (int)Math.Round((double)enrolledCount / c.Capacity * 100) : 0,
                     Teacher = teacher != null ? $"{teacher.FirstName} {teacher.LastName}" : null,
                     Email = teacher?.Email,
-                    TeacherId = c.ClassTeacherId
+                    TeacherId = c.ClassTeacherId,
+                    AreMarksPublished = c.AreMarksPublished
                 };
             });
 
@@ -139,6 +140,38 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.CompleteAsync();
 
             return Ok(new { success = true });
+        }
+
+        [HttpPost("classes/{id}/toggle-marks-publication")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> ToggleMarksPublication(Guid id, [FromBody] bool publish)
+        {
+            var classObj = await _unitOfWork.Classes.GetByIdAsync(id);
+            if (classObj == null) return NotFound(new { error = "Class not found" });
+
+            classObj.AreMarksPublished = publish;
+            _unitOfWork.Classes.Update(classObj);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true, areMarksPublished = publish });
+        }
+
+        [HttpPost("classes/{id}/deny-marks")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> DenyMarks(Guid id, [FromBody] DenyMarksRequest request)
+        {
+            var classObj = await _unitOfWork.Classes.GetByIdAsync(id);
+            if (classObj == null) return NotFound(new { error = "Class not found" });
+
+            classObj.AreMarksPublished = false;
+            _unitOfWork.Classes.Update(classObj);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { 
+                success = true, 
+                classTeacherId = classObj.ClassTeacherId?.ToString(),
+                className = $"Class {classObj.Grade} - {classObj.Section}"
+            });
         }
 
         // --- Students ---
@@ -1703,7 +1736,8 @@ namespace EduVault.Api.Controllers
                         c.Room,
                         c.Capacity,
                         Enrolled = enrolledCount,
-                        IsClassTeacher = c.ClassTeacherId == userId
+                        IsClassTeacher = c.ClassTeacherId == userId,
+                        AreMarksPublished = c.AreMarksPublished
                     };
                 });
 
@@ -1747,6 +1781,68 @@ namespace EduVault.Api.Controllers
 
             return Ok(new { success = true });
         }
+
+        [HttpGet("class-subjects/{classId}")]
+        public async Task<IActionResult> GetClassSubjects(Guid classId)
+        {
+            var schoolId = GetSchoolId();
+            var classSubjects = await _unitOfWork.ClassSubjects.FindAsync(cs => cs.ClassId == classId);
+            var subjectIds = classSubjects.Select(cs => cs.SubjectId).ToList();
+            var subjects = await _unitOfWork.Subjects.FindAsync(s => subjectIds.Contains(s.Id));
+            var teachers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "teacher");
+
+            var result = classSubjects.Select(cs => {
+                var subject = subjects.FirstOrDefault(s => s.Id == cs.SubjectId);
+                var teacher = teachers.FirstOrDefault(t => t.Id == cs.TeacherId);
+                return new {
+                    ClassId = cs.ClassId,
+                    SubjectId = cs.SubjectId,
+                    SubjectName = subject?.Name ?? "Unknown Subject",
+                    SubjectCode = subject?.Code ?? string.Empty,
+                    TeacherId = cs.TeacherId,
+                    TeacherName = teacher != null ? $"{teacher.FirstName} {teacher.LastName}" : "Unassigned"
+                };
+            });
+
+            return Ok(result);
+        }
+
+        [HttpPost("class-subjects")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> CreateClassSubject([FromBody] ClassSubjectDto model)
+        {
+            var existing = (await _unitOfWork.ClassSubjects.FindAsync(cs => cs.ClassId == model.ClassId && cs.SubjectId == model.SubjectId)).FirstOrDefault();
+            if (existing != null)
+            {
+                existing.TeacherId = model.TeacherId;
+                _unitOfWork.ClassSubjects.Update(existing);
+            }
+            else
+            {
+                var cs = new ClassSubject
+                {
+                    ClassId = model.ClassId,
+                    SubjectId = model.SubjectId,
+                    TeacherId = model.TeacherId
+                };
+                await _unitOfWork.ClassSubjects.AddAsync(cs);
+            }
+            await _unitOfWork.CompleteAsync();
+            return Ok(new { success = true });
+        }
+
+        [HttpDelete("class-subjects/{classId}/{subjectId}")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> DeleteClassSubject(Guid classId, Guid subjectId)
+        {
+            var cs = (await _unitOfWork.ClassSubjects.FindAsync(x => x.ClassId == classId && x.SubjectId == subjectId)).FirstOrDefault();
+            if (cs != null)
+            {
+                _unitOfWork.ClassSubjects.Remove(cs);
+                await _unitOfWork.CompleteAsync();
+            }
+            return Ok(new { success = true });
+        }
     }
 
     public class SubmitAttendanceRequest
@@ -1766,5 +1862,12 @@ namespace EduVault.Api.Controllers
     public class CancelClassRequest
     {
         public string Reason { get; set; } = string.Empty;
+    }
+
+    public class ClassSubjectDto
+    {
+        public Guid ClassId { get; set; }
+        public Guid SubjectId { get; set; }
+        public Guid? TeacherId { get; set; }
     }
 }

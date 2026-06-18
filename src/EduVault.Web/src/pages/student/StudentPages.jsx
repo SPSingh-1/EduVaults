@@ -116,9 +116,9 @@ export const StudentDashboard = () => {
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
           { label: 'Attendance', value: totalDays > 0 ? realAttendancePercent : '98.1%', sub: 'On Track', icon: '📋' },
-          { label: 'Semester GPA', value: performance?.semesterGpa || '0.00', sub: 'Target: 4.00', icon: '📝' },
+          { label: 'Semester GPA', value: performance?.areMarksPublished !== false ? (performance?.semesterGpa || '0.00') : '🔒 Locked', sub: performance?.areMarksPublished !== false ? 'Target: 4.00' : 'Awaiting Release', icon: '📝' },
           { label: 'Outstanding Fees', value: `Rs. ${pendingAmount.toLocaleString()}`, sub: pendingAmount > 0 ? 'Due soon' : 'All Clear', icon: '💳', warn: pendingAmount > 0 },
-          { label: 'Rank', value: performance?.classRank || '1st / 1', sub: 'Top 15%', icon: '📢' },
+          { label: 'Rank', value: performance?.areMarksPublished !== false ? (performance?.classRank || '1st / 1') : '🔒 Locked', sub: performance?.areMarksPublished !== false ? 'Top 15%' : 'Awaiting Release', icon: '📢' },
         ].map(s => (
           <div key={s.label} className="stat-card">
             <div className="flex items-center justify-between mb-2">
@@ -135,7 +135,7 @@ export const StudentDashboard = () => {
         <div className="card">
           <h3 className="font-display font-bold text-primary text-sm mb-4">📈 Academic Subject Performance</h3>
           <div className="h-64">
-            {perfData.length > 0 ? (
+            {performance?.areMarksPublished !== false && perfData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={perfData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -145,6 +145,12 @@ export const StudentDashboard = () => {
                   <Bar dataKey="marks" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            ) : performance?.areMarksPublished === false ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-slate-50/50 rounded-xl border border-dashed border-gray-200">
+                <span className="text-3xl mb-2">🔒</span>
+                <div className="font-semibold text-xs text-primary mb-1">Grades Not Published Yet</div>
+                <div className="text-[10px] text-gray-400 max-w-xs font-light">Subject wise performance analytics are locked until report cards are released.</div>
+              </div>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-400 text-xs">No subject exam records graded yet.</div>
             )}
@@ -154,15 +160,23 @@ export const StudentDashboard = () => {
         <div className="card">
           <h3 className="font-display font-bold text-primary text-sm mb-4">🏆 Class Performance Benchmarking</h3>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={rankData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" stroke="#94a3b8" />
-                <YAxis domain={[0, 100]} stroke="#94a3b8" />
-                <Tooltip formatter={(value) => [`${value}%`, 'Score']} />
-                <Bar dataKey="score" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {performance?.areMarksPublished !== false ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={rankData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" stroke="#94a3b8" />
+                  <YAxis domain={[0, 100]} stroke="#94a3b8" />
+                  <Tooltip formatter={(value) => [`${value}%`, 'Score']} />
+                  <Bar dataKey="score" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-slate-50/50 rounded-xl border border-dashed border-gray-200">
+                <span className="text-3xl mb-2">🔒</span>
+                <div className="font-semibold text-xs text-primary mb-1">Benchmarks Locked</div>
+                <div className="text-[10px] text-gray-400 max-w-xs font-light">Class rank benchmarking is hidden until release.</div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -475,6 +489,24 @@ export const StudentResults = () => {
     window.print();
   };
 
+  if (perf && perf.areMarksPublished === false) {
+    return (
+      <div>
+        <Topbar title="Academic Performance" subtitle="Academic Records › Final Results" />
+        <div className="card text-center py-20 max-w-md mx-auto mt-12 border border-slate-100 bg-white shadow-lg rounded-2xl p-8">
+          <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100">🔒</div>
+          <h3 className="font-display font-bold text-lg text-primary mb-2">Report Cards Not Released</h3>
+          <p className="text-gray-500 text-sm leading-relaxed mb-6 font-light">
+            {perf.message || "Your semester report cards and final grades have not been officially published by the school administration yet."}
+          </p>
+          <div className="inline-block px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold">
+            Status: Awaiting Admin Release
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <Topbar title="Academic Performance" subtitle="Academic Records › Final Results" actions={
@@ -612,9 +644,28 @@ export const StudentResults = () => {
 };
 
 // --- Student Fees ---
+const loadScript = (src) => {
+  return new Promise((resolve) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
+const generateMockPaymentId = () => {
+  return `pay_mock_${Math.random().toString(36).substring(7)}`;
+};
+
 export const StudentFees = () => {
   const [invoices, setInvoices] = useState([]);
   const [feeStructures, setFeeStructures] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const fetchInvoicesAndStructures = async () => {
@@ -624,8 +675,11 @@ export const StudentFees = () => {
 
       const structRes = await apiClient.get('/billing/my-fee-structures');
       setFeeStructures(structRes.data);
+
+      const txnRes = await apiClient.get('/billing/transactions');
+      setTransactions(txnRes.data);
     } catch (err) {
-      console.error(err);
+      console.error('Error loading fees data:', err);
     }
   };
 
@@ -636,20 +690,82 @@ export const StudentFees = () => {
   const handlePay = async (invoiceId) => {
     setLoading(true);
     try {
-      await apiClient.post('/billing/pay', {
-        invoiceId,
-        paymentMethod: 'Visa'
-      });
-      alert('Payment successful!');
-      fetchInvoicesAndStructures();
+      const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+      if (!scriptLoaded) {
+        alert('Failed to load Razorpay SDK. Please check your internet connection.');
+        setLoading(false);
+        return;
+      }
+
+      // 1. Create Razorpay order
+      const orderRes = await apiClient.post('/billing/create-order', { invoiceId });
+      const { orderId, amount, currency, keyId, isMock } = orderRes.data;
+
+      const userProfile = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
+
+      // 2. Setup checkout options
+      const options = {
+        key: keyId,
+        amount: amount,
+        currency: currency,
+        name: "EduVault Payments",
+        description: "School Fee Invoice Payment",
+        order_id: isMock ? undefined : orderId,
+        handler: async function (response) {
+          setLoading(true);
+          try {
+            // 3. Verify payment signature on backend
+            await apiClient.post('/billing/verify-payment', {
+              invoiceId: invoiceId,
+              razorpayOrderId: response.razorpay_order_id || orderId,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature || 'mock_signature'
+            });
+            alert('Payment received and verified successfully!');
+            fetchInvoicesAndStructures();
+          } catch (err) {
+            alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
+          } finally {
+            setLoading(false);
+          }
+        },
+        prefill: {
+          name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`,
+          email: userProfile.email || '',
+        },
+        theme: {
+          color: "#1a2744"
+        }
+      };
+
+      if (isMock) {
+        // Mock gateway fallback for easy demonstration/testing
+        if (window.confirm("Razorpay credentials not configured. Proceed with simulated payment?")) {
+          // Trigger the handler directly with fake parameters
+          await options.handler({
+            razorpay_order_id: orderId,
+            razorpay_payment_id: generateMockPaymentId(),
+            razorpay_signature: 'mock_signature'
+          });
+        } else {
+          setLoading(false);
+        }
+      } else {
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response){
+          alert("Payment failed: " + response.error.description);
+        });
+        rzp.open();
+      }
     } catch (err) {
-      alert(err.response?.data?.error || 'Payment failed.');
+      alert(err.response?.data?.error || 'Order creation failed.');
     } finally {
       setLoading(false);
     }
   };
 
   const pendingAmount = invoices.filter(i => i.status !== 'Paid').reduce((sum, i) => sum + i.amount, 0);
+  const totalPaid = invoices.filter(i => i.status === 'Paid').reduce((sum, i) => sum + i.amount, 0);
   const paidInvoices = invoices.filter(i => i.status === 'Paid');
   const lastPaymentVal = paidInvoices.length > 0 ? paidInvoices[0].amount : 0;
 
@@ -659,7 +775,8 @@ export const StudentFees = () => {
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
           { l: 'Total Outstanding', v: `Rs. ${pendingAmount.toLocaleString()}`, c: 'text-red-500' },
-          { l: 'Last Payment Amount', v: lastPaymentVal > 0 ? `Rs. ${lastPaymentVal.toLocaleString()}` : 'Rs. 0.00', c: 'text-green-600' }
+          { l: 'Total Paid', v: `Rs. ${totalPaid.toLocaleString()}`, c: 'text-green-600' },
+          { l: 'Last Payment Amount', v: lastPaymentVal > 0 ? `Rs. ${lastPaymentVal.toLocaleString()}` : 'Rs. 0.00', c: 'text-blue-600' }
         ].map(s => (
           <div key={s.l} className="stat-card">
             <div className="text-xs text-gray-500 mb-1">{s.l}</div>
@@ -670,7 +787,7 @@ export const StudentFees = () => {
 
       <div className="grid grid-cols-3 gap-6">
         <div className="card col-span-2">
-          <h3 className="font-display font-semibold text-primary mb-4">Pending Fees</h3>
+          <h3 className="font-display font-semibold text-primary mb-4">Pending & Recent Invoices</h3>
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
@@ -720,6 +837,39 @@ export const StudentFees = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Transaction History Section */}
+      <div className="card mt-6">
+        <h3 className="font-display font-semibold text-primary mb-4">📋 Payment Transaction History</h3>
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b border-gray-100">
+              {['Reference Number', 'Fee Description', 'Date', 'Payment Method', 'Amount', 'Status'].map(h => <th key={h} className="table-th">{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((t, i) => (
+              <tr key={t.id || i} className="border-b border-gray-50 hover:bg-gray-50">
+                <td className="table-td font-mono text-xs text-primary font-bold">{t.referenceNumber}</td>
+                <td className="table-td text-sm font-semibold">{t.feeName}</td>
+                <td className="table-td text-sm text-gray-400 font-medium">{t.date}</td>
+                <td className="table-td text-sm text-gray-500 font-medium">{t.paymentMethod}</td>
+                <td className="table-td text-sm font-bold text-primary">Rs. {t.amount.toLocaleString()}</td>
+                <td className="table-td">
+                  <span className={t.status === 'success' ? 'badge-success' : 'badge-danger'}>
+                    {t.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+            {transactions.length === 0 && (
+              <tr>
+                <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No transactions completed yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -1313,20 +1463,30 @@ export const StudentExams = () => {
     );
   }
 
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
+  const getExamDateTime = (rawDateStr, timeStr) => {
+    if (!rawDateStr) return new Date(0);
+    const dt = new Date(rawDateStr);
+    if (isNaN(dt.getTime())) return new Date(0);
+    if (timeStr && timeStr.includes(':')) {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      if (!isNaN(hours) && !isNaN(minutes)) {
+        dt.setHours(hours, minutes, 0, 0);
+      }
+    }
+    return dt;
+  };
 
   const upcomingExams = exams
     .filter(e => {
-      const examDate = new Date(e.rawDate || e.RawDate);
-      return examDate >= now && e.status !== 'Cancelled';
+      const examDate = getExamDateTime(e.rawDate || e.RawDate, e.time || e.Time);
+      return examDate >= new Date() && e.status !== 'Cancelled';
     })
     .sort((a, b) => new Date(a.rawDate || a.RawDate) - new Date(b.rawDate || b.RawDate));
 
   const pastAndOtherExams = exams
     .filter(e => {
-      const examDate = new Date(e.rawDate || e.RawDate);
-      return examDate < now || e.status === 'Cancelled';
+      const examDate = getExamDateTime(e.rawDate || e.RawDate, e.time || e.Time);
+      return examDate < new Date() || e.status === 'Cancelled';
     })
     .sort((a, b) => new Date(b.rawDate || b.RawDate) - new Date(a.rawDate || a.RawDate));
 

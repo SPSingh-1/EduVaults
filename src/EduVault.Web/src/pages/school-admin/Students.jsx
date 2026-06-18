@@ -71,7 +71,7 @@ const Students = () => {
     }
   }, []);
 
-  const resetForm = () => {
+  function resetForm() {
     setForm({
       firstName: '',
       lastName: '',

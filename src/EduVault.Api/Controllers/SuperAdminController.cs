@@ -27,17 +27,27 @@ namespace EduVault.Api.Controllers
         public async Task<IActionResult> GetSchools()
         {
             var schools = await _unitOfWork.Schools.GetAllAsync();
-            var schoolList = schools.Select(s => new
+            var schoolList = new System.Collections.Generic.List<object>();
+
+            foreach (var s in schools)
             {
-                s.Id,
-                s.Name,
-                s.SchoolCode,
-                s.Status,
-                s.CreatedAt,
-                s.Website,
-                // Count of students
-                StudentsCount = _unitOfWork.Users.FindAsync(u => u.SchoolId == s.Id && u.Role == "student").Result.Count()
-            });
+                var students = await _unitOfWork.Users.FindAsync(u => u.SchoolId == s.Id && u.Role == "student");
+                var adminUser = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == s.Id && u.Role == "schooladmin")).FirstOrDefault();
+                schoolList.Add(new
+                {
+                    s.Id,
+                    s.Name,
+                    s.SchoolCode,
+                    s.Status,
+                    s.CreatedAt,
+                    s.Website,
+                    s.LogoUrl,
+                    s.EmailDomain,
+                    s.ThemeColor,
+                    StudentsCount = students.Count(),
+                    AdminEmail = adminUser?.Email
+                });
+            }
 
             return Ok(schoolList);
         }
@@ -51,6 +61,16 @@ namespace EduVault.Api.Controllers
                 return BadRequest(new { error = "Email address already exists" });
             }
 
+            var emailDomain = request.EmailDomain;
+            if (string.IsNullOrWhiteSpace(emailDomain) && !string.IsNullOrWhiteSpace(request.AdminEmail))
+            {
+                var parts = request.AdminEmail.Split('@');
+                if (parts.Length > 1)
+                {
+                    emailDomain = parts[parts.Length - 1].Trim();
+                }
+            }
+
             var schoolCode = $"SCH-{DateTime.UtcNow.Year}-{new Random().Next(1000, 9999)}";
             var school = new School
             {
@@ -59,7 +79,10 @@ namespace EduVault.Api.Controllers
                 City = request.City,
                 Website = request.Website,
                 SchoolCode = schoolCode,
-                Status = "Active"
+                Status = "Active",
+                LogoUrl = request.LogoUrl,
+                EmailDomain = emailDomain,
+                ThemeColor = request.ThemeColor
             };
 
             await _unitOfWork.Schools.AddAsync(school);
@@ -107,6 +130,26 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.CompleteAsync();
 
             return Ok(new { success = true });
+        }
+
+        [HttpPut("schools/{id}")]
+        public async Task<IActionResult> UpdateSchoolBranding(Guid id, [FromBody] UpdateSchoolBrandingRequest request)
+        {
+            var school = await _unitOfWork.Schools.GetByIdAsync(id);
+            if (school == null)
+            {
+                return NotFound(new { error = "School not found" });
+            }
+
+            school.Name = request.Name;
+            school.LogoUrl = request.LogoUrl;
+            school.EmailDomain = request.EmailDomain;
+            school.ThemeColor = request.ThemeColor;
+
+            _unitOfWork.Schools.Update(school);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(school);
         }
 
         [HttpGet("subscriptions")]
@@ -191,6 +234,44 @@ namespace EduVault.Api.Controllers
                 onboardingTrend,
                 recentActivity
             });
+        }
+
+        [HttpGet("settings")]
+        public async Task<IActionResult> GetSettings()
+        {
+            var settings = (await _unitOfWork.PlatformSettings.GetAllAsync()).FirstOrDefault();
+            if (settings == null)
+            {
+                settings = new PlatformSetting();
+                await _unitOfWork.PlatformSettings.AddAsync(settings);
+                await _unitOfWork.CompleteAsync();
+            }
+            return Ok(settings);
+        }
+
+        [HttpPost("settings")]
+        public async Task<IActionResult> UpdateSettings([FromBody] PlatformSetting request)
+        {
+            var settings = (await _unitOfWork.PlatformSettings.GetAllAsync()).FirstOrDefault();
+            if (settings == null)
+            {
+                settings = new PlatformSetting();
+                await _unitOfWork.PlatformSettings.AddAsync(settings);
+            }
+
+            settings.OrgName = request.OrgName;
+            settings.LogoUrl = request.LogoUrl;
+            settings.PrimaryColor = request.PrimaryColor;
+            settings.MaintenanceMode = request.MaintenanceMode;
+            settings.MaintenanceMessage = request.MaintenanceMessage;
+            settings.BackupFrequency = request.BackupFrequency;
+            settings.BackupTime = request.BackupTime;
+            settings.BackupTarget = request.BackupTarget;
+
+            _unitOfWork.PlatformSettings.Update(settings);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(settings);
         }
     }
 }

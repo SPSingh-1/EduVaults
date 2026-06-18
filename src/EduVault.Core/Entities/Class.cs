@@ -13,6 +13,7 @@ namespace EduVault.Core.Entities
         public string Room { get; set; } = string.Empty;
         public int Capacity { get; set; } = 30;
         public Guid? ClassTeacherId { get; set; }
+        public bool AreMarksPublished { get; set; } = false;
 
         // Navigation properties
         public virtual School? School { get; set; }

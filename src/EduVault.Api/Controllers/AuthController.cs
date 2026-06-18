@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using EduVault.Core.Entities;
 using EduVault.Core.Interfaces;
 using EduVault.Core.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace EduVault.Api.Controllers
 {
@@ -33,16 +34,28 @@ namespace EduVault.Api.Controllers
                 return Unauthorized(new { error = "Invalid email or password" });
             }
 
+            var settings = (await _unitOfWork.PlatformSettings.GetAllAsync()).FirstOrDefault();
+            if (settings != null && settings.MaintenanceMode && user.Role != "superadmin" && user.Role != "schooladmin")
+            {
+                return StatusCode(503, new { error = settings.MaintenanceMessage ?? "System is currently undergoing maintenance. Please try again later." });
+            }
+
             if (!user.IsActive)
             {
                 return StatusCode(403, new { error = "User account is deactivated" });
             }
 
             string schoolName = string.Empty;
+            string logoUrl = string.Empty;
+            string emailDomain = string.Empty;
+            string themeColor = string.Empty;
             if (user.SchoolId.HasValue)
             {
                 var school = await _unitOfWork.Schools.GetByIdAsync(user.SchoolId.Value);
                 schoolName = school?.Name ?? string.Empty;
+                logoUrl = school?.LogoUrl ?? string.Empty;
+                emailDomain = school?.EmailDomain ?? string.Empty;
+                themeColor = school?.ThemeColor ?? string.Empty;
             }
 
             var token = _authService.GenerateToken(user);
@@ -59,7 +72,10 @@ namespace EduVault.Api.Controllers
                     LastName = user.LastName,
                     Avatar = $"{user.FirstName[0]}{user.LastName[0]}",
                     SchoolId = user.SchoolId,
-                    SchoolName = schoolName
+                    SchoolName = schoolName,
+                    LogoUrl = logoUrl,
+                    EmailDomain = emailDomain,
+                    ThemeColor = themeColor
                 }
             };
 
@@ -145,6 +161,51 @@ namespace EduVault.Api.Controllers
             {
                 success = true,
                 message = "Password updated successfully."
+            });
+        }
+
+        [HttpGet("school-branding")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetSchoolBranding([FromQuery] string domain)
+        {
+            if (string.IsNullOrWhiteSpace(domain))
+            {
+                return BadRequest(new { error = "Domain parameter is required." });
+            }
+
+            var schoolList = await _unitOfWork.Schools.FindAsync(s => s.EmailDomain != null && s.EmailDomain.ToLower() == domain.ToLower());
+            var school = schoolList.FirstOrDefault();
+            if (school == null)
+            {
+                return NotFound(new { error = "No branding found for this domain." });
+            }
+
+            return Ok(new
+            {
+                school.Name,
+                school.LogoUrl,
+                school.ThemeColor
+            });
+        }
+
+        [HttpGet("settings")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPublicSettings()
+        {
+            var settings = (await _unitOfWork.PlatformSettings.GetAllAsync()).FirstOrDefault();
+            if (settings == null)
+            {
+                settings = new PlatformSetting();
+                await _unitOfWork.PlatformSettings.AddAsync(settings);
+                await _unitOfWork.CompleteAsync();
+            }
+            return Ok(new
+            {
+                settings.OrgName,
+                settings.LogoUrl,
+                settings.PrimaryColor,
+                settings.MaintenanceMode,
+                settings.MaintenanceMessage
             });
         }
     }

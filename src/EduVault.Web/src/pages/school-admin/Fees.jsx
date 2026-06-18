@@ -6,6 +6,9 @@ import { apiClient } from '../../api/apiClient';
 const Fees = () => {
   const [invoices, setInvoices] = useState([]);
   const [structures, setStructures] = useState([]);
+  const [studentLedger, setStudentLedger] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [activeTab, setActiveTab] = useState('invoices');
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -35,6 +38,12 @@ const Fees = () => {
 
       const strRes = await apiClient.get('/billing/structures');
       setStructures(strRes.data);
+
+      const ledgerRes = await apiClient.get('/billing/student-ledger');
+      setStudentLedger(ledgerRes.data);
+
+      const txnRes = await apiClient.get('/billing/transactions');
+      setTransactions(txnRes.data);
     } catch (err) {
       console.error('Error fetching billing data:', err);
     } finally {
@@ -254,49 +263,166 @@ const Fees = () => {
       </div>
 
       <div className="card">
-        <h3 className="font-display font-semibold text-primary mb-4">Recent Transactions</h3>
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="table-th text-left">Student Name</th>
-              <th className="table-th text-left">Fee Type</th>
-              <th className="table-th text-left">Amount</th>
-              <th className="table-th text-left">Date</th>
-              <th className="table-th text-left">Status</th>
-              <th className="table-th text-left">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((t, idx) => (
-              <tr key={t.id || idx} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="table-td">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                      {t.studentName ? t.studentName[0] : '?'}
-                    </div>
-                    <span className="font-medium text-sm">{t.studentName}</span>
-                  </div>
-                </td>
-                <td className="table-td text-sm text-gray-500">{t.type}</td>
-                <td className="table-td font-bold text-primary">Rs. {t.amount.toLocaleString()}</td>
-                <td className="table-td text-sm text-gray-400">{t.date}</td>
-                <td className="table-td">
-                  <span className={getStatusBadge(t.status)}>
-                    {t.status}
-                  </span>
-                </td>
-                <td className="table-td">
-                  <button className="text-gray-400 text-lg">⋮</button>
-                </td>
-              </tr>
-            ))}
-            {invoices.length === 0 && (
-              <tr>
-                <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No billing invoices recorded yet.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <div className="flex border-b border-gray-100 mb-6 gap-6">
+          {[
+            { id: 'invoices', label: 'Recent Invoices' },
+            { id: 'ledger', label: 'Student Dues Ledger' },
+            { id: 'transactions', label: 'Payment Transactions Log' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
+                activeTab === tab.id
+                  ? 'border-primary text-primary font-bold'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'invoices' && (
+          <div>
+            <h3 className="font-display font-semibold text-primary mb-4">Invoiced School Fees</h3>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="table-th text-left">Student Name</th>
+                  <th className="table-th text-left">Fee Type</th>
+                  <th className="table-th text-left">Amount</th>
+                  <th className="table-th text-left">Date</th>
+                  <th className="table-th text-left">Status</th>
+                  <th className="table-th text-left">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((t, idx) => (
+                  <tr key={t.id || idx} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="table-td">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                          {t.studentName ? t.studentName[0] : '?'}
+                        </div>
+                        <span className="font-semibold text-sm">{t.studentName}</span>
+                      </div>
+                    </td>
+                    <td className="table-td text-sm text-gray-500 font-medium">{t.type}</td>
+                    <td className="table-td font-bold text-primary">Rs. {t.amount.toLocaleString()}</td>
+                    <td className="table-td text-sm text-gray-400 font-medium">{t.date}</td>
+                    <td className="table-td">
+                      <span className={getStatusBadge(t.status)}>
+                        {t.status}
+                      </span>
+                    </td>
+                    <td className="table-td">
+                      <button className="text-gray-400 text-lg">⋮</button>
+                    </td>
+                  </tr>
+                ))}
+                {invoices.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No billing invoices recorded yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === 'ledger' && (
+          <div>
+            <h3 className="font-display font-semibold text-primary mb-4">Student-wise Dues Ledger</h3>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="table-th text-left">Student Name</th>
+                  <th className="table-th text-left">Class/Grade</th>
+                  <th className="table-th text-left">Total Billed</th>
+                  <th className="table-th text-left">Total Paid</th>
+                  <th className="table-th text-left">Remaining Due</th>
+                  <th className="table-th text-left">Dues Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {studentLedger.map((sl, idx) => (
+                  <tr key={sl.studentId || idx} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="table-td">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                          {sl.studentName ? sl.studentName[0] : '?'}
+                        </div>
+                        <span className="font-semibold text-sm">{sl.studentName}</span>
+                      </div>
+                    </td>
+                    <td className="table-td text-sm text-gray-500 font-medium">{sl.className}</td>
+                    <td className="table-td font-semibold text-gray-700">Rs. {sl.totalBilled.toLocaleString()}</td>
+                    <td className="table-td font-semibold text-green-600">Rs. {sl.totalPaid.toLocaleString()}</td>
+                    <td className={`table-td font-bold ${sl.remainingDue > 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                      Rs. {sl.remainingDue.toLocaleString()}
+                    </td>
+                    <td className="table-td">
+                      <span className={
+                        sl.status === 'Paid' ? 'badge-success' :
+                        sl.status === 'Partial' ? 'badge-info bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-2xs font-bold' :
+                        sl.status === 'Pending' ? 'badge-warning' : 'badge-gray'
+                      }>
+                        {sl.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {studentLedger.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No student ledger data available.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === 'transactions' && (
+          <div>
+            <h3 className="font-display font-semibold text-primary mb-4">Razorpay Payment Transaction Logs</h3>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="table-th text-left">Reference Number</th>
+                  <th className="table-th text-left">Student Name</th>
+                  <th className="table-th text-left">Fee Description</th>
+                  <th className="table-th text-left">Date</th>
+                  <th className="table-th text-left">Method</th>
+                  <th className="table-th text-left">Amount</th>
+                  <th className="table-th text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.map((tx, idx) => (
+                  <tr key={tx.id || idx} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="table-td font-mono text-xs text-primary font-bold">{tx.referenceNumber}</td>
+                    <td className="table-td text-sm font-semibold">{tx.studentName}</td>
+                    <td className="table-td text-sm text-gray-500 font-medium">{tx.feeName}</td>
+                    <td className="table-td text-sm text-gray-400 font-medium">{tx.date}</td>
+                    <td className="table-td text-sm text-gray-500 font-medium">{tx.paymentMethod}</td>
+                    <td className="table-td font-bold text-primary">Rs. {tx.amount.toLocaleString()}</td>
+                    <td className="table-td">
+                      <span className={tx.status === 'success' ? 'badge-success' : 'badge-danger'}>
+                        {tx.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {transactions.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="text-center py-6 text-gray-400 text-sm">No payment transactions recorded yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {showNewModal && (

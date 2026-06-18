@@ -13,6 +13,9 @@ namespace EduVault.Core.Entities
         public string SchoolCode { get; set; } = string.Empty;
         public string Status { get; set; } = "Active"; // Active, Pending, Suspended
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string? LogoUrl { get; set; }
+        public string? EmailDomain { get; set; }
+        public string? ThemeColor { get; set; }
 
         // Navigation properties
         public virtual ICollection<User> Users { get; set; } = new List<User>();
