@@ -17,6 +17,20 @@ import {
   Cell 
 } from 'recharts';
 
+const loadScript = (src) => {
+  return new Promise((resolve) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 const studentLinks = [
   { icon: '📊', label: 'Dashboard', path: '/student/dashboard' },
   { icon: '📅', label: 'Daily Schedule', path: '/student/schedule' },
@@ -44,6 +58,92 @@ export const StudentDashboard = () => {
   const [attendanceList, setAttendanceList] = useState([]);
   const [remarks, setRemarks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+
+  const fetchInvoices = async () => {
+    try {
+      const billRes = await apiClient.get('/billing/invoices');
+      setInvoices(billRes.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleQuickPay = async (invoiceId) => {
+    if (!invoiceId) return;
+    setPaymentLoading(true);
+    try {
+      const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+      if (!scriptLoaded) {
+        alert('Failed to load Razorpay SDK. Please check your internet connection.');
+        setPaymentLoading(false);
+        return;
+      }
+
+      // 1. Create Razorpay order
+      const orderRes = await apiClient.post('/billing/create-order', { invoiceId });
+      const { orderId, amount, currency, keyId, isMock } = orderRes.data;
+
+      const userProfile = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
+
+      // 2. Setup checkout options
+      const options = {
+        key: keyId,
+        amount: amount,
+        currency: currency,
+        name: "EduVault Payments",
+        description: "School Fee Invoice Payment",
+        order_id: isMock ? undefined : orderId,
+        handler: async function (response) {
+          setPaymentLoading(true);
+          try {
+            // 3. Verify payment signature on backend
+            await apiClient.post('/billing/verify-payment', {
+              invoiceId: invoiceId,
+              razorpayOrderId: response.razorpay_order_id || orderId,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature || 'mock_signature'
+            });
+            alert('Payment received and verified successfully!');
+            fetchInvoices();
+          } catch (err) {
+            alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
+          } finally {
+            setPaymentLoading(false);
+          }
+        },
+        prefill: {
+          name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`,
+          email: userProfile.email || '',
+        },
+        theme: {
+          color: "#1a2744"
+        }
+      };
+
+      if (isMock) {
+        if (window.confirm("Razorpay credentials not configured. Proceed with simulated payment?")) {
+          await options.handler({
+            razorpay_order_id: orderId,
+            razorpay_payment_id: `pay_mock_${Math.random().toString(36).substring(7)}`,
+            razorpay_signature: 'mock_signature'
+          });
+        } else {
+          setPaymentLoading(false);
+        }
+      } else {
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response){
+          alert("Payment failed: " + response.error.description);
+        });
+        rzp.open();
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Order creation failed.');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -117,16 +217,34 @@ export const StudentDashboard = () => {
         {[
           { label: 'Attendance', value: totalDays > 0 ? realAttendancePercent : '98.1%', sub: 'On Track', icon: '📋' },
           { label: 'Semester GPA', value: performance?.areMarksPublished !== false ? (performance?.semesterGpa || '0.00') : '🔒 Locked', sub: performance?.areMarksPublished !== false ? 'Target: 4.00' : 'Awaiting Release', icon: '📝' },
-          { label: 'Outstanding Fees', value: `Rs. ${pendingAmount.toLocaleString()}`, sub: pendingAmount > 0 ? 'Due soon' : 'All Clear', icon: '💳', warn: pendingAmount > 0 },
+          { 
+            label: 'Outstanding Fees', 
+            value: `Rs. ${pendingAmount.toLocaleString()}`, 
+            sub: pendingAmount > 0 ? 'Due soon' : 'All Clear', 
+            icon: '💳', 
+            warn: pendingAmount > 0,
+            action: pendingAmount > 0 ? (
+              <button 
+                onClick={() => handleQuickPay(invoices.find(i => i.status !== 'Paid')?.id)}
+                disabled={paymentLoading}
+                className="mt-2 text-[10px] font-bold text-red-600 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-lg transition-all w-full text-center border border-red-100/50 flex items-center justify-center gap-1"
+              >
+                {paymentLoading ? 'Processing...' : '💳 Pay Next Fee Item'}
+              </button>
+            ) : null
+          },
           { label: 'Rank', value: performance?.areMarksPublished !== false ? (performance?.classRank || '1st / 1') : '🔒 Locked', sub: performance?.areMarksPublished !== false ? 'Top 15%' : 'Awaiting Release', icon: '📢' },
         ].map(s => (
-          <div key={s.label} className="stat-card">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-500">{s.label}</span>
-              <span className="text-xl">{s.icon}</span>
+          <div key={s.label} className="stat-card flex flex-col justify-between min-h-[110px]">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500">{s.label}</span>
+                <span className="text-xl">{s.icon}</span>
+              </div>
+              <div className={`font-display text-2xl font-bold ${s.warn ? 'text-red-500' : 'text-primary'}`}>{s.value}</div>
+              <div className={`text-xs mt-1 ${s.warn ? 'text-red-400' : 'text-gray-400'}`}>{s.sub}</div>
             </div>
-            <div className={`font-display text-2xl font-bold ${s.warn ? 'text-red-500' : 'text-primary'}`}>{s.value}</div>
-            <div className={`text-xs mt-1 ${s.warn ? 'text-red-400' : 'text-gray-400'}`}>{s.sub}</div>
+            {s.action}
           </div>
         ))}
       </div>
@@ -221,16 +339,42 @@ export const StudentDashboard = () => {
 
         <div className="card">
           <h3 className="font-display font-bold text-primary text-sm mb-4">💰 School Fees Status</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={feeData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis type="number" stroke="#94a3b8" />
-                <YAxis dataKey="name" type="category" stroke="#94a3b8" />
-                <Tooltip formatter={(value) => [`Rs. ${value.toLocaleString()}`, 'Amount']} />
-                <Bar dataKey="amount" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={feeData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis type="number" stroke="#94a3b8" />
+                  <YAxis dataKey="name" type="category" stroke="#94a3b8" />
+                  <Tooltip formatter={(value) => [`Rs. ${value.toLocaleString()}`, 'Amount']} />
+                  <Bar dataKey="amount" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 space-y-3 max-h-64 overflow-y-auto pr-1">
+              <div className="text-xxs font-bold text-gray-400 uppercase tracking-wider mb-2">Pending Invoices</div>
+              {invoices.filter(i => i.status !== 'Paid').map(inv => (
+                <div key={inv.id} className="p-3 bg-red-50/40 border border-red-100/50 rounded-xl flex items-center justify-between gap-4 transition-all hover:bg-red-50/70">
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-primary truncate" title={inv.desc}>{inv.desc}</div>
+                    <div className="text-[10px] text-gray-400">Due: {inv.due}</div>
+                  </div>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <span className="text-xs font-extrabold text-red-600">Rs. {inv.amount}</span>
+                    <button
+                      onClick={() => handleQuickPay(inv.id)}
+                      disabled={paymentLoading}
+                      className="btn-primary text-3xs py-1 px-3 bg-red-600 hover:bg-red-700 border-none rounded-lg font-bold shadow-sm shadow-red-500/10 active:scale-95 transition-all"
+                    >
+                      {paymentLoading ? '...' : 'Pay'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {invoices.filter(i => i.status !== 'Paid').length === 0 && (
+                <div className="text-center text-gray-400 text-xs py-16 italic">No pending dues. All clear!</div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -644,20 +788,6 @@ export const StudentResults = () => {
 };
 
 // --- Student Fees ---
-const loadScript = (src) => {
-  return new Promise((resolve) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = src;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
-
 const generateMockPaymentId = () => {
   return `pay_mock_${Math.random().toString(36).substring(7)}`;
 };
@@ -1138,28 +1268,50 @@ export const StudentHomework = () => {
   const [profile, setProfile] = useState(null);
   const [homeworks, setHomeworks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submittingId, setSubmittingId] = useState(null);
+  const [selectedHomework, setSelectedHomework] = useState(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const fetchHomeworks = async () => {
+    try {
+      // Fetch student profile first
+      const profRes = await apiClient.get('/academics/student/profile');
+      const prof = profRes.data;
+      setProfile(prof);
+
+      // Fetch homework assignments
+      const homeworkRes = await expressClient.get('/homework');
+      const studentClass = `${prof.class} - ${prof.section}`;
+      const filtered = homeworkRes.data.filter(h => h.className === studentClass);
+      setHomeworks(filtered);
+    } catch (err) {
+      console.error('Error loading student homework:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchHomeworks = async () => {
-      try {
-        // Fetch student profile first
-        const profRes = await apiClient.get('/academics/student/profile');
-        const prof = profRes.data;
-        setProfile(prof);
-
-        // Fetch homework assignments
-        const homeworkRes = await expressClient.get('/homework');
-        const studentClass = `${prof.class} - ${prof.section}`;
-        const filtered = homeworkRes.data.filter(h => h.className === studentClass);
-        setHomeworks(filtered);
-      } catch (err) {
-        console.error('Error loading student homework:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchHomeworks();
   }, []);
+
+  const handleSubmitHomework = async (id) => {
+    setSubmittingId(id);
+    try {
+      await expressClient.put(`/homework/${id}/student-submit`);
+      setSubmitSuccess(true);
+      await fetchHomeworks();
+      setTimeout(() => {
+        setSubmitSuccess(false);
+        setSelectedHomework(null);
+      }, 1500);
+    } catch (err) {
+      console.error('Error submitting homework:', err);
+      alert(err.response?.data?.error || 'Failed to submit homework.');
+    } finally {
+      setSubmittingId(null);
+    }
+  };
 
   return (
     <div>
@@ -1175,37 +1327,140 @@ export const StudentHomework = () => {
               <tr className="border-b border-gray-100">
                 <th className="table-th text-left">Assignment Details</th>
                 <th className="table-th text-left">Instructions</th>
-                <th className="table-th">Due Date</th>
-                <th className="table-th">Status</th>
+                <th className="table-th text-center">Due Date</th>
+                <th className="table-th text-center">Status</th>
+                <th className="table-th text-center">Action</th>
               </tr>
             </thead>
             <tbody>
-              {homeworks.map((h, i) => (
-                <tr key={h._id || i} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="table-td">
-                    <div className="font-semibold text-sm text-primary">{h.title}</div>
-                    <div className="text-2xs text-gray-400 mt-0.5">{h.className}</div>
-                  </td>
-                  <td className="table-td text-sm text-gray-600 max-w-xs truncate" title={h.instructions}>
-                    {h.instructions}
-                  </td>
-                  <td className="table-td text-center text-sm font-semibold text-gray-500">
-                    📅 {new Date(h.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </td>
-                  <td className="table-td text-center">
-                    <span className={`badge ${h.status === 'Active' ? 'badge-info' : h.status === 'Pending Review' ? 'badge-warning' : 'badge-success'}`}>
-                      {h.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {homeworks.map((h, i) => {
+                const isSubmitted = h.submittedStudents?.includes(profile?.id);
+                const isClosed = h.status === 'Completed';
+
+                return (
+                  <tr key={h._id || i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <td className="table-td">
+                      <div className="font-semibold text-sm text-primary">{h.title}</div>
+                      <div className="text-2xs text-gray-400 mt-0.5">{h.className}</div>
+                    </td>
+                    <td className="table-td text-sm text-gray-600 max-w-xs truncate" title={h.instructions}>
+                      {h.instructions}
+                    </td>
+                    <td className="table-td text-center text-sm font-semibold text-gray-500">
+                      📅 {new Date(h.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </td>
+                    <td className="table-td text-center">
+                      <span className={`badge ${isSubmitted ? 'badge-success' : isClosed ? 'badge-gray' : 'badge-warning'}`}>
+                        {isSubmitted ? 'Submitted' : isClosed ? 'Closed' : 'Pending'}
+                      </span>
+                    </td>
+                    <td className="table-td text-center">
+                      {isSubmitted ? (
+                        <span className="text-xs text-green-600 font-semibold flex items-center justify-center gap-1.5">
+                          ✓ Done
+                        </span>
+                      ) : isClosed ? (
+                        <span className="text-xs text-gray-400 italic">Closed</span>
+                      ) : (
+                        <button
+                          onClick={() => setSelectedHomework(h)}
+                          className="btn-primary text-2xs py-1.5 px-3 rounded-lg hover:scale-[1.03] active:scale-[0.97] transition-all"
+                        >
+                          📤 Submit
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {homeworks.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="text-center py-8 text-gray-400 text-sm">No homework assignments posted for your class.</td>
+                  <td colSpan="5" className="text-center py-8 text-gray-400 text-sm">No homework assignments posted for your class.</td>
                 </tr>
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Submission Modal */}
+      {selectedHomework && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transform transition-all">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+              <div>
+                <h3 className="font-display font-bold text-base">📤 Submit Homework</h3>
+                <p className="text-blue-200 text-xxs">Ensure all tasks are finished before submitting.</p>
+              </div>
+              {!submitSuccess && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedHomework(null)}
+                  className="text-white hover:text-blue-200 text-lg transition-colors"
+                >
+                  ✖
+                </button>
+              )}
+            </div>
+
+            <div className="p-6 space-y-4">
+              {submitSuccess ? (
+                <div className="text-center py-6 space-y-3 animate-fadeIn">
+                  <div className="w-16 h-16 bg-green-50 text-green-600 border border-green-200 rounded-full flex items-center justify-center text-3xl font-bold mx-auto animate-bounce">
+                    🎉
+                  </div>
+                  <h4 className="font-display font-bold text-lg text-primary">Submission Successful!</h4>
+                  <p className="text-xs text-gray-500">Your homework has been submitted to the teacher.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <div className="text-2xs text-gray-400 font-bold uppercase tracking-wider">Assignment</div>
+                    <div className="font-semibold text-primary text-sm">{selectedHomework.title}</div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-2xs text-gray-400 font-bold uppercase tracking-wider">Instructions</div>
+                    <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-3 max-h-24 overflow-y-auto border border-gray-100">
+                      {selectedHomework.instructions}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
+                    <span className="font-medium">Due Date:</span>
+                    <span className="font-bold">
+                      📅 {new Date(selectedHomework.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                    <button
+                      type="button"
+                      disabled={submittingId === selectedHomework._id}
+                      onClick={() => setSelectedHomework(null)}
+                      className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-500 font-semibold text-xs hover:bg-gray-50 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={submittingId === selectedHomework._id}
+                      onClick={() => handleSubmitHomework(selectedHomework._id)}
+                      className="btn-primary text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-1.5 shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                    >
+                      {submittingId === selectedHomework._id ? (
+                        <>
+                          <span className="animate-spin">⏳</span> Submitting...
+                        </>
+                      ) : (
+                        '📤 Confirm Submission'
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

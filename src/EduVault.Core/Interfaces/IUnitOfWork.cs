@@ -27,6 +27,10 @@ namespace EduVault.Core.Interfaces
         IRepository<Room> Rooms { get; }
         IRepository<Attendance> Attendances { get; }
         IRepository<PlatformSetting> PlatformSettings { get; }
+        IRepository<SupportTicket> SupportTickets { get; }
+        IRepository<KnowledgeBaseCategory> KnowledgeBaseCategories { get; }
+        IRepository<SystemEvent> SystemEvents { get; }
+        IRepository<PlatformPlan> PlatformPlans { get; }
         Task<int> CompleteAsync();
     }
 }

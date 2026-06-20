@@ -167,7 +167,7 @@ const Landing = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
             <div className="bg-white/10 rounded-2xl p-7 border border-white/20">
               <div className="text-xs font-bold text-accent uppercase tracking-wider mb-2">Standard Plan</div>
-              <div className="font-display text-4xl font-bold text-white mb-1">Rs.4k <span className="text-lg text-blue-300">/month</span></div>
+              <div className="font-display text-4xl font-bold text-white mb-1">$49 <span className="text-lg text-blue-300">/month</span></div>
               <p className="text-blue-200 text-sm mb-6">Everything a school needs to manage up to 500 students</p>
               <ul className="space-y-2 text-sm text-blue-200 mb-7">
                 {['Up to 500 Students','Attendance management','Automated Report Cards','Parent & Staff Support','Full Fee Management'].map(f=>(
@@ -191,7 +191,7 @@ const Landing = () => {
             {/* Custom Pricing Card */}
             <div className="bg-white/10 rounded-2xl p-7 border border-white/20">
               <div className="text-xs font-bold text-yellow-400 uppercase tracking-wider mb-2">Custom Development</div>
-              <div className="font-display text-4xl font-bold text-white mb-1">Rs.5k–25k <span className="text-lg text-blue-300">/pages</span></div>
+              <div className="font-display text-4xl font-bold text-white mb-1">$199–$999 <span className="text-lg text-blue-300">/pages</span></div>
               <p className="text-blue-200 text-sm mb-6">Need extra pages or modifications to existing features? We'll quote based on your requirements.</p>
               <ul className="space-y-2 text-sm text-blue-200 mb-7">
                 {[
@@ -209,14 +209,14 @@ const Landing = () => {
             </div>
             {/* Yearly Plan Card */}
             <div className="bg-green-500/10 rounded-2xl p-7 border border-green-400/30 relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-bold px-4 py-1 rounded-full">SAVE UP TO Rs.5k</div>
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-bold px-4 py-1 rounded-full">SAVE UP TO $100</div>
               <div className="text-xs font-bold text-green-400 uppercase tracking-wider mb-2">Yearly Plan</div>
-              <div className="font-display text-4xl font-bold text-white mb-1">Rs.2k–5k <span className="text-lg text-blue-300">off/year</span></div>
+              <div className="font-display text-4xl font-bold text-white mb-1">$50–$100 <span className="text-lg text-blue-300">off/year</span></div>
               <p className="text-blue-200 text-sm mb-6">Pay annually and enjoy loyalty discounts — the longer your relationship with us, the more you save.</p>
               <ul className="space-y-2 text-sm text-blue-200 mb-7">
                 {[
-                  'Rs.2,000 off for new yearly subscribers',
-                  'Up to Rs.5,000 off for long-term clients',
+                  '$50 off for new yearly subscribers',
+                  'Up to $100 off for long-term clients',
                   'All Standard Plan features included',
                   'Priority onboarding & setup assistance',
                   'Locked-in pricing for 12 months',

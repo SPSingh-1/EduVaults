@@ -493,6 +493,36 @@ app.put('/api/homework/:id/submit', authenticateToken, async (req, res) => {
   }
 });
 
+app.put('/api/homework/:id/student-submit', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Only students can submit homework' });
+    }
+    const homework = await Homework.findById(req.params.id);
+    if (!homework) return res.status(404).json({ error: 'Homework not found' });
+
+    if (!homework.submittedStudents) {
+      homework.submittedStudents = [];
+    }
+
+    const studentId = req.user.id;
+    if (homework.submittedStudents.includes(studentId)) {
+      return res.status(400).json({ error: 'Homework already submitted' });
+    }
+
+    homework.submittedStudents.push(studentId);
+    homework.submittedCount = homework.submittedStudents.length;
+    const total = homework.totalStudents || 0;
+    homework.submissions = `${homework.submittedCount}/${total}`;
+    homework.pct = total > 0 ? Math.min(100, Math.round((homework.submittedCount / total) * 100)) : 0;
+
+    await homework.save();
+    res.json(homework);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.put('/api/homework/:id/status', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'teacher' && req.user.role !== 'schooladmin') {

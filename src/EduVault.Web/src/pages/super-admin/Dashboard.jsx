@@ -47,7 +47,7 @@ const SuperAdminDashboard = () => {
         {[
           {label:'Total Schools',value: stats?.totalSchools ?? '0',change:'Real-time',icon:'🏫',color:'text-blue-600'},
           {label:'Active Subscriptions',value: stats?.activeSubscriptions ?? '0',change:'Active',icon:'✅',color:'text-green-600'},
-          {label:'Monthly Revenue',value: `Rs. ${stats?.monthlyRevenue?.toLocaleString() ?? '0'}`,change:'MRR',icon:'💰',color:'text-purple-600'},
+          {label:'Monthly Revenue',value: `$${stats?.monthlyRevenue?.toLocaleString() ?? '0'}`,change:'MRR',icon:'💰',color:'text-purple-600'},
           {label:'Platform Growth',value: stats?.platformGrowth ?? 'Stable',change:'Steady',icon:'📈',color:'text-orange-600'},
         ].map(s=>(
           <div key={s.label} className="stat-card">

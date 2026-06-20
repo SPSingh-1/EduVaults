@@ -171,6 +171,14 @@ using (var scope = app.Services.CreateScope())
             await cmd.ExecuteNonQueryAsync();
 
             cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS ""ExamTypes"" (
+                    ""Id"" UUID PRIMARY KEY,
+                    ""SchoolId"" UUID NOT NULL,
+                    ""Name"" TEXT NOT NULL
+                );";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS ""PlatformSettings"" (
                     ""Id"" UUID PRIMARY KEY,
                     ""OrgName"" TEXT NOT NULL,
@@ -193,6 +201,117 @@ using (var scope = app.Services.CreateScope())
                     VALUES ('" + Guid.NewGuid() + @"', 'SuperAdmin Global', '/logo.jpeg', '#1a2744', false, 'Scheduled maintenance in progress. We''ll be back shortly.', 'Daily', '02:00 AM', 'Amazon S3: production-vault-01');";
                 await cmd.ExecuteNonQueryAsync();
             }
+
+            // Create Support Tickets table
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS ""SupportTickets"" (
+                    ""Id"" UUID PRIMARY KEY,
+                    ""TicketNumber"" TEXT NOT NULL,
+                    ""Title"" TEXT NOT NULL,
+                    ""SchoolName"" TEXT NOT NULL,
+                    ""Status"" TEXT NOT NULL,
+                    ""Priority"" TEXT NOT NULL,
+                    ""CreatedAt"" TIMESTAMP WITH TIME ZONE NOT NULL
+                );";
+            await cmd.ExecuteNonQueryAsync();
+
+            // Create Knowledge Base Categories table
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS ""KnowledgeBaseCategories"" (
+                    ""Id"" UUID PRIMARY KEY,
+                    ""Icon"" TEXT NOT NULL,
+                    ""Title"" TEXT NOT NULL,
+                    ""ArticleCount"" INTEGER NOT NULL
+                );";
+            await cmd.ExecuteNonQueryAsync();
+
+            // Create System Events table
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS ""SystemEvents"" (
+                    ""Id"" UUID PRIMARY KEY,
+                    ""Icon"" TEXT NOT NULL,
+                    ""Title"" TEXT NOT NULL,
+                    ""Description"" TEXT NOT NULL,
+                    ""CreatedAt"" TIMESTAMP WITH TIME ZONE NOT NULL
+                );";
+            await cmd.ExecuteNonQueryAsync();
+
+            // Seed Support Tickets if empty
+            cmd.CommandText = "SELECT COUNT(*) FROM \"SupportTickets\";";
+            var ticketsCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            if (ticketsCount == 0)
+            {
+                cmd.CommandText = @"
+                    INSERT INTO ""SupportTickets"" (""Id"", ""TicketNumber"", ""Title"", ""SchoolName"", ""Status"", ""Priority"", ""CreatedAt"")
+                    VALUES 
+                    ('" + Guid.NewGuid() + @"', 'TK-8821', 'SSO Login failure for faculty staff', 'Lincoln High School', 'IN PROGRESS', 'HIGH', '" + DateTime.UtcNow.AddMinutes(-45).ToString("o") + @"'),
+                    ('" + Guid.NewGuid() + @"', 'TK-8794', 'Bulk student data import error', 'Westside Academy', 'OPEN', 'MEDIUM', '" + DateTime.UtcNow.AddHours(-2).ToString("o") + @"'),
+                    ('" + Guid.NewGuid() + @"', 'TK-8750', 'Billing period update request', 'Elite Grove Prep', 'RESOLVED', 'LOW', '" + DateTime.UtcNow.AddDays(-1).ToString("o") + @"');";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            // Seed Knowledge Base Categories if empty
+            cmd.CommandText = "SELECT COUNT(*) FROM \"KnowledgeBaseCategories\";";
+            var kbCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            if (kbCount == 0)
+            {
+                cmd.CommandText = @"
+                    INSERT INTO ""KnowledgeBaseCategories"" (""Id"", ""Icon"", ""Title"", ""ArticleCount"")
+                    VALUES 
+                    ('" + Guid.NewGuid() + @"', '📋', 'Onboarding Guide', 51),
+                    ('" + Guid.NewGuid() + @"', '💳', 'Billing & Licenses', 8),
+                    ('" + Guid.NewGuid() + @"', '🔧', 'Troubleshooting', 34);";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            // Seed System Events if empty
+            cmd.CommandText = "SELECT COUNT(*) FROM \"SystemEvents\";";
+            var eventsCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            if (eventsCount == 0)
+            {
+                cmd.CommandText = @"
+                    INSERT INTO ""SystemEvents"" (""Id"", ""Icon"", ""Title"", ""Description"", ""CreatedAt"")
+                    VALUES 
+                    ('" + Guid.NewGuid() + @"', '🟢', 'Backup Completed', 'Weekly snapshot stored', '" + DateTime.UtcNow.AddHours(-1).ToString("o") + @"'),
+                    ('" + Guid.NewGuid() + @"', '🟡', 'New School Admin', 'Lakeside Academy registered', '" + DateTime.UtcNow.AddHours(-3).ToString("o") + @"'),
+                    ('" + Guid.NewGuid() + @"', '🔴', 'API Latency Spike', 'Auth service slow response', '" + DateTime.UtcNow.AddHours(-5).ToString("o") + @"');";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            // Create Platform Plans table
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS ""PlatformPlans"" (
+                    ""Id"" UUID PRIMARY KEY,
+                    ""TierLabel"" TEXT NOT NULL,
+                    ""PlanName"" TEXT NOT NULL,
+                    ""ImplementationCost"" NUMERIC NOT NULL,
+                    ""StudentCapacity"" TEXT NOT NULL,
+                    ""StorageLimit"" TEXT NOT NULL,
+                    ""MonthlyPrice"" TEXT NOT NULL,
+                    ""IsTopRevenue"" BOOLEAN NOT NULL
+                );";
+            await cmd.ExecuteNonQueryAsync();
+
+            // Seed Platform Plans if empty
+            cmd.CommandText = "SELECT COUNT(*) FROM \"PlatformPlans\";";
+            var plansCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            if (plansCount == 0)
+            {
+                cmd.CommandText = @"
+                    INSERT INTO ""PlatformPlans"" (""Id"", ""TierLabel"", ""PlanName"", ""ImplementationCost"", ""StudentCapacity"", ""StorageLimit"", ""MonthlyPrice"", ""IsTopRevenue"")
+                    VALUES 
+                    ('" + Guid.NewGuid() + @"', 'TIER 1', 'Standard Plan', 199, '500 Students', '50 GB', '$49/mo', false),
+                    ('" + Guid.NewGuid() + @"', 'TIER 2', 'Enterprise Plan', 499, 'Unlimited', '2 TB', 'Custom /mo', true);";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            // Run self-healing updates to convert existing records from INR to USD
+            cmd.CommandText = "UPDATE \"PlatformPlans\" SET \"MonthlyPrice\" = '$49/mo', \"ImplementationCost\" = 199 WHERE \"PlanName\" = 'Standard Plan' AND (\"MonthlyPrice\" LIKE '%Rs%' OR \"ImplementationCost\" = 12000);";
+            await cmd.ExecuteNonQueryAsync();
+            cmd.CommandText = "UPDATE \"PlatformPlans\" SET \"ImplementationCost\" = 499 WHERE \"PlanName\" = 'Enterprise Plan' AND \"ImplementationCost\" = 15000;";
+            await cmd.ExecuteNonQueryAsync();
+            cmd.CommandText = "UPDATE \"Subscriptions\" SET \"Amount\" = 49.00 WHERE \"PlanType\" = 'Standard' AND \"Amount\" = 499.00;";
+            await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception migEx)
         {

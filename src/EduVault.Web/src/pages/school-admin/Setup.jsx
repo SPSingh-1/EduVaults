@@ -2,6 +2,24 @@ import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
 
+const loadSubScript = (src) => {
+  return new Promise((resolve) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
+const generateSetupMockPaymentId = () => {
+  return `sub_pay_mock_${Math.random().toString(36).substring(7)}`;
+};
+
 const Setup = () => {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState('infrastructure'); // 'infrastructure', 'timetable', 'substitutions', 'fees'
@@ -28,13 +46,21 @@ const Setup = () => {
   const [gradeLevels, setGradeLevels] = useState([]);
   const [capacities, setCapacities] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [examTypes, setExamTypes] = useState([]);
   const [newSection, setNewSection] = useState('');
   const [newRoom, setNewRoom] = useState('');
   const [newGradeLevel, setNewGradeLevel] = useState('');
   const [newCapacity, setNewCapacity] = useState('');
   const [newDepartment, setNewDepartment] = useState('');
+  const [newExamType, setNewExamType] = useState('');
   const [newSubName, setNewSubName] = useState('');
   const [loadingSub, setLoadingSub] = useState(false);
+  const [loadingExamTypes, setLoadingExamTypes] = useState(false);
+
+  // Subscription state
+  const [subInfo, setSubInfo] = useState(null);
+  const [payingSub, setPayingSub] = useState(false);
+  const [platformPlans, setPlatformPlans] = useState([]);
 
   // Tab 2: Timetable State
   const [classes, setClasses] = useState([]);
@@ -79,6 +105,93 @@ const Setup = () => {
   // Days of the week
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
+  const fetchSubscriptionInfo = async () => {
+    try {
+      const res = await apiClient.get('/academics/stats');
+      setSubInfo({
+        status: res.data.subscriptionStatus,
+        amount: res.data.subscriptionAmount,
+        planType: res.data.subscriptionPlanType,
+        id: res.data.subscriptionId
+      });
+      const plansRes = await apiClient.get('/billing/plans');
+      setPlatformPlans(plansRes.data || []);
+    } catch (err) {
+      console.error('Error fetching subscription details:', err);
+    }
+  };
+
+  const handlePaySetupSubscription = async () => {
+    setPayingSub(true);
+    try {
+      const scriptLoaded = await loadSubScript('https://checkout.razorpay.com/v1/checkout.js');
+      if (!scriptLoaded) {
+        alert('Failed to load Razorpay SDK. Please check your internet connection.');
+        setPayingSub(false);
+        return;
+      }
+
+      const orderRes = await apiClient.post('/billing/create-subscription-order');
+      const { orderId, amount, currency, keyId, isMock } = orderRes.data;
+
+      const userProfile = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
+
+      const options = {
+        key: keyId,
+        amount: amount,
+        currency: currency,
+        name: "EduVault Subscription",
+        description: `${subInfo?.planType || 'Standard'} Plan Platform Fees`,
+        order_id: isMock ? undefined : orderId,
+        handler: async function (response) {
+          setPayingSub(true);
+          try {
+            await apiClient.post('/billing/verify-subscription-payment', {
+              razorpayOrderId: response.razorpay_order_id || orderId,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature || 'mock_signature'
+            });
+            alert('Platform subscription payment successful! All features unlocked.');
+            fetchSubscriptionInfo();
+          } catch (err) {
+            alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
+          } finally {
+            setPayingSub(false);
+          }
+        },
+        prefill: {
+          name: userProfile.firstName || 'School Admin',
+          email: userProfile.email || '',
+        },
+        theme: {
+          color: "#1a2744"
+        }
+      };
+
+      if (isMock) {
+        if (window.confirm("Razorpay credentials not configured. Proceed with simulated subscription payment?")) {
+          await options.handler({
+            razorpay_order_id: orderId,
+            razorpay_payment_id: generateSetupMockPaymentId(),
+            razorpay_signature: 'mock_signature'
+          });
+        } else {
+          setPayingSub(false);
+        }
+      } else {
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response){
+          alert("Payment failed: " + response.error.description);
+        });
+        rzp.open();
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Order creation failed.');
+    } finally {
+      setPayingSub(false);
+    }
+  };
+
   const fetchInfrastructure = async () => {
     try {
       const secRes = await apiClient.get('/academics/sections');
@@ -95,6 +208,9 @@ const Setup = () => {
 
       const depRes = await apiClient.get('/academics/departments');
       setDepartments(depRes.data);
+
+      const examTypeRes = await apiClient.get('/academics/exam-types');
+      setExamTypes(examTypeRes.data);
 
       const subjRes = await apiClient.get('/academics/subjects');
       setSubjects(subjRes.data);
@@ -367,6 +483,7 @@ const Setup = () => {
     fetchTimetableMeta();
     fetchActiveAlerts();
     fetchFeeSetupData();
+    fetchSubscriptionInfo();
   }, []);
 
   useEffect(() => {
@@ -600,6 +717,40 @@ const Setup = () => {
     }
   };
 
+  const handleAddExamType = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!newExamType.trim()) return;
+    setLoadingExamTypes(true);
+    setError('');
+    setSuccess('');
+    try {
+      await apiClient.post('/academics/exam-types', { name: newExamType.trim() });
+      setNewExamType('');
+      setSuccess('Examination type added successfully!');
+      fetchInfrastructure();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to add examination type.');
+    } finally {
+      setLoadingExamTypes(false);
+    }
+  };
+
+  const handleDeleteExamType = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this examination type?')) return;
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      await apiClient.delete(`/academics/exam-types/${id}`);
+      setSuccess('Examination type deleted successfully!');
+      fetchInfrastructure();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete examination type.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Tab 2 grid handlers
   const handleCellClick = (day, periodNo) => {
     setModalError('');
@@ -742,42 +893,43 @@ const Setup = () => {
       <Topbar title="Academic Setup & Configurations" subtitle="Dashboard › Academics › Setup" />
 
       {/* Tabs Menu */}
-      <div className="flex gap-4 border-b border-gray-200 px-6 mt-4">
-        <button
-          onClick={() => { setActiveTab('infrastructure'); setError(''); setSuccess(''); }}
-          className={`pb-3 text-sm font-semibold transition-all ${activeTab === 'infrastructure' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-primary'}`}
-        >
-          📂 Infrastructure Setup
-        </button>
-        <button
-          onClick={() => { setActiveTab('timetable'); setError(''); setSuccess(''); fetchTimetableMeta(); }}
-          className={`pb-3 text-sm font-semibold transition-all ${activeTab === 'timetable' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-primary'}`}
-        >
-          📅 Weekly Timetable Config
-        </button>
-        <button
-          onClick={() => { setActiveTab('substitutions'); setError(''); setSuccess(''); fetchActiveAlerts(); }}
-          className={`pb-3 text-sm font-semibold transition-all flex items-center gap-1.5 ${activeTab === 'substitutions' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-primary'}`}
-        >
-          👩‍🏫 Substitution & Cover Alerts
-          {activeAlerts.length > 0 && (
-            <span className="bg-rose-500 text-white text-xxs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-              {activeAlerts.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => { setActiveTab('fees'); setError(''); setSuccess(''); fetchFeeSetupData(); }}
-          className={`pb-3 text-sm font-semibold transition-all ${activeTab === 'fees' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-primary'}`}
-        >
-          💰 Fee Rules Setup
-        </button>
-        <button
-          onClick={() => { setActiveTab('class-subjects'); setError(''); setSuccess(''); fetchClassSubjectsData(); }}
-          className={`pb-3 text-sm font-semibold transition-all ${activeTab === 'class-subjects' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-primary'}`}
-        >
-          📚 Class Subjects Mapping
-        </button>
+      <div className="flex gap-2 border-b border-gray-100 pb-4 mt-4 px-6 overflow-x-auto whitespace-nowrap scrollbar-none">
+        {[
+          { id: 'infrastructure', label: 'Infrastructure Setup', icon: '📂' },
+          { id: 'timetable', label: 'Weekly Timetable Config', icon: '📅', action: fetchTimetableMeta },
+          { id: 'substitutions', label: 'Substitution & Cover Alerts', icon: '👩‍🏫', badge: activeAlerts.length, action: fetchActiveAlerts },
+          { id: 'fees', label: 'Fee Rules Setup', icon: '💰', action: fetchFeeSetupData },
+          { id: 'class-subjects', label: 'Class Subjects Mapping', icon: '📚', action: fetchClassSubjectsData },
+          { id: 'billing', label: 'Billing & Subscription', icon: '💳', action: fetchSubscriptionInfo }
+        ].map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setError('');
+                setSuccess('');
+                if (tab.action) tab.action();
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 border ${
+                isActive
+                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/20 scale-[1.02]'
+                  : 'bg-white text-gray-500 border-gray-200/60 hover:text-primary hover:border-primary/20 hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-sm">{tab.icon}</span>
+              <span>{tab.label}</span>
+              {tab.badge > 0 && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  isActive ? 'bg-rose-500 text-white' : 'bg-rose-500 text-white animate-pulse'
+                }`}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="p-6 space-y-6">
@@ -788,12 +940,12 @@ const Setup = () => {
         {activeTab === 'infrastructure' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Section Management */}
-            <div className="card">
+            <div className="card flex flex-col h-[420px]">
               <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">
                 📂 School Sections
               </h3>
               <p className="text-gray-400 text-xs mb-4">Add and organize sections for your school classes.</p>
-
+ 
               <form onSubmit={handleAddSection} className="flex gap-2 mb-5">
                 <input
                   required
@@ -806,50 +958,52 @@ const Setup = () => {
                   {loadingSec ? 'Adding...' : '+ Add Section'}
                 </button>
               </form>
-
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase">Section Name</th>
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sections.map(s => (
-                    <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-3 text-sm font-semibold text-primary">{s.name}</td>
-                      <td className="py-3 text-sm text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="badge badge-success text-xs">Active</span>
-                          <button
-                            onClick={() => handleDeleteSection(s.id)}
-                            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
-                            title="Delete Section"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
+ 
+              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="border-b border-gray-100">
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Section Name</th>
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right bg-white">Status</th>
                     </tr>
-                  ))}
-                  {sections.length === 0 && (
-                    <tr>
-                      <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No sections registered yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {sections.map(s => (
+                      <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-3 text-sm font-semibold text-primary">{s.name}</td>
+                        <td className="py-3 text-sm text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="badge badge-success text-xs">Active</span>
+                            <button
+                              onClick={() => handleDeleteSection(s.id)}
+                              className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                              title="Delete Section"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {sections.length === 0 && (
+                      <tr>
+                        <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No sections registered yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-
+ 
             {/* Room Management */}
-            <div className="card">
+            <div className="card flex flex-col h-[420px]">
               <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">
                 Classrooms & Rooms
               </h3>
               <p className="text-gray-400 text-xs mb-4">Manage room codes and locations for educational scheduling.</p>
-
+ 
               <form onSubmit={handleAddRoom} className="flex gap-2 mb-5">
                 <input
                   required
@@ -862,50 +1016,52 @@ const Setup = () => {
                   {loadingRm ? 'Adding...' : '+ Add Room'}
                 </button>
               </form>
-
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase">Room Name</th>
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rooms.map(r => (
-                    <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-3 text-sm font-semibold text-primary">{r.name}</td>
-                      <td className="py-3 text-sm text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="badge badge-success text-xs">Active</span>
-                          <button
-                            onClick={() => handleDeleteRoom(r.id)}
-                            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
-                            title="Delete Room"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
+ 
+              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="border-b border-gray-100">
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Room Name</th>
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right bg-white">Status</th>
                     </tr>
-                  ))}
-                  {rooms.length === 0 && (
-                    <tr>
-                      <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No rooms registered yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rooms.map(r => (
+                      <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-3 text-sm font-semibold text-primary">{r.name}</td>
+                        <td className="py-3 text-sm text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="badge badge-success text-xs">Active</span>
+                            <button
+                              onClick={() => handleDeleteRoom(r.id)}
+                              className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                              title="Delete Room"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {rooms.length === 0 && (
+                      <tr>
+                        <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No rooms registered yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-
+ 
             {/* Grade Level Management */}
-            <div className="card">
+            <div className="card flex flex-col h-[420px]">
               <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">
                 🎓 Grade Levels
               </h3>
               <p className="text-gray-400 text-xs mb-4">Add and manage class grades configured for your school.</p>
-
+ 
               <form onSubmit={handleAddGradeLevel} className="flex gap-2 mb-5">
                 <input
                   required
@@ -918,50 +1074,52 @@ const Setup = () => {
                   {loadingGl ? 'Adding...' : '+ Add Grade'}
                 </button>
               </form>
-
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase">Grade Name</th>
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {gradeLevels.map(gl => (
-                    <tr key={gl.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-3 text-sm font-semibold text-primary">{gl.name}</td>
-                      <td className="py-3 text-sm text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="badge badge-success text-xs">Active</span>
-                          <button
-                            onClick={() => handleDeleteGradeLevel(gl.id)}
-                            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
-                            title="Delete Grade Level"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
+ 
+              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="border-b border-gray-100">
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Grade Name</th>
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right bg-white">Status</th>
                     </tr>
-                  ))}
-                  {gradeLevels.length === 0 && (
-                    <tr>
-                      <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No grade levels registered yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {gradeLevels.map(gl => (
+                      <tr key={gl.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-3 text-sm font-semibold text-primary">{gl.name}</td>
+                        <td className="py-3 text-sm text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="badge badge-success text-xs">Active</span>
+                            <button
+                              onClick={() => handleDeleteGradeLevel(gl.id)}
+                              className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                              title="Delete Grade Level"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {gradeLevels.length === 0 && (
+                      <tr>
+                        <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No grade levels registered yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Capacity Management */}
-            <div className="card">
+            <div className="card flex flex-col h-[420px]">
               <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">
                 👥 Classroom Capacities
               </h3>
               <p className="text-gray-400 text-xs mb-4">Set standard class enrollment thresholds.</p>
-
+ 
               <form onSubmit={handleAddCapacity} className="flex gap-2 mb-5">
                 <input
                   required
@@ -975,50 +1133,52 @@ const Setup = () => {
                   {loadingCap ? 'Adding...' : '+ Add Capacity'}
                 </button>
               </form>
-
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase">Student Capacity</th>
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {capacities.map(c => (
-                    <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-3 text-sm font-semibold text-primary">{c.value} students</td>
-                      <td className="py-3 text-sm text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="badge badge-success text-xs">Active</span>
-                          <button
-                            onClick={() => handleDeleteCapacity(c.id)}
-                            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
-                            title="Delete Capacity Option"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
+ 
+              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="border-b border-gray-100">
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Student Capacity</th>
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right bg-white">Status</th>
                     </tr>
-                  ))}
-                  {capacities.length === 0 && (
-                    <tr>
-                      <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No capacity limits registered yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {capacities.map(c => (
+                      <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-3 text-sm font-semibold text-primary">{c.value} students</td>
+                        <td className="py-3 text-sm text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="badge badge-success text-xs">Active</span>
+                            <button
+                              onClick={() => handleDeleteCapacity(c.id)}
+                              className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                              title="Delete Capacity Option"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {capacities.length === 0 && (
+                      <tr>
+                        <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No capacity limits registered yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-
+ 
             {/* Department Management */}
-            <div className="card">
+            <div className="card flex flex-col h-[420px]">
               <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">
                 🏢 Academic Departments
               </h3>
               <p className="text-gray-400 text-xs mb-4">Add and manage departments for teacher profiles.</p>
-
+ 
               <form onSubmit={handleAddDepartment} className="flex gap-2 mb-5">
                 <input
                   required
@@ -1031,50 +1191,52 @@ const Setup = () => {
                   {loadingDept ? 'Adding...' : '+ Add Dept'}
                 </button>
               </form>
-
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase">Department Name</th>
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {departments.map(d => (
-                    <tr key={d.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-3 text-sm font-semibold text-primary">{d.name}</td>
-                      <td className="py-3 text-sm text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="badge badge-success text-xs">Active</span>
-                          <button
-                            onClick={() => handleDeleteDepartment(d.id)}
-                            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
-                            title="Delete Department"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
+ 
+              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="border-b border-gray-100">
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Department Name</th>
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right bg-white">Status</th>
                     </tr>
-                  ))}
-                  {departments.length === 0 && (
-                    <tr>
-                      <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No departments registered yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {departments.map(d => (
+                      <tr key={d.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-3 text-sm font-semibold text-primary">{d.name}</td>
+                        <td className="py-3 text-sm text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="badge badge-success text-xs">Active</span>
+                            <button
+                              onClick={() => handleDeleteDepartment(d.id)}
+                              className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                              title="Delete Department"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {departments.length === 0 && (
+                      <tr>
+                        <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No departments registered yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-
+ 
             {/* Subjects Management */}
-            <div className="card">
+            <div className="card flex flex-col h-[420px]">
               <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">
                 📚 School Subjects
               </h3>
               <p className="text-gray-400 text-xs mb-4">Add and manage subjects for classrooms and exam configurations.</p>
-
+ 
               <div className="flex gap-2 mb-5">
                 <input
                   required
@@ -1097,39 +1259,97 @@ const Setup = () => {
                   {loadingSub ? 'Adding...' : '+ Add Subject'}
                 </button>
               </div>
-
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase">Subject</th>
-                    <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {subjects.map(s => (
-                    <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-3 text-sm font-semibold text-primary">{s.name}</td>
-                      <td className="py-3 text-sm text-right">
-                        <button
-                          onClick={() => handleDeleteSubject(s.id)}
-                          className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
-                          title="Delete Subject"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </td>
+ 
+              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="border-b border-gray-100">
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Subject</th>
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right bg-white">Actions</th>
                     </tr>
-                  ))}
-                  {subjects.length === 0 && (
-                    <tr>
-                      <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No subjects registered yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {subjects.map(s => (
+                      <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-3 text-sm font-semibold text-primary">{s.name}</td>
+                        <td className="py-3 text-sm text-right">
+                          <button
+                            onClick={() => handleDeleteSubject(s.id)}
+                            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                            title="Delete Subject"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {subjects.length === 0 && (
+                      <tr>
+                        <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No subjects registered yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+            {/* Examinations Setup Card */}
+            <div className="card flex flex-col h-[420px]">
+              <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">
+                📋 Examinations Setup
+              </h3>
+              <p className="text-gray-400 text-xs mb-4">Add and manage examination types/cycles for scheduling and report cards.</p>
+  
+              <form onSubmit={handleAddExamType} className="flex gap-2 mb-5">
+                <input
+                  required
+                  value={newExamType}
+                  onChange={e => setNewExamType(e.target.value)}
+                  placeholder="e.g. Mid-term assessment"
+                  className="input text-sm flex-1"
+                />
+                <button type="submit" disabled={loadingExamTypes} className="btn-primary text-xs py-2">
+                  {loadingExamTypes ? 'Adding...' : '+ Add Exam'}
+                </button>
+              </form>
+  
+              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="border-b border-gray-100">
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Examination Type</th>
+                      <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right bg-white">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {examTypes.map(et => (
+                      <tr key={et.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-3 text-sm font-semibold text-primary">{et.name}</td>
+                        <td className="py-3 text-sm text-right">
+                          <button
+                            onClick={() => handleDeleteExamType(et.id)}
+                            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                            title="Delete Examination Type"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {examTypes.length === 0 && (
+                      <tr>
+                        <td colSpan="2" className="text-center py-4 text-gray-400 text-xs">No examination types registered yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -1813,6 +2033,125 @@ const Setup = () => {
                   Select a class from the left panel to manage subjects.
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'billing' && (
+          <div className="space-y-6">
+            {/* Top overview card of school's active subscription status */}
+            <div className="card bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="font-display font-bold text-primary text-lg">Platform Service Subscription</h3>
+                <p className="text-gray-400 text-xs mt-1">Configure and manage your school's EduVault subscription tier.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Status</div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {subInfo?.status === 'success' ? (
+                      <span className="badge badge-success text-xxs">Active / Paid</span>
+                    ) : (
+                      <span className="badge badge-warning text-xxs animate-pulse">Pending Payment</span>
+                    )}
+                  </div>
+                </div>
+                {subInfo?.status === 'success' && (
+                  <div className="border-l border-gray-100 pl-3">
+                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Valid Until</div>
+                    <div className="text-xs font-semibold text-primary mt-0.5">1 Year Recurring</div>
+                  </div>
+                )}
+              </div>
+            </div>
+ 
+            {/* Plans List Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {platformPlans.map(p => {
+                const isCurrent = subInfo && (p.planName.toLowerCase().includes(subInfo.planType.toLowerCase()) || subInfo.planType.toLowerCase().includes(p.planName.toLowerCase()));
+                return (
+                  <div 
+                    key={p.id} 
+                    className={`card relative transition-all duration-300 flex flex-col justify-between min-h-[350px] border-2 ${
+                      isCurrent 
+                        ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20 bg-primary/[0.01]' 
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
+                    }`}
+                  >
+                    {p.isTopRevenue && (
+                      <div className="absolute -top-3 right-4 bg-accent text-white text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                        TOP REVENUE
+                      </div>
+                    )}
+                    
+                    <div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{p.tierLabel}</div>
+                      
+                      <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-2">
+                        <div className="font-display font-bold text-primary text-xl">{p.planName}</div>
+                        {isCurrent && (
+                          <span className="bg-primary/10 text-primary border border-primary/25 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Current Tier
+                          </span>
+                        )}
+                      </div>
+ 
+                      <div className="space-y-3 mb-6 text-xs">
+                        <div className="flex items-center justify-between py-1 border-b border-gray-50/50">
+                          <span className="text-gray-400">Implementation Cost</span>
+                          <span className="font-bold text-primary">${p.implementationCost.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-1 border-b border-gray-50/50">
+                          <span className="text-gray-400">Student Capacity</span>
+                          <span className="font-bold text-primary">{p.studentCapacity}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-1 border-b border-gray-50/50">
+                          <span className="text-gray-400">Storage Limit</span>
+                          <span className="font-bold text-primary">{p.storageLimit}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-1 border-b border-gray-50/50">
+                          <span className="text-gray-400">Support Level</span>
+                          <span className="font-bold text-primary">{p.planName.toLowerCase().includes('enterprise') ? '24/7 Priority Support' : 'Standard Support'}</span>
+                        </div>
+                      </div>
+                    </div>
+ 
+                    <div className="border-t border-gray-50 pt-4 mt-auto">
+                      <div className="flex items-baseline justify-between mb-4">
+                        <div>
+                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Plan Cost</span>
+                          <span className="text-2xl font-black text-primary">
+                            {p.monthlyPrice.includes('Rs.') ? p.monthlyPrice.replace('Rs.', '$') : p.monthlyPrice.includes('$') ? p.monthlyPrice : `$${p.monthlyPrice}`}
+                          </span>
+                        </div>
+                      </div>
+ 
+                      {isCurrent ? (
+                        subInfo.status === 'success' ? (
+                          <div className="w-full bg-green-50 border border-green-100 text-green-700 text-center rounded-xl py-3 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm">
+                            <span>✅ Plan Active & Fully Paid</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={handlePaySetupSubscription}
+                            disabled={payingSub}
+                            className="w-full btn-primary justify-center font-bold text-xs py-3 rounded-xl transition-all shadow-md shadow-primary/10 flex items-center gap-2"
+                          >
+                            {payingSub ? 'Processing...' : `💳 Pay $${subInfo.amount} to Activate`}
+                          </button>
+                        )
+                      ) : (
+                        <button
+                          disabled
+                          className="w-full bg-gray-50 border border-gray-200 text-gray-400 text-center rounded-xl py-3 text-xs font-bold cursor-not-allowed"
+                        >
+                          {p.planName.toLowerCase().includes('enterprise') ? 'Contact Support to Upgrade' : 'Standard Tier Available'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

@@ -125,7 +125,7 @@ namespace EduVault.Api.Controllers
                 SchoolId = school.Id,
                 PlanType = "Standard",
                 Amount = 499.00m,
-                Status = "success",
+                Status = "pending",
                 StartDate = DateTime.UtcNow,
                 EndDate = DateTime.UtcNow.AddYears(1)
             };

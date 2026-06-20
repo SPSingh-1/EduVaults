@@ -11,6 +11,7 @@ const HomeworkSchema = new mongoose.Schema({
   totalStudents: { type: Number, default: 0 },
   pct: { type: Number, default: 0 },
   status: { type: String, enum: ['Active', 'Pending Review', 'Completed', 'Drafts'], default: 'Active' },
+  submittedStudents: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now }
 });
 

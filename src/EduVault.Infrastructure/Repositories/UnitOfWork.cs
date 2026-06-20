@@ -34,6 +34,10 @@ namespace EduVault.Infrastructure.Repositories
             Rooms = new Repository<Room>(_context);
             Attendances = new Repository<Attendance>(_context);
             PlatformSettings = new Repository<PlatformSetting>(_context);
+            SupportTickets = new Repository<SupportTicket>(_context);
+            KnowledgeBaseCategories = new Repository<KnowledgeBaseCategory>(_context);
+            SystemEvents = new Repository<SystemEvent>(_context);
+            PlatformPlans = new Repository<PlatformPlan>(_context);
         }
 
         public IRepository<School> Schools { get; private set; }
@@ -57,6 +61,10 @@ namespace EduVault.Infrastructure.Repositories
         public IRepository<Room> Rooms { get; private set; }
         public IRepository<Attendance> Attendances { get; private set; }
         public IRepository<PlatformSetting> PlatformSettings { get; private set; }
+        public IRepository<SupportTicket> SupportTickets { get; private set; }
+        public IRepository<KnowledgeBaseCategory> KnowledgeBaseCategories { get; private set; }
+        public IRepository<SystemEvent> SystemEvents { get; private set; }
+        public IRepository<PlatformPlan> PlatformPlans { get; private set; }
 
         public async Task<int> CompleteAsync()
         {

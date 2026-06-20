@@ -103,7 +103,7 @@ namespace EduVault.Api.Controllers
             {
                 SchoolId = school.Id,
                 PlanType = "Standard",
-                Amount = 499.00m,
+                Amount = 49.00m,
                 Status = "success",
                 StartDate = DateTime.UtcNow,
                 EndDate = DateTime.UtcNow.AddYears(1)
@@ -127,6 +127,16 @@ namespace EduVault.Api.Controllers
 
             school.Status = status;
             _unitOfWork.Schools.Update(school);
+
+            // Synchronize subscription status (Active -> success, Suspended -> pending)
+            var subscriptions = await _unitOfWork.Subscriptions.FindAsync(s => s.SchoolId == id);
+            var subscription = subscriptions.FirstOrDefault();
+            if (subscription != null)
+            {
+                subscription.Status = status == "Active" ? "success" : "pending";
+                _unitOfWork.Subscriptions.Update(subscription);
+            }
+
             await _unitOfWork.CompleteAsync();
 
             return Ok(new { success = true });
@@ -272,6 +282,62 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.CompleteAsync();
 
             return Ok(settings);
+        }
+
+        [HttpGet("plans")]
+        public async Task<IActionResult> GetPlans()
+        {
+            var plans = (await _unitOfWork.PlatformPlans.GetAllAsync())
+                .OrderBy(p => p.TierLabel)
+                .ToList();
+            return Ok(plans);
+        }
+
+        [HttpPut("plans/{id}")]
+        public async Task<IActionResult> UpdatePlan(Guid id, [FromBody] PlatformPlan request)
+        {
+            var plan = await _unitOfWork.PlatformPlans.GetByIdAsync(id);
+            if (plan == null)
+            {
+                return NotFound(new { error = "Plan not found." });
+            }
+
+            plan.PlanName = request.PlanName;
+            plan.ImplementationCost = request.ImplementationCost;
+            plan.StudentCapacity = request.StudentCapacity;
+            plan.StorageLimit = request.StorageLimit;
+            plan.MonthlyPrice = request.MonthlyPrice;
+            plan.IsTopRevenue = request.IsTopRevenue;
+
+            _unitOfWork.PlatformPlans.Update(plan);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(plan);
+        }
+
+        [HttpPost("plans")]
+        public async Task<IActionResult> CreatePlan([FromBody] PlatformPlan request)
+        {
+            if (string.IsNullOrWhiteSpace(request.PlanName) || string.IsNullOrWhiteSpace(request.TierLabel))
+            {
+                return BadRequest(new { error = "Plan Name and Tier Label are required." });
+            }
+
+            var plan = new PlatformPlan
+            {
+                TierLabel = request.TierLabel,
+                PlanName = request.PlanName,
+                ImplementationCost = request.ImplementationCost,
+                StudentCapacity = request.StudentCapacity,
+                StorageLimit = request.StorageLimit,
+                MonthlyPrice = request.MonthlyPrice,
+                IsTopRevenue = request.IsTopRevenue
+            };
+
+            await _unitOfWork.PlatformPlans.AddAsync(plan);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(plan);
         }
     }
 }

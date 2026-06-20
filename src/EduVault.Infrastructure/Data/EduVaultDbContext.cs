@@ -32,6 +32,11 @@ namespace EduVault.Infrastructure.Data
         public DbSet<Capacity> Capacities { get; set; }
         public DbSet<Department> Departments { get; set; }
         public DbSet<PlatformSetting> PlatformSettings { get; set; }
+        public DbSet<SupportTicket> SupportTickets { get; set; }
+        public DbSet<KnowledgeBaseCategory> KnowledgeBaseCategories { get; set; }
+        public DbSet<SystemEvent> SystemEvents { get; set; }
+        public DbSet<PlatformPlan> PlatformPlans { get; set; }
+        public DbSet<ExamType> ExamTypes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -77,6 +82,13 @@ namespace EduVault.Infrastructure.Data
                 .HasOne(d => d.School)
                 .WithMany()
                 .HasForeignKey(d => d.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure ExamType
+            modelBuilder.Entity<ExamType>()
+                .HasOne(et => et.School)
+                .WithMany()
+                .HasForeignKey(et => et.SchoolId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Configure School

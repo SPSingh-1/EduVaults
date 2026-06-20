@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-const EXPRESS_BASE_URL = import.meta.env.VITE_EXPRESS_URL || 'http://localhost:5005/api'; // Express runs on 5005
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5265/api';
+const EXPRESS_BASE_URL = import.meta.env.VITE_EXPRESS_URL || 'http://localhost:5000/api'; // Express runs on 5000
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

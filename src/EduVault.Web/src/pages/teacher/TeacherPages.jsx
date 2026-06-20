@@ -1109,6 +1109,7 @@ export const MarksEntry = () => {
   const [savingProgress, setSavingProgress] = useState(false);
   const [isClassTeacher, setIsClassTeacher] = useState(true);
   const [teacherClasses, setTeacherClasses] = useState([]);
+  const [examTypes, setExamTypes] = useState([]);
   const [selectedExamType, setSelectedExamType] = useState('Semester Examination');
 
   // States for marks entry popup
@@ -1140,6 +1141,12 @@ export const MarksEntry = () => {
       // Fetch global subjects as fallback
       const subRes = await apiClient.get('/academics/subjects');
       setGlobalSubjects(Array.isArray(subRes.data) ? subRes.data : []);
+
+      const etRes = await apiClient.get('/academics/exam-types');
+      setExamTypes(etRes.data || []);
+      if (etRes.data && etRes.data.length > 0) {
+        setSelectedExamType(etRes.data[0].name);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -1301,9 +1308,9 @@ export const MarksEntry = () => {
             <div className="w-72">
               <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Select Examination Type</label>
               <select value={selectedExamType} onChange={e => setSelectedExamType(e.target.value)} className="input text-sm">
-                <option value="Semester Examination">Semester Examination</option>
-                <option value="Mid-term assessment">Mid-term assessment</option>
-                <option value="Final Examination">Final Examination</option>
+                {examTypes.map(et => (
+                  <option key={et.id} value={et.name}>{et.name}</option>
+                ))}
               </select>
             </div>
           </div>

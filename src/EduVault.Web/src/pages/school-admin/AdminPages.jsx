@@ -372,6 +372,7 @@ export const Exams = () => {
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  const [examTypes, setExamTypes] = useState([]);
   const [showNew, setShowNew] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -403,7 +404,7 @@ export const Exams = () => {
       proctorId: teachers[0]?.id || '',
       date: '',
       time: '09:00',
-      examType: filterExamType || 'Semester Examination',
+      examType: filterExamType || examTypes[0]?.name || 'Semester Examination',
       status: 'Scheduled'
     });
     setEditMode(false);
@@ -459,6 +460,14 @@ export const Exams = () => {
 
       const subjRes = await apiClient.get('/academics/subjects');
       setSubjects(subjRes.data);
+
+      const etRes = await apiClient.get('/academics/exam-types');
+      setExamTypes(etRes.data);
+
+      if (etRes.data.length > 0) {
+        setFilterExamType(etRes.data[0].name);
+        setForm(f => ({ ...f, examType: etRes.data[0].name }));
+      }
 
       if (clsRes.data.length > 0) {
         setForm(f => ({ ...f, classId: clsRes.data[0].id }));
@@ -609,9 +618,9 @@ export const Exams = () => {
               onChange={e => setFilterExamType(e.target.value)}
               className="input bg-white/10 border-white/20 text-white text-xs w-48"
             >
-              <option value="Semester Examination" className="text-primary">Semester Examination</option>
-              <option value="Mid-term assessment" className="text-primary">Mid-term assessment</option>
-              <option value="Final Examination" className="text-primary">Final Examination</option>
+              {examTypes.map(et => (
+                <option key={et.id} value={et.name} className="text-primary">{et.name}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -735,9 +744,9 @@ export const Exams = () => {
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Exam Cycle *</label>
                   <select required value={form.examType} onChange={e => setForm(f => ({ ...f, examType: e.target.value }))} className="input">
-                    <option value="Semester Examination">Semester Examination</option>
-                    <option value="Mid-term assessment">Mid-term assessment</option>
-                    <option value="Final Examination">Final Examination</option>
+                    {examTypes.map(et => (
+                      <option key={et.id} value={et.name}>{et.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div>

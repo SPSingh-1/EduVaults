@@ -656,13 +656,21 @@ namespace EduVault.Api.Controllers
                     CreatedAt = u.CreatedAt
                 });
 
+            // Fetch subscription details
+            var subscriptions = await _unitOfWork.Subscriptions.FindAsync(s => s.SchoolId == schoolId);
+            var subscription = subscriptions.FirstOrDefault();
+
             return Ok(new
             {
                 totalStudents,
                 totalTeachers,
                 totalClasses,
                 pendingFees,
-                recentAdmissions
+                recentAdmissions,
+                subscriptionStatus = subscription?.Status ?? "pending",
+                subscriptionAmount = subscription?.Amount ?? 49.00m,
+                subscriptionPlanType = subscription?.PlanType ?? "Standard",
+                subscriptionId = subscription?.Id
             });
         }
 
@@ -1145,6 +1153,81 @@ namespace EduVault.Api.Controllers
 
             _unitOfWork.Departments.Remove(department);
             await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true });
+        }
+
+        // --- Exam Types ---
+
+        [HttpGet("exam-types")]
+        public async Task<IActionResult> GetExamTypes()
+        {
+            var schoolId = GetSchoolId();
+            var types = await _context.ExamTypes
+                .Where(et => et.SchoolId == schoolId)
+                .OrderBy(et => et.Name)
+                .ToListAsync();
+
+            if (!types.Any())
+            {
+                // Seed 3 default exam types for this school
+                var defaults = new List<ExamType>
+                {
+                    new ExamType { SchoolId = schoolId, Name = "Semester Examination" },
+                    new ExamType { SchoolId = schoolId, Name = "Mid-term assessment" },
+                    new ExamType { SchoolId = schoolId, Name = "Final Examination" }
+                };
+                await _context.ExamTypes.AddRangeAsync(defaults);
+                await _context.SaveChangesAsync();
+                types = defaults.OrderBy(et => et.Name).ToList();
+            }
+
+            return Ok(types.Select(et => new { et.Id, et.Name }));
+        }
+
+        [HttpPost("exam-types")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> CreateExamType([FromBody] ExamType model)
+        {
+            var schoolId = GetSchoolId();
+            if (string.IsNullOrWhiteSpace(model.Name))
+            {
+                return BadRequest(new { error = "Examination name is required" });
+            }
+
+            var existing = await _context.ExamTypes
+                .AnyAsync(et => et.SchoolId == schoolId && et.Name.ToLower() == model.Name.Trim().ToLower());
+            if (existing)
+            {
+                return BadRequest(new { error = "Examination type already exists" });
+            }
+
+            var examType = new ExamType
+            {
+                SchoolId = schoolId,
+                Name = model.Name.Trim()
+            };
+
+            await _context.ExamTypes.AddAsync(examType);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { examType.Id, examType.Name });
+        }
+
+        [HttpDelete("exam-types/{id}")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> DeleteExamType(Guid id)
+        {
+            var schoolId = GetSchoolId();
+            var examType = await _context.ExamTypes
+                .FirstOrDefaultAsync(et => et.Id == id && et.SchoolId == schoolId);
+            if (examType == null)
+            {
+                return NotFound(new { error = "Examination type not found" });
+            }
+
+            _context.ExamTypes.Remove(examType);
+            await _context.SaveChangesAsync();
 
             return Ok(new { success = true });
         }
