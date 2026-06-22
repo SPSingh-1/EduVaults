@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
+import { io } from 'socket.io-client';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { 
   ResponsiveContainer, 
   BarChart, 
@@ -1007,7 +1009,23 @@ export const StudentFees = () => {
 
 // --- Student Notices ---
 export const StudentNotices = () => {
+  const { markAllAsRead } = useNotifications();
   const [notices, setNotices] = useState([]);
+  const [activeFilterTab, setActiveFilterTab] = useState('all'); // 'all', 'schooladmin', 'teacher'
+
+  const filteredNotices = notices.filter(n => {
+    // Exclude system alerts (superadmin notices) for students
+    if (n.senderRole === 'superadmin') {
+      return false;
+    }
+    if (activeFilterTab === 'schooladmin') {
+      return n.senderRole === 'schooladmin';
+    }
+    if (activeFilterTab === 'teacher') {
+      return n.senderRole === 'teacher';
+    }
+    return true; // 'all'
+  });
 
   useEffect(() => {
     const fetchNotices = async () => {
@@ -1019,30 +1037,81 @@ export const StudentNotices = () => {
       }
     };
     fetchNotices();
+
+    const token = localStorage.getItem('eduvault_token');
+    if (token) {
+      const expressUrl = import.meta.env.VITE_EXPRESS_URL || 'http://localhost:5005/api';
+      const socketUrl = expressUrl.replace(/\/api$/, '');
+      const socket = io(socketUrl, {
+        auth: { token }
+      });
+      socket.on('notification', (notif) => {
+        setNotices(prev => [notif, ...prev]);
+      });
+      return () => {
+        socket.disconnect();
+      };
+    }
   }, []);
+
+  useEffect(() => {
+    if (notices.length > 0) {
+      markAllAsRead();
+    }
+  }, [notices]);
 
   return (
     <div>
       <Topbar title="Notices & Announcements" />
+      
+      {/* Filtering Tabs */}
+      <div className="flex border-b border-gray-100 mb-6 gap-4">
+        {[
+          { id: 'all', label: 'All Announcements', icon: '📢' },
+          { id: 'schooladmin', label: 'School Admin Notices', icon: '🏫' },
+          { id: 'teacher', label: 'Teacher Notices', icon: '👨‍🏫' }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveFilterTab(tab.id)}
+            className={`pb-2.5 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all ${
+              activeFilterTab === tab.id
+                ? 'border-primary text-primary font-black'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="space-y-4">
-        {notices.map((n, i) => (
+        {filteredNotices.map((n, i) => (
           <div key={n._id || i} className={`card ${n.type === 'URGENT' ? 'border-l-4 border-red-500 shadow-md' : ''}`}>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className={n.type === 'URGENT' ? 'badge-danger' : n.type === 'EVENT' ? 'badge-info' : 'badge-gray'}>{n.type}</span>
                 <span className="text-xs text-gray-400 font-medium">{new Date(n.createdAt).toLocaleString()}</span>
               </div>
-              {n.senderName && (
-                <span className="text-xs font-bold text-primary bg-primary/5 px-2.5 py-1 rounded-lg">
-                  👤 Sent by: {n.senderName} ({n.senderRole === 'schooladmin' ? 'Admin' : n.senderRole === 'teacher' ? 'Teacher' : n.senderRole})
+              {n.senderRole === 'superadmin' ? (
+                <span className="text-xs font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded-lg border border-red-200/50">
+                  🛡️ Platform Admin Announcement
                 </span>
+              ) : (
+                n.senderName && (
+                  <span className="text-xs font-bold text-primary bg-primary/5 px-2.5 py-1 rounded-lg">
+                    👤 Sent by: {n.senderName} ({n.senderRole === 'schooladmin' ? 'Admin' : n.senderRole === 'teacher' ? 'Teacher' : n.senderRole})
+                  </span>
+                )
               )}
             </div>
             <h3 className="font-display font-bold text-primary text-base mb-1.5">{n.title}</h3>
             <p className="text-sm text-gray-500 leading-relaxed">{n.body}</p>
           </div>
         ))}
-        {notices.length === 0 && (
+        {filteredNotices.length === 0 && (
           <div className="card text-center py-6 text-gray-400 text-sm">No notices posted.</div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { ProtectedRoute } from './router/ProtectedRoute';
 import './index.css';
 
@@ -24,6 +25,7 @@ import Schools from './pages/super-admin/Schools';
 import Subscriptions from './pages/super-admin/Subscriptions';
 import Settings from './pages/super-admin/Settings';
 import Support from './pages/super-admin/Support';
+import SuperAdminNotices from './pages/super-admin/Notices';
 
 // School Admin Pages
 import SchoolAdminDashboard from './pages/school-admin/Dashboard';
@@ -43,7 +45,9 @@ import {
   MarksEntry,
   Homework,
   Remarks,
-  TeacherProfile
+  TeacherProfile,
+  TeacherSelfAttendance,
+  TeacherNotices
 } from './pages/teacher/TeacherPages';
 
 // Student Pages
@@ -62,8 +66,9 @@ import {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <NotificationProvider>
+        <BrowserRouter>
+          <Routes>
           {/* Public */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
@@ -81,6 +86,7 @@ export default function App() {
               <Route path="users" element={<Schools />} />
               <Route path="settings" element={<Settings />} />
               <Route path="support" element={<Support />} />
+              <Route path="notices" element={<SuperAdminNotices />} />
             </Route>
           </Route>
 
@@ -109,10 +115,11 @@ export default function App() {
               <Route path="classes" element={<TeacherClasses />} />
               <Route path="students" element={<TeacherStudents />} />
               <Route path="attendance" element={<Attendance />} />
+              <Route path="self-attendance" element={<TeacherSelfAttendance />} />
               <Route path="marks" element={<MarksEntry />} />
               <Route path="homework" element={<Homework />} />
               <Route path="remarks" element={<Remarks />} />
-              <Route path="notices" element={<Notices />} />
+              <Route path="notices" element={<TeacherNotices />} />
               <Route path="profile" element={<TeacherProfile />} />
             </Route>
           </Route>
@@ -137,6 +144,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

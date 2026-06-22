@@ -339,5 +339,269 @@ namespace EduVault.Api.Controllers
 
             return Ok(plan);
         }
+
+        [HttpGet("upgrade-requests")]
+        public async Task<IActionResult> GetUpgradeRequests()
+        {
+            var requests = await _unitOfWork.UpgradeRequests.GetAllAsync();
+            var schools = await _unitOfWork.Schools.GetAllAsync();
+            
+            var list = requests.OrderByDescending(r => r.CreatedAt).Select(r => {
+                var school = schools.FirstOrDefault(s => s.Id == r.SchoolId);
+                return new {
+                    r.Id,
+                    r.SchoolId,
+                    SchoolName = school?.Name ?? "Unknown School",
+                    SchoolCode = school?.SchoolCode ?? "N/A",
+                    r.RequestedPlanType,
+                    r.Status,
+                    r.Requirements,
+                    CreatedAt = r.CreatedAt.ToString("MMM dd, yyyy HH:mm")
+                };
+            }).ToList();
+            
+            return Ok(list);
+        }
+
+        [HttpPost("upgrade-requests/{id}/approve")]
+        public async Task<IActionResult> ApproveUpgradeRequest(Guid id, [FromBody] ApproveUpgradeRequestInput? input)
+        {
+            var request = await _unitOfWork.UpgradeRequests.GetByIdAsync(id);
+            if (request == null)
+            {
+                return NotFound(new { error = "Upgrade request not found" });
+            }
+
+            if (request.Status != "Pending")
+            {
+                return BadRequest(new { error = "Request is already processed" });
+            }
+
+            request.Status = "Approved";
+            _unitOfWork.UpgradeRequests.Update(request);
+
+            // Determine target plan
+            string activePlanType = request.RequestedPlanType;
+            if (request.RequestedPlanType.Contains("Enterprise", StringComparison.OrdinalIgnoreCase) || request.RequestedPlanType == "Custom")
+            {
+                activePlanType = "Enterprise";
+            }
+
+            // Save overrides if custom inputs are provided
+            if (input != null)
+            {
+                var existingConfigs = await _unitOfWork.SchoolPlanConfigurations.FindAsync(c => c.SchoolId == request.SchoolId && c.PlanType == activePlanType);
+                var config = existingConfigs.FirstOrDefault();
+                if (config == null)
+                {
+                    config = new SchoolPlanConfiguration
+                    {
+                        SchoolId = request.SchoolId,
+                        PlanType = activePlanType,
+                        ImplementationCost = input.ImplementationCost,
+                        StudentCapacity = input.StudentCapacity ?? string.Empty,
+                        StorageLimit = input.StorageLimit ?? string.Empty,
+                        MonthlyPrice = input.MonthlyPrice ?? string.Empty
+                    };
+                    await _unitOfWork.SchoolPlanConfigurations.AddAsync(config);
+                }
+                else
+                {
+                    config.ImplementationCost = input.ImplementationCost;
+                    config.StudentCapacity = input.StudentCapacity ?? string.Empty;
+                    config.StorageLimit = input.StorageLimit ?? string.Empty;
+                    config.MonthlyPrice = input.MonthlyPrice ?? string.Empty;
+                    _unitOfWork.SchoolPlanConfigurations.Update(config);
+                }
+                await _unitOfWork.CompleteAsync();
+            }
+
+            // Find or create Subscription record for this school
+            var subscriptions = await _unitOfWork.Subscriptions.FindAsync(s => s.SchoolId == request.SchoolId);
+            var subscription = subscriptions.FirstOrDefault();
+            
+            // Check if this school has a custom plan configuration for the target plan type
+            var customConfigs = await _unitOfWork.SchoolPlanConfigurations.FindAsync(c => c.SchoolId == request.SchoolId && c.PlanType == activePlanType);
+            var customConfig = customConfigs.FirstOrDefault();
+            
+            decimal targetAmount = 49.00m; // Default Standard
+            if (activePlanType.Contains("Enterprise", StringComparison.OrdinalIgnoreCase))
+            {
+                targetAmount = 499.00m; // Default Enterprise
+            }
+            
+            if (customConfig != null)
+            {
+                // Try parsing custom monthly price string to set the subscription Amount
+                var priceStr = customConfig.MonthlyPrice.Replace("$", "").Replace("/mo", "").Trim();
+                if (decimal.TryParse(priceStr, out decimal parsedAmount))
+                {
+                    targetAmount = parsedAmount;
+                }
+            }
+            else
+            {
+                // Retrieve default platform plan monthly price
+                var plans = await _unitOfWork.PlatformPlans.GetAllAsync();
+                var plan = plans.FirstOrDefault(p => p.PlanName.Contains(activePlanType, StringComparison.OrdinalIgnoreCase));
+                if (plan != null)
+                {
+                    var priceStr = plan.MonthlyPrice.Replace("$", "").Replace("/mo", "").Trim();
+                    if (decimal.TryParse(priceStr, out decimal parsedAmount))
+                    {
+                        targetAmount = parsedAmount;
+                    }
+                }
+            }
+
+            // Override with UpgradeCharge if explicitly specified in request body
+            if (input != null && input.UpgradeCharge.HasValue)
+            {
+                targetAmount = input.UpgradeCharge.Value;
+            }
+
+            if (subscription == null)
+            {
+                subscription = new Subscription
+                {
+                    SchoolId = request.SchoolId,
+                    PlanType = activePlanType,
+                    Amount = targetAmount,
+                    Status = "pending",
+                    StartDate = DateTime.UtcNow,
+                    EndDate = DateTime.UtcNow.AddYears(1)
+                };
+                await _unitOfWork.Subscriptions.AddAsync(subscription);
+            }
+            else
+            {
+                subscription.PlanType = activePlanType;
+                subscription.Amount = targetAmount;
+                subscription.Status = "pending";
+                _unitOfWork.Subscriptions.Update(subscription);
+            }
+
+            var schoolName = "School";
+            var school = await _unitOfWork.Schools.GetByIdAsync(request.SchoolId);
+            if (school != null)
+            {
+                schoolName = school.Name;
+            }
+
+            var systemEvent = new SystemEvent
+            {
+                Icon = "✅",
+                Title = request.RequestedPlanType == "Custom" ? "Custom Requirements Approved" : "Plan Upgraded",
+                Description = request.RequestedPlanType == "Custom"
+                    ? $"{schoolName} custom requirements approved. Pending payment."
+                    : $"{schoolName} upgraded to {activePlanType} Plan successfully. Pending payment.",
+                CreatedAt = DateTime.UtcNow
+            };
+            await _unitOfWork.SystemEvents.AddAsync(systemEvent);
+
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true });
+        }
+
+        [HttpPost("upgrade-requests/{id}/reject")]
+        public async Task<IActionResult> RejectUpgradeRequest(Guid id)
+        {
+            var request = await _unitOfWork.UpgradeRequests.GetByIdAsync(id);
+            if (request == null)
+            {
+                return NotFound(new { error = "Upgrade request not found" });
+            }
+
+            if (request.Status != "Pending")
+            {
+                return BadRequest(new { error = "Request is already processed" });
+            }
+
+            request.Status = "Rejected";
+            _unitOfWork.UpgradeRequests.Update(request);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true });
+        }
+
+        [HttpGet("plans/custom")]
+        public async Task<IActionResult> GetCustomPlans()
+        {
+            var configs = await _unitOfWork.SchoolPlanConfigurations.GetAllAsync();
+            var schools = await _unitOfWork.Schools.GetAllAsync();
+            
+            var list = configs.Select(c => {
+                var school = schools.FirstOrDefault(s => s.Id == c.SchoolId);
+                return new {
+                    c.Id,
+                    c.SchoolId,
+                    SchoolName = school?.Name ?? "Unknown School",
+                    c.PlanType,
+                    c.ImplementationCost,
+                    c.StudentCapacity,
+                    c.StorageLimit,
+                    c.MonthlyPrice
+                };
+            }).ToList();
+            
+            return Ok(list);
+        }
+
+        [HttpPost("plans/custom")]
+        public async Task<IActionResult> SaveCustomPlan([FromBody] SaveCustomPlanRequest request)
+        {
+            if (request.SchoolId == Guid.Empty || string.IsNullOrWhiteSpace(request.PlanType))
+            {
+                return BadRequest(new { error = "SchoolId and PlanType are required." });
+            }
+
+            var existingList = await _unitOfWork.SchoolPlanConfigurations.FindAsync(c => c.SchoolId == request.SchoolId && c.PlanType == request.PlanType);
+            var config = existingList.FirstOrDefault();
+
+            if (config == null)
+            {
+                config = new SchoolPlanConfiguration
+                {
+                    SchoolId = request.SchoolId,
+                    PlanType = request.PlanType,
+                    ImplementationCost = request.ImplementationCost,
+                    StudentCapacity = request.StudentCapacity ?? string.Empty,
+                    StorageLimit = request.StorageLimit ?? string.Empty,
+                    MonthlyPrice = request.MonthlyPrice ?? string.Empty
+                };
+                await _unitOfWork.SchoolPlanConfigurations.AddAsync(config);
+            }
+            else
+            {
+                config.ImplementationCost = request.ImplementationCost;
+                config.StudentCapacity = request.StudentCapacity ?? string.Empty;
+                config.StorageLimit = request.StorageLimit ?? string.Empty;
+                config.MonthlyPrice = request.MonthlyPrice ?? string.Empty;
+                _unitOfWork.SchoolPlanConfigurations.Update(config);
+            }
+
+            await _unitOfWork.CompleteAsync();
+            return Ok(config);
+        }
+    }
+
+    public class SaveCustomPlanRequest
+    {
+        public Guid SchoolId { get; set; }
+        public string PlanType { get; set; } = string.Empty;
+        public decimal ImplementationCost { get; set; }
+        public string? StudentCapacity { get; set; }
+        public string? StorageLimit { get; set; }
+        public string? MonthlyPrice { get; set; }
+    }
+
+    public class ApproveUpgradeRequestInput
+    {
+        public decimal ImplementationCost { get; set; }
+        public string StudentCapacity { get; set; } = string.Empty;
+        public string StorageLimit { get; set; } = string.Empty;
+        public string MonthlyPrice { get; set; } = string.Empty;
+        public decimal? UpgradeCharge { get; set; }
     }
 }

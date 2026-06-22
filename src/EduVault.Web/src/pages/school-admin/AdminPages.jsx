@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { io } from 'socket.io-client';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 // --- Classes Page ---
 export const Classes = () => {
@@ -251,6 +252,7 @@ export const Classes = () => {
 
 // --- Notices Page ---
 export const Notices = () => {
+  const { markAllAsRead } = useNotifications();
   const [noticesList, setNoticesList] = useState([]);
   const [showNew, setShowNew] = useState(false);
   const [target, setTarget] = useState('ALL');
@@ -258,6 +260,17 @@ export const Notices = () => {
   const [body, setBody] = useState('');
   const [type, setType] = useState('GENERAL');
   const [loading, setLoading] = useState(false);
+  const [activeFilterTab, setActiveFilterTab] = useState('all'); // 'all', 'school', 'system'
+
+  const filteredNotices = noticesList.filter(n => {
+    if (activeFilterTab === 'school') {
+      return n.senderRole !== 'superadmin';
+    }
+    if (activeFilterTab === 'system') {
+      return n.senderRole === 'superadmin';
+    }
+    return true; // 'all'
+  });
 
   const fetchNotices = async () => {
     try {
@@ -286,6 +299,12 @@ export const Notices = () => {
       };
     }
   }, []);
+
+  useEffect(() => {
+    if (noticesList.length > 0) {
+      markAllAsRead();
+    }
+  }, [noticesList]);
 
   const handlePostNotice = async (e) => {
     e.preventDefault();
@@ -317,20 +336,48 @@ export const Notices = () => {
       
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 space-y-4">
-          {noticesList.map((n, i) => (
-            <div key={n._id || i} className="card">
+          {/* Filtering Tabs */}
+          <div className="flex border-b border-gray-100 mb-4 gap-4">
+            {[
+              { id: 'all', label: 'All Announcements', icon: '📢' },
+              { id: 'school', label: 'School Notices', icon: '🏫' },
+              { id: 'system', label: 'System Alerts', icon: '🛡️' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveFilterTab(tab.id)}
+                className={`pb-2.5 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all ${
+                  activeFilterTab === tab.id
+                    ? 'border-primary text-primary font-black'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {filteredNotices.map((n, i) => (
+            <div key={n._id || i} className={`card ${n.type === 'URGENT' ? 'border-l-4 border-red-500 shadow-md' : ''}`}>
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={n.type === 'URGENT' ? 'badge-danger' : n.type === 'EVENT' ? 'badge-info' : 'badge-gray'}>{n.type}</span>
-                  <span className="badge badge-info">Audience: {n.recipientId}</span>
+                  <span className="badge badge-info">Audience: {n.recipientId === 'SCHOOLADMINS' ? 'Admins' : n.recipientId}</span>
                   <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString()}</span>
                 </div>
+                {n.senderRole === 'superadmin' ? (
+                  <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2.5 py-0.5 rounded border border-red-200/50">🛡️ Platform Admin</span>
+                ) : (
+                  <span className="text-[10px] font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded">👤 {n.senderName || 'School System'} ({n.senderRole === 'schooladmin' ? 'Admin' : n.senderRole === 'teacher' ? 'Teacher' : n.senderRole})</span>
+                )}
               </div>
               <h3 className="font-display font-bold text-primary mb-1">{n.title}</h3>
               <p className="text-sm text-gray-500 mb-3">{n.body}</p>
             </div>
           ))}
-          {noticesList.length === 0 && (
+          {filteredNotices.length === 0 && (
             <div className="card text-center py-6 text-gray-400 text-sm">No notices posted.</div>
           )}
         </div>
@@ -362,6 +409,51 @@ export const Notices = () => {
           </form>
         </div>
       </div>
+
+      {showNew && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <form onSubmit={handlePostNotice} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-6 text-left">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-display font-bold text-primary text-xl">Create New Notice</h3>
+                <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Target Audience</label>
+                  <select value={target} onChange={e => setTarget(e.target.value)} className="input">
+                    <option value="ALL">All Users (ALL)</option>
+                    <option value="TEACHERS">Teachers Only</option>
+                    <option value="STUDENTS">Students Only</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Category</label>
+                  <select value={type} onChange={e => setType(e.target.value)} className="input">
+                    <option value="GENERAL">General Notice</option>
+                    <option value="URGENT">Urgent Announcement</option>
+                    <option value="EVENT">School Event</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Title</label>
+                  <input required placeholder="Enter title..." value={title} onChange={e => setTitle(e.target.value)} className="input" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Message Body</label>
+                  <textarea required placeholder="Type announcement here..." value={body} onChange={e => setBody(e.target.value)} className="input h-28 resize-none" />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
+              <button type="button" onClick={() => setShowNew(false)} className="btn-outline">Cancel</button>
+              <button type="submit" disabled={loading} className="btn-primary">
+                {loading ? 'Publishing...' : 'Publish Notice'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

@@ -38,6 +38,8 @@ namespace EduVault.Infrastructure.Repositories
             KnowledgeBaseCategories = new Repository<KnowledgeBaseCategory>(_context);
             SystemEvents = new Repository<SystemEvent>(_context);
             PlatformPlans = new Repository<PlatformPlan>(_context);
+            SchoolPlanConfigurations = new Repository<SchoolPlanConfiguration>(_context);
+            UpgradeRequests = new Repository<UpgradeRequest>(_context);
         }
 
         public IRepository<School> Schools { get; private set; }
@@ -65,6 +67,8 @@ namespace EduVault.Infrastructure.Repositories
         public IRepository<KnowledgeBaseCategory> KnowledgeBaseCategories { get; private set; }
         public IRepository<SystemEvent> SystemEvents { get; private set; }
         public IRepository<PlatformPlan> PlatformPlans { get; private set; }
+        public IRepository<SchoolPlanConfiguration> SchoolPlanConfigurations { get; private set; }
+        public IRepository<UpgradeRequest> UpgradeRequests { get; private set; }
 
         public async Task<int> CompleteAsync()
         {

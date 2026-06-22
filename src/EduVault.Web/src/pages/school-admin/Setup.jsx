@@ -61,6 +61,9 @@ const Setup = () => {
   const [subInfo, setSubInfo] = useState(null);
   const [payingSub, setPayingSub] = useState(false);
   const [platformPlans, setPlatformPlans] = useState([]);
+  const [showUpgradeRequirementsModal, setShowUpgradeRequirementsModal] = useState(false);
+  const [upgradeRequirementsPlanType, setUpgradeRequirementsPlanType] = useState('Enterprise');
+  const [upgradeRequirementsText, setUpgradeRequirementsText] = useState('');
 
   // Tab 2: Timetable State
   const [classes, setClasses] = useState([]);
@@ -112,7 +115,10 @@ const Setup = () => {
         status: res.data.subscriptionStatus,
         amount: res.data.subscriptionAmount,
         planType: res.data.subscriptionPlanType,
-        id: res.data.subscriptionId
+        id: res.data.subscriptionId,
+        startDate: res.data.subscriptionStartDate,
+        endDate: res.data.subscriptionEndDate,
+        pendingUpgradeRequest: res.data.pendingUpgradeRequest
       });
       const plansRes = await apiClient.get('/billing/plans');
       setPlatformPlans(plansRes.data || []);
@@ -121,7 +127,49 @@ const Setup = () => {
     }
   };
 
-  const handlePaySetupSubscription = async () => {
+  const getRemainingDays = (endDateStr) => {
+    if (!endDateStr) return 999;
+    try {
+      const endDate = new Date(endDateStr);
+      const today = new Date();
+      const diffTime = endDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    } catch (e) {
+      return 999;
+    }
+  };
+
+  const handleRequestUpgrade = (planType) => {
+    setUpgradeRequirementsPlanType(planType);
+    setUpgradeRequirementsText('');
+    setShowUpgradeRequirementsModal(true);
+  };
+
+  const handleSubUpgradeRequirements = async (e) => {
+    e.preventDefault();
+    if (!upgradeRequirementsText.trim()) {
+      alert('Please specify your project requirements.');
+      return;
+    }
+    setPayingSub(true);
+    try {
+      await apiClient.post('/billing/upgrade-request', {
+        requestedPlanType: upgradeRequirementsPlanType,
+        requirements: upgradeRequirementsText
+      });
+      alert('Requirements submitted successfully! The Super Admin has been notified.');
+      setShowUpgradeRequirementsModal(false);
+      fetchSubscriptionInfo();
+    } catch (err) {
+      console.error('Error submitting upgrade requirements:', err);
+      alert(err.response?.data?.error || 'Failed to submit requirements. Please try again.');
+    } finally {
+      setPayingSub(false);
+    }
+  };
+
+  const handlePaySetupSubscription = async (isRenewal = false) => {
     setPayingSub(true);
     try {
       const scriptLoaded = await loadSubScript('https://checkout.razorpay.com/v1/checkout.js');
@@ -131,7 +179,7 @@ const Setup = () => {
         return;
       }
 
-      const orderRes = await apiClient.post('/billing/create-subscription-order');
+      const orderRes = await apiClient.post(`/billing/create-subscription-order?isRenewal=${isRenewal}`);
       const { orderId, amount, currency, keyId, isMock } = orderRes.data;
 
       const userProfile = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
@@ -140,18 +188,18 @@ const Setup = () => {
         key: keyId,
         amount: amount,
         currency: currency,
-        name: "EduVault Subscription",
+        name: isRenewal ? "EduVault Subscription Renewal" : "EduVault Subscription",
         description: `${subInfo?.planType || 'Standard'} Plan Platform Fees`,
         order_id: isMock ? undefined : orderId,
         handler: async function (response) {
           setPayingSub(true);
           try {
-            await apiClient.post('/billing/verify-subscription-payment', {
+            await apiClient.post(`/billing/verify-subscription-payment?isRenewal=${isRenewal}`, {
               razorpayOrderId: response.razorpay_order_id || orderId,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature || 'mock_signature'
             });
-            alert('Platform subscription payment successful! All features unlocked.');
+            alert(isRenewal ? 'Platform subscription renewal successful!' : 'Platform subscription payment successful! All features unlocked.');
             fetchSubscriptionInfo();
           } catch (err) {
             alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
@@ -2058,12 +2106,35 @@ const Setup = () => {
                 </div>
                 {subInfo?.status === 'success' && (
                   <div className="border-l border-gray-100 pl-3">
-                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Valid Until</div>
-                    <div className="text-xs font-semibold text-primary mt-0.5">1 Year Recurring</div>
+                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Validity Period</div>
+                    <div className="text-xs font-semibold text-primary mt-0.5">
+                      {subInfo.startDate && subInfo.endDate 
+                        ? `from ${subInfo.startDate} to ${subInfo.endDate}` 
+                        : '1 Year Recurring'}
+                    </div>
                   </div>
                 )}
               </div>
             </div>
+
+            {subInfo?.pendingUpgradeRequest && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-5 text-xs font-semibold flex flex-col gap-3 shadow-sm animate-in fade-in duration-200">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="animate-pulse">🔔</span>
+                  <span className="font-bold text-amber-900">
+                    Pending {subInfo.pendingUpgradeRequest.requestedPlanType === 'Custom' ? 'Custom Modification' : 'Plan Upgrade'} Request
+                  </span>
+                </div>
+                <div className="text-gray-700 bg-white/70 p-3.5 rounded-xl border border-amber-100/50 font-normal">
+                  <span className="font-bold text-gray-700 block mb-1 text-3xs uppercase tracking-wider text-gray-400">Your Submitted Requirements:</span>
+                  <p className="text-xs whitespace-pre-wrap leading-relaxed">{subInfo.pendingUpgradeRequest.requirements || 'No specific requirements listed.'}</p>
+                </div>
+                <div className="text-amber-700 text-[10px] uppercase font-extrabold tracking-wider mt-1 flex items-center gap-1.5">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+                  Status: Waiting for Super Admin Review and Price Customization
+                </div>
+              </div>
+            )}
  
             {/* Plans List Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2128,26 +2199,64 @@ const Setup = () => {
  
                       {isCurrent ? (
                         subInfo.status === 'success' ? (
-                          <div className="w-full bg-green-50 border border-green-100 text-green-700 text-center rounded-xl py-3 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm">
-                            <span>✅ Plan Active & Fully Paid</span>
+                          <div className="space-y-2 w-full animate-in fade-in duration-200">
+                            <div className="w-full bg-green-50 border border-green-100 text-green-700 text-center rounded-xl py-3 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm">
+                              <span>✅ Plan Active & Fully Paid</span>
+                            </div>
+                            {getRemainingDays(subInfo.endDate) <= 30 && (
+                              <button
+                                onClick={() => handlePaySetupSubscription(true)}
+                                disabled={payingSub}
+                                className="w-full bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-center rounded-xl py-3 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 animate-in slide-in-from-bottom duration-300"
+                              >
+                                {payingSub ? 'Processing...' : '🔄 Renew Subscription'}
+                              </button>
+                            )}
+                            {p.planName.toLowerCase().includes('enterprise') && (
+                              <button
+                                onClick={() => handleRequestUpgrade('Custom')}
+                                disabled={payingSub || (subInfo.pendingUpgradeRequest && subInfo.pendingUpgradeRequest.requestedPlanType === 'Custom')}
+                                className="w-full bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-center rounded-xl py-3 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
+                              >
+                                📝 Request Custom Modification
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <button
-                            onClick={handlePaySetupSubscription}
+                            onClick={() => handlePaySetupSubscription(false)}
                             disabled={payingSub}
                             className="w-full btn-primary justify-center font-bold text-xs py-3 rounded-xl transition-all shadow-md shadow-primary/10 flex items-center gap-2"
                           >
-                            {payingSub ? 'Processing...' : `💳 Pay $${subInfo.amount} to Activate`}
+                            {payingSub ? 'Processing...' : `💳 Accept & Pay $${subInfo.amount}`}
                           </button>
                         )
-                      ) : (
-                        <button
-                          disabled
-                          className="w-full bg-gray-50 border border-gray-200 text-gray-400 text-center rounded-xl py-3 text-xs font-bold cursor-not-allowed"
-                        >
-                          {p.planName.toLowerCase().includes('enterprise') ? 'Contact Support to Upgrade' : 'Standard Tier Available'}
-                        </button>
-                      )}
+                      ) : (() => {
+                        const isPendingThisPlan = subInfo?.pendingUpgradeRequest && 
+                          (subInfo.pendingUpgradeRequest.requestedPlanType.toLowerCase().includes(p.planName.toLowerCase()) || 
+                           p.planName.toLowerCase().includes(subInfo.pendingUpgradeRequest.requestedPlanType.toLowerCase()));
+
+                        if (isPendingThisPlan) {
+                          return (
+                            <button
+                              disabled
+                              className="w-full bg-amber-50 border border-amber-200 text-amber-600 text-center rounded-xl py-3 text-xs font-bold cursor-not-allowed animate-pulse"
+                            >
+                              Upgrade Request Pending Approval
+                            </button>
+                          );
+                        } else {
+                          return (
+                            <button
+                              onClick={() => handleRequestUpgrade(p.planName.toLowerCase().includes('enterprise') ? 'Enterprise' : p.planName)}
+                              disabled={payingSub || (subInfo?.pendingUpgradeRequest)}
+                              className="w-full bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-center rounded-xl py-3 text-xs font-bold transition-all shadow-sm"
+                            >
+                              {p.planName.toLowerCase().includes('enterprise') ? 'Contact Support to Upgrade' : 'Select Standard Plan'}
+                            </button>
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
                 );
@@ -2316,6 +2425,65 @@ const Setup = () => {
               <div className="flex justify-end gap-2 pt-2 border-t border-gray-50">
                 <button type="button" onClick={() => setShowMappingModal(false)} className="btn-outline text-xs py-2">Cancel</button>
                 <button type="submit" className="btn-primary text-xs py-2">Link Subject</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Requirements Collection Modal */}
+      {showUpgradeRequirementsModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <form onSubmit={handleSubUpgradeRequirements} className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-primary px-6 py-5 text-white">
+              <h3 className="font-display font-bold text-base">
+                {upgradeRequirementsPlanType === 'Custom' ? '📝 Submit Modification Requirements' : '🚀 Request Enterprise Upgrade'}
+              </h3>
+              <p className="text-blue-200 text-xxs mt-1">
+                {upgradeRequirementsPlanType === 'Custom' 
+                  ? 'Specify new requirements/features to change in your custom plan.' 
+                  : 'Specify requirements to customize and scale your platform to Enterprise Plan.'}
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-2">
+                  Describe all your custom features, integration requirements, or modifications *
+                </label>
+                <textarea
+                  required
+                  rows={6}
+                  value={upgradeRequirementsText}
+                  onChange={e => setUpgradeRequirementsText(e.target.value)}
+                  placeholder="e.g., We need integrations with our legacy biometric attendance devices, 2TB storage space, and customized student report card templates..."
+                  className="input text-xs py-2 px-3 focus:ring-primary/20 w-full"
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xxs text-blue-700 leading-normal flex items-start gap-2">
+                <span>💡</span>
+                <span>
+                  After submission, the Super Admin will review your requirements. Once approved, the customized pricing details (minimum charges + any requirement fees) will be shown, and you can pay to activate them.
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                <button 
+                  type="button" 
+                  onClick={() => setShowUpgradeRequirementsModal(false)} 
+                  disabled={payingSub}
+                  className="btn-outline text-xs py-2"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={payingSub || !upgradeRequirementsText.trim()}
+                  className="btn-primary text-xs py-2 px-4"
+                >
+                  {payingSub ? 'Submitting...' : 'Submit Request'}
+                </button>
               </div>
             </div>
           </form>

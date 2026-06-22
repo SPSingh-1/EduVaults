@@ -697,7 +697,7 @@ namespace EduVault.Api.Controllers
 
         [HttpPost("create-subscription-order")]
         [Authorize(Roles = "schooladmin")]
-        public async Task<IActionResult> CreateSubscriptionOrder()
+        public async Task<IActionResult> CreateSubscriptionOrder([FromQuery] bool isRenewal = false)
         {
             var schoolId = GetSchoolId();
             var subscriptions = await _unitOfWork.Subscriptions.FindAsync(s => s.SchoolId == schoolId);
@@ -708,7 +708,7 @@ namespace EduVault.Api.Controllers
                 return NotFound(new { error = "Subscription record not found for this school" });
             }
 
-            if (subscription.Status == "success")
+            if (subscription.Status == "success" && !isRenewal)
             {
                 return BadRequest(new { error = "Subscription is already active and paid" });
             }
@@ -774,7 +774,7 @@ namespace EduVault.Api.Controllers
 
         [HttpPost("verify-subscription-payment")]
         [Authorize(Roles = "schooladmin")]
-        public async Task<IActionResult> VerifySubscriptionPayment([FromBody] VerifySubscriptionPaymentRequest request)
+        public async Task<IActionResult> VerifySubscriptionPayment([FromBody] VerifySubscriptionPaymentRequest request, [FromQuery] bool isRenewal = false)
         {
             var schoolId = GetSchoolId();
             var subscriptions = await _unitOfWork.Subscriptions.FindAsync(s => s.SchoolId == schoolId);
@@ -785,7 +785,7 @@ namespace EduVault.Api.Controllers
                 return NotFound(new { error = "Subscription not found" });
             }
 
-            if (subscription.Status == "success")
+            if (subscription.Status == "success" && !isRenewal)
             {
                 return BadRequest(new { error = "Subscription is already active" });
             }
@@ -809,8 +809,15 @@ namespace EduVault.Api.Controllers
 
             // Update subscription
             subscription.Status = "success";
-            subscription.StartDate = DateTime.UtcNow;
-            subscription.EndDate = DateTime.UtcNow.AddYears(1);
+            if (isRenewal && subscription.EndDate > DateTime.UtcNow)
+            {
+                subscription.EndDate = subscription.EndDate.AddYears(1);
+            }
+            else
+            {
+                subscription.StartDate = DateTime.UtcNow;
+                subscription.EndDate = DateTime.UtcNow.AddYears(1);
+            }
             _unitOfWork.Subscriptions.Update(subscription);
 
             await _unitOfWork.CompleteAsync();
@@ -824,8 +831,94 @@ namespace EduVault.Api.Controllers
             var plans = (await _unitOfWork.PlatformPlans.GetAllAsync())
                 .OrderBy(p => p.TierLabel)
                 .ToList();
-            return Ok(plans);
+
+            var schoolId = Guid.Empty;
+            try { schoolId = GetSchoolId(); } catch {}
+
+            var customConfigs = schoolId != Guid.Empty
+                ? (await _unitOfWork.SchoolPlanConfigurations.FindAsync(c => c.SchoolId == schoolId)).ToList()
+                : new System.Collections.Generic.List<SchoolPlanConfiguration>();
+
+            var result = plans.Select(p => {
+                var custom = customConfigs.FirstOrDefault(c => 
+                    p.PlanName.Contains(c.PlanType, StringComparison.OrdinalIgnoreCase) || 
+                    c.PlanType.Contains(p.PlanName, StringComparison.OrdinalIgnoreCase));
+
+                return new {
+                    p.Id,
+                    p.TierLabel,
+                    PlanName = p.PlanName,
+                    ImplementationCost = custom != null ? custom.ImplementationCost : p.ImplementationCost,
+                    StudentCapacity = custom != null ? custom.StudentCapacity : p.StudentCapacity,
+                    StorageLimit = custom != null ? custom.StorageLimit : p.StorageLimit,
+                    MonthlyPrice = custom != null ? custom.MonthlyPrice : p.MonthlyPrice,
+                    p.IsTopRevenue
+                };
+            }).ToList();
+
+            return Ok(result);
         }
+
+        [HttpPost("upgrade-request")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> RequestUpgrade([FromBody] UpgradeRequestInput model)
+        {
+            if (string.IsNullOrWhiteSpace(model.RequestedPlanType))
+            {
+                return BadRequest(new { error = "RequestedPlanType is required." });
+            }
+
+            var schoolId = GetSchoolId();
+
+            var existing = (await _unitOfWork.UpgradeRequests.FindAsync(ur =>
+                ur.SchoolId == schoolId &&
+                ur.RequestedPlanType == model.RequestedPlanType &&
+                ur.Status == "Pending")).FirstOrDefault();
+
+            if (existing != null)
+            {
+                return BadRequest(new { error = "An upgrade request for this plan is already pending approval." });
+            }
+
+            var request = new UpgradeRequest
+            {
+                SchoolId = schoolId,
+                RequestedPlanType = model.RequestedPlanType,
+                Status = "Pending",
+                Requirements = model.Requirements ?? string.Empty,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.UpgradeRequests.AddAsync(request);
+
+            var schoolName = "School";
+            var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+            if (school != null)
+            {
+                schoolName = school.Name;
+            }
+
+            var systemEvent = new SystemEvent
+            {
+                Icon = "🔔",
+                Title = model.RequestedPlanType == "Custom" ? "Custom Requirements Request" : "Plan Upgrade Request",
+                Description = model.RequestedPlanType == "Custom"
+                    ? $"{schoolName} submitted new custom requirements."
+                    : $"{schoolName} requested an upgrade to {model.RequestedPlanType} Plan.",
+                CreatedAt = DateTime.UtcNow
+            };
+            await _unitOfWork.SystemEvents.AddAsync(systemEvent);
+
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true });
+        }
+    }
+
+    public class UpgradeRequestInput
+    {
+        public string RequestedPlanType { get; set; } = string.Empty;
+        public string Requirements { get; set; } = string.Empty;
     }
 
     public class PayInvoiceRequest

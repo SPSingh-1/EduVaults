@@ -312,6 +312,37 @@ using (var scope = app.Services.CreateScope())
             await cmd.ExecuteNonQueryAsync();
             cmd.CommandText = "UPDATE \"Subscriptions\" SET \"Amount\" = 49.00 WHERE \"PlanType\" = 'Standard' AND \"Amount\" = 499.00;";
             await cmd.ExecuteNonQueryAsync();
+
+            // Create School Plan Configurations table
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS ""SchoolPlanConfigurations"" (
+                    ""Id"" UUID PRIMARY KEY,
+                    ""SchoolId"" UUID NOT NULL,
+                    ""PlanType"" TEXT NOT NULL,
+                    ""ImplementationCost"" NUMERIC NOT NULL,
+                    ""StudentCapacity"" TEXT NOT NULL,
+                    ""StorageLimit"" TEXT NOT NULL,
+                    ""MonthlyPrice"" TEXT NOT NULL
+                );";
+            await cmd.ExecuteNonQueryAsync();
+
+            // Create Upgrade Requests table
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS ""UpgradeRequests"" (
+                    ""Id"" UUID PRIMARY KEY,
+                    ""SchoolId"" UUID NOT NULL,
+                    ""RequestedPlanType"" TEXT NOT NULL,
+                    ""Status"" TEXT NOT NULL,
+                    ""Requirements"" TEXT NULL,
+                    ""CreatedAt"" TIMESTAMP WITH TIME ZONE NOT NULL
+                );";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"UpgradeRequests\" ADD COLUMN IF NOT EXISTS \"Requirements\" TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "UPDATE \"UpgradeRequests\" SET \"Requirements\" = '' WHERE \"Requirements\" IS NULL;";
+            await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception migEx)
         {

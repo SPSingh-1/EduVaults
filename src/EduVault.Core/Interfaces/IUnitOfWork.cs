@@ -31,6 +31,8 @@ namespace EduVault.Core.Interfaces
         IRepository<KnowledgeBaseCategory> KnowledgeBaseCategories { get; }
         IRepository<SystemEvent> SystemEvents { get; }
         IRepository<PlatformPlan> PlatformPlans { get; }
+        IRepository<SchoolPlanConfiguration> SchoolPlanConfigurations { get; }
+        IRepository<UpgradeRequest> UpgradeRequests { get; }
         Task<int> CompleteAsync();
     }
 }

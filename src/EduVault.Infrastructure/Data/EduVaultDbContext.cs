@@ -37,6 +37,8 @@ namespace EduVault.Infrastructure.Data
         public DbSet<SystemEvent> SystemEvents { get; set; }
         public DbSet<PlatformPlan> PlatformPlans { get; set; }
         public DbSet<ExamType> ExamTypes { get; set; }
+        public DbSet<SchoolPlanConfiguration> SchoolPlanConfigurations { get; set; }
+        public DbSet<UpgradeRequest> UpgradeRequests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -89,6 +91,20 @@ namespace EduVault.Infrastructure.Data
                 .HasOne(et => et.School)
                 .WithMany()
                 .HasForeignKey(et => et.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure SchoolPlanConfiguration
+            modelBuilder.Entity<SchoolPlanConfiguration>()
+                .HasOne(spc => spc.School)
+                .WithMany()
+                .HasForeignKey(spc => spc.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure UpgradeRequest
+            modelBuilder.Entity<UpgradeRequest>()
+                .HasOne(ur => ur.School)
+                .WithMany()
+                .HasForeignKey(ur => ur.SchoolId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Configure School

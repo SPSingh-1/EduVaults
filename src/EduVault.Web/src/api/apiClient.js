@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5265/api';
-const EXPRESS_BASE_URL = import.meta.env.VITE_EXPRESS_URL || 'http://localhost:5000/api'; // Express runs on 5000
+const EXPRESS_BASE_URL = import.meta.env.VITE_EXPRESS_URL || 'http://localhost:5005/api'; // Express runs on 5005
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -35,6 +35,7 @@ const handleResponseError = (error) => {
     // Clear credentials and redirect to login if session expires
     localStorage.removeItem('eduvault_token');
     localStorage.removeItem('eduvault_user');
+    sessionStorage.removeItem('eduvault_welcome_shown');
     if (window.location.pathname !== '/login') {
       window.location.href = '/login';
     }

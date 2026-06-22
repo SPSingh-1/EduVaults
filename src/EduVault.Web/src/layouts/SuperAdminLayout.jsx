@@ -7,6 +7,7 @@ const superLinks = [
   { icon: '💳', label: 'Subscriptions', path: '/super-admin/subscriptions' },
   { icon: '⚙️', label: 'Platform Settings', path: '/super-admin/settings' },
   { icon: '🎫', label: 'Support & Help Desk', path: '/super-admin/support' },
+  { icon: '📢', label: 'Notices & Alerts', path: '/super-admin/notices' },
 ];
 
 const SuperAdminLayout = () => (

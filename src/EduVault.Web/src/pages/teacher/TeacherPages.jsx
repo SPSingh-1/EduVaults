@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
+import { io } from 'socket.io-client';
+import { useNotifications } from '../../contexts/NotificationContext';
 import {
   ResponsiveContainer,
   BarChart,
@@ -22,6 +24,7 @@ const teacherLinks = [
   { icon: '🏫', label: 'My Classes', path: '/teacher/classes' },
   { icon: '👨‍🎓', label: 'Students', path: '/teacher/students' },
   { icon: '📋', label: 'Attendance', path: '/teacher/attendance' },
+  { icon: '📅', label: 'My Attendance', path: '/teacher/self-attendance' },
   { icon: '✏️', label: 'Marks Entry', path: '/teacher/marks' },
   { icon: '📝', label: 'Homework', path: '/teacher/homework' },
   { icon: '💬', label: 'Remarks', path: '/teacher/remarks' },
@@ -549,6 +552,7 @@ export const TeacherStudents = () => {
   const [classes, setClasses] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
+  const [activeTab, setActiveTab] = useState('roster'); // 'roster', 'contacts'
 
   const [showViewModal, setShowViewModal] = useState(false);
   const [showRemarkModal, setShowRemarkModal] = useState(false);
@@ -603,19 +607,52 @@ export const TeacherStudents = () => {
 
   const filtered = students.filter(s => {
     const nameStr = s.name || '';
-    const matchesSearch = !search || nameStr.toLowerCase().includes(search.toLowerCase());
+    const fatherStr = s.father || '';
+    const matchesSearch = !search || 
+      nameStr.toLowerCase().includes(search.toLowerCase()) ||
+      fatherStr.toLowerCase().includes(search.toLowerCase());
     const matchesClass = !selectedClass || s.classId === selectedClass;
     return matchesSearch && matchesClass;
   });
 
   return (
     <div>
-      <Topbar title="Students Roster" subtitle="Directory of students enrolled in your class sections" />
+      <Topbar 
+        title={activeTab === 'roster' ? "Students Roster" : "Parent Contact Directory"} 
+        subtitle={activeTab === 'roster' ? "Directory of students enrolled in your class sections" : "Parent contact numbers and details for students in your classes"} 
+      />
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-100 mb-6 gap-4">
+        {[
+          { id: 'roster', label: 'Students Roster', icon: '👨‍🎓' },
+          { id: 'contacts', label: 'Parent Contacts', icon: '📞' }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`pb-2.5 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all ${
+              activeTab === tab.id
+                ? 'border-primary text-primary font-black'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
 
       <div className="card">
         <div className="flex items-center gap-4 mb-5">
           <div className="flex-1 relative">
-            <input placeholder="Search students by name..." value={search} onChange={e => setSearch(e.target.value)} className="input pl-9 text-sm" />
+            <input 
+              placeholder={activeTab === 'roster' ? "Search students by name..." : "Search parents by student or guardian name..."} 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              className="input pl-9 text-sm" 
+            />
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
           </div>
           <select className="input w-48 text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
@@ -626,60 +663,113 @@ export const TeacherStudents = () => {
           </select>
         </div>
 
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="table-th text-left">Student Name</th>
-              <th className="table-th">Student ID</th>
-              <th className="table-th">Class</th>
-              <th className="table-th">Section</th>
-              <th className="table-th">Father's Name</th>
-              <th className="table-th">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(s => (
-              <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="table-td">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                      {s.name ? s.name[0] : '?'}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-primary text-sm">{s.name}</div>
-                      <div className="text-xs text-gray-400">{s.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="table-td text-xs font-mono text-gray-500">{s.studentId}</td>
-                <td className="table-td text-sm">{s.class}</td>
-                <td className="table-td text-sm">{s.section}</td>
-                <td className="table-td text-sm">{s.father}</td>
-                <td className="table-td">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => { setViewStudent(s); setShowViewModal(true); }}
-                      className="px-2.5 py-1 text-2xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded hover:bg-indigo-100 transition-all"
-                    >
-                      👤 Details
-                    </button>
-                    <button
-                      onClick={() => { setViewStudent(s); setTag('NEUTRAL'); setRemarkText(''); setShowRemarkModal(true); }}
-                      className="px-2.5 py-1 text-2xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded hover:bg-amber-100 transition-all"
-                    >
-                      💬 Add Remark
-                    </button>
-                  </div>
-                </td>
+        {activeTab === 'roster' ? (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="table-th text-left">Student Name</th>
+                <th className="table-th">Student ID</th>
+                <th className="table-th">Class</th>
+                <th className="table-th">Section</th>
+                <th className="table-th">Father's Name</th>
+                <th className="table-th">Actions</th>
               </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No students matched.</td>
+            </thead>
+            <tbody>
+              {filtered.map(s => (
+                <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
+                  <td className="table-td">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                        {s.name ? s.name[0] : '?'}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-primary text-sm">{s.name}</div>
+                        <div className="text-xs text-gray-400">{s.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="table-td text-xs font-mono text-gray-500">{s.studentId}</td>
+                  <td className="table-td text-sm">{s.class}</td>
+                  <td className="table-td text-sm">{s.section}</td>
+                  <td className="table-td text-sm">{s.father}</td>
+                  <td className="table-td">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => { setViewStudent(s); setShowViewModal(true); }}
+                        className="px-2.5 py-1 text-2xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded hover:bg-indigo-100 transition-all"
+                      >
+                        👤 Details
+                      </button>
+                      <button
+                        onClick={() => { setViewStudent(s); setTag('NEUTRAL'); setRemarkText(''); setShowRemarkModal(true); }}
+                        className="px-2.5 py-1 text-2xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded hover:bg-amber-100 transition-all"
+                      >
+                        💬 Add Remark
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No students matched.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="table-th text-left">Student Info</th>
+                <th className="table-th">Class</th>
+                <th className="table-th">Section</th>
+                <th className="table-th">Parent/Guardian Name</th>
+                <th className="table-th">Guardian Contact No.</th>
+                <th className="table-th">Actions</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map(s => (
+                <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
+                  <td className="table-td">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                        {s.name ? s.name[0] : '?'}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-primary text-sm">{s.name}</div>
+                        <div className="text-xs text-gray-400">ID: {s.studentId}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="table-td text-sm">{s.class}</td>
+                  <td className="table-td text-sm">{s.section}</td>
+                  <td className="table-td font-semibold text-gray-700 text-sm">{s.father || 'N/A'}</td>
+                  <td className="table-td font-mono text-sm text-gray-600">{s.guardianPhone || 'N/A'}</td>
+                  <td className="table-td">
+                    {s.guardianPhone ? (
+                      <a
+                        href={`tel:${s.guardianPhone}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-2xs font-bold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-all"
+                      >
+                        📞 Call Parent
+                      </a>
+                    ) : (
+                      <span className="text-2xs text-gray-400">No Phone</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No parent contact details found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Student Details Modal */}
@@ -839,6 +929,8 @@ export const Attendance = () => {
       });
 
       setStudents(mapped);
+      const isSaved = records.length > 0 && records.every(r => r.status !== null && r.status !== undefined && r.status !== '');
+      setAttendanceSaved(isSaved);
     } catch (err) {
       console.error('Failed to load attendance:', err);
     } finally {
@@ -2128,4 +2220,418 @@ export const TeacherProfile = () => {
         </div>
       </div>
       );
+};
+
+// --- Teacher Self Attendance View ---
+export const TeacherSelfAttendance = () => {
+  const [attendanceList, setAttendanceList] = useState([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        const res = await expressClient.get('/teacher-attendance/my-attendance');
+        setAttendanceList(res.data || []);
+      } catch (err) {
+        console.error('Failed to load my attendance:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAttendance();
+  }, []);
+
+  const totalDays = attendanceList.length;
+  const presentCount = attendanceList.filter(a => a.status === 'Present').length;
+  const lateCount = attendanceList.filter(a => a.status === 'Late').length;
+  const absentCount = attendanceList.filter(a => a.status === 'Absent').length;
+  const leaveCount = attendanceList.filter(a => a.status === 'On Leave').length;
+  
+  const attendanceRate = totalDays > 0 
+    ? (((presentCount + lateCount) / totalDays) * 100).toFixed(1) + '%' 
+    : '100%';
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const firstDayOfWeek = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(new Date(year, month - 1, 1));
+    setSelectedRecord(null);
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(new Date(year, month + 1, 1));
+    setSelectedRecord(null);
+  };
+
+  const calendarDays = [];
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    calendarDays.push({ padding: true, key: `pad-${i}` });
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const record = attendanceList.find(a => a.date === dateStr);
+    calendarDays.push({
+      padding: false,
+      day,
+      dateStr,
+      record,
+      key: `day-${day}`
+    });
+  }
+
+  const getStatusColor = (status) => {
+    if (status === 'Present') return 'bg-green-500 text-white hover:bg-green-600';
+    if (status === 'Late') return 'bg-amber-500 text-white hover:bg-amber-600';
+    if (status === 'Absent') return 'bg-red-500 text-white hover:bg-red-600';
+    if (status === 'On Leave') return 'bg-orange-500 text-white hover:bg-orange-600';
+    return 'bg-gray-100 text-gray-400 hover:bg-gray-200';
+  };
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  return (
+    <div>
+      <Topbar title="My Attendance Logs" subtitle="Track your daily attendance status and details" />
+      
+      <div className="grid grid-cols-5 gap-4 mb-6">
+        {[
+          { label: 'Attendance Rate', value: attendanceRate, color: 'text-primary', icon: '📈' },
+          { label: 'Present Days', value: presentCount, color: 'text-green-600', icon: '✅' },
+          { label: 'Late Days', value: lateCount, color: 'text-amber-500', icon: '⏱️' },
+          { label: 'Absent Days', value: absentCount, color: 'text-red-500', icon: '❌' },
+          { label: 'Leave Days', value: leaveCount, color: 'text-orange-500', icon: '💼' }
+        ].map(stat => (
+          <div key={stat.label} className="stat-card flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center text-xl">{stat.icon}</div>
+            <div>
+              <div className={`font-display text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+              <div className="text-xs text-gray-500">{stat.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="card text-center py-16 text-gray-400">
+          <div className="animate-spin text-2xl mb-3">⏳</div>
+          Loading your attendance logs...
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-6">
+          <div className="card col-span-2">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-display font-bold text-primary text-lg">
+                📅 {monthNames[month]} {year}
+              </h3>
+              <div className="flex gap-2">
+                <button onClick={handlePrevMonth} className="p-2 border rounded-lg hover:bg-gray-50 text-xs font-bold">◀ Prev</button>
+                <button onClick={handleNextMonth} className="p-2 border rounded-lg hover:bg-gray-50 text-xs font-bold">Next ▶</button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-gray-400">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="py-2">{d}</div>)}
+            </div>
+
+            <div className="grid grid-cols-7 gap-2">
+              {calendarDays.map(item => {
+                if (item.padding) {
+                  return <div key={item.key} className="h-16 bg-gray-50/30 rounded-xl border border-dashed border-gray-100" />;
+                }
+                const hasRecord = !!item.record;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => item.record && setSelectedRecord(item.record)}
+                    className={`h-16 rounded-xl border flex flex-col justify-between p-2 text-left relative transition-all ${
+                      hasRecord
+                        ? getStatusColor(item.record.status)
+                        : 'border-gray-100 hover:bg-gray-50 text-gray-600'
+                    }`}
+                  >
+                    <span className="text-xs font-bold">{item.day}</span>
+                    {hasRecord && (
+                      <span className="text-[9px] font-extrabold uppercase leading-none opacity-90 truncate max-w-full">
+                        {item.record.status}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="card bg-gray-50/50">
+              <h3 className="font-display font-bold text-primary text-sm mb-4">ℹ️ Date Details</h3>
+              {selectedRecord ? (
+                <div className="space-y-4 text-xs">
+                  <div className="flex justify-between py-1.5 border-b border-gray-100">
+                    <span className="text-gray-400 font-semibold uppercase">Date</span>
+                    <span className="font-bold text-primary">{selectedRecord.date}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-gray-100">
+                    <span className="text-gray-400 font-semibold uppercase">Status</span>
+                    <span className="font-bold text-primary">{selectedRecord.status}</span>
+                  </div>
+                  {selectedRecord.status === 'Late' && (
+                    <div className="flex justify-between py-1.5 border-b border-gray-100">
+                      <span className="text-gray-400 font-semibold uppercase">Minutes Late</span>
+                      <span className="font-bold text-amber-600">{selectedRecord.lateMinutes} mins</span>
+                    </div>
+                  )}
+                  <div className="py-1.5">
+                    <span className="text-gray-400 font-semibold uppercase block mb-1">Admin Remarks</span>
+                    <p className="text-gray-600 bg-white p-2.5 rounded-lg border border-gray-100 italic leading-normal">
+                      {selectedRecord.remarks || 'No remarks provided.'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400 italic text-2xs">
+                  Click on any marked date in the calendar to view full attendance remarks and details.
+                </div>
+              )}
+            </div>
+
+            <div className="card">
+              <h3 className="font-display font-bold text-primary text-sm mb-3">Legend</h3>
+              <div className="space-y-2">
+                {[
+                  { label: 'Present', color: 'bg-green-500' },
+                  { label: 'Late', color: 'bg-amber-500' },
+                  { label: 'Absent', color: 'bg-red-500' },
+                  { label: 'On Leave', color: 'bg-orange-500' }
+                ].map(item => (
+                  <div key={item.label} className="flex items-center gap-2 text-xs">
+                    <span className={`w-3 h-3 rounded-full ${item.color}`} />
+                    <span className="font-medium text-gray-600">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- Teacher Notices ---
+export const TeacherNotices = () => {
+  const { markAllAsRead } = useNotifications();
+  const [noticesList, setNoticesList] = useState([]);
+  const [showNew, setShowNew] = useState(false);
+  const [target, setTarget] = useState('ALL');
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [type, setType] = useState('GENERAL');
+  const [loading, setLoading] = useState(false);
+  const [activeFilterTab, setActiveFilterTab] = useState('all'); // 'all', 'schooladmin', 'teacher'
+
+  const filteredNotices = noticesList.filter(n => {
+    // Exclude system alerts (superadmin notices) for teachers
+    if (n.senderRole === 'superadmin') {
+      return false;
+    }
+    if (activeFilterTab === 'schooladmin') {
+      return n.senderRole === 'schooladmin';
+    }
+    if (activeFilterTab === 'teacher') {
+      return n.senderRole === 'teacher';
+    }
+    return true; // 'all'
+  });
+
+  const fetchNotices = async () => {
+    try {
+      const res = await expressClient.get('/notifications');
+      setNoticesList(res.data);
+    } catch (err) {
+      console.error('Error fetching notices:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotices();
+
+    const token = localStorage.getItem('eduvault_token');
+    if (token) {
+      const expressUrl = import.meta.env.VITE_EXPRESS_URL || 'http://localhost:5005/api';
+      const socketUrl = expressUrl.replace(/\/api$/, '');
+      const socket = io(socketUrl, {
+        auth: { token }
+      });
+      socket.on('notification', (notif) => {
+        setNoticesList(prev => [notif, ...prev]);
+      });
+      return () => {
+        socket.disconnect();
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    if (noticesList.length > 0) {
+      markAllAsRead();
+    }
+  }, [noticesList]);
+
+  const handlePostNotice = async (e) => {
+    e.preventDefault();
+    if (!title || !body) return;
+    setLoading(true);
+    try {
+      await expressClient.post('/notifications', {
+        recipientId: target,
+        title,
+        body,
+        type
+      });
+      setShowNew(false);
+      setTitle('');
+      setBody('');
+      fetchNotices();
+    } catch (err) {
+      console.error('Error publishing notice:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <Topbar title="Notices & Announcements" actions={
+        <button onClick={() => setShowNew(true)} className="btn-primary">+ New Notice</button>
+      } />
+      
+      <div className="grid grid-cols-3 gap-6">
+        <div className="col-span-2 space-y-4">
+          {/* Filtering Tabs */}
+          <div className="flex border-b border-gray-100 mb-4 gap-4">
+            {[
+              { id: 'all', label: 'All Announcements', icon: '📢' },
+              { id: 'schooladmin', label: 'School Admin Notices', icon: '🏫' },
+              { id: 'teacher', label: 'Teacher Notices', icon: '👨‍🏫' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveFilterTab(tab.id)}
+                className={`pb-2.5 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all ${
+                  activeFilterTab === tab.id
+                    ? 'border-primary text-primary font-black'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {filteredNotices.map((n, i) => (
+            <div key={n._id || i} className={`card ${n.type === 'URGENT' ? 'border-l-4 border-red-500 shadow-md' : ''}`}>
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={n.type === 'URGENT' ? 'badge-danger' : n.type === 'EVENT' ? 'badge-info' : 'badge-gray'}>{n.type}</span>
+                  <span className="badge badge-info">Audience: {n.recipientId === 'SCHOOLADMINS' ? 'Admins' : n.recipientId}</span>
+                  <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString()}</span>
+                </div>
+                <span className="text-[10px] font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded">👤 {n.senderName || 'School System'} ({n.senderRole === 'schooladmin' ? 'Admin' : n.senderRole === 'teacher' ? 'Teacher' : n.senderRole})</span>
+              </div>
+              <h3 className="font-display font-bold text-primary mb-1">{n.title}</h3>
+              <p className="text-sm text-gray-500 mb-3">{n.body}</p>
+            </div>
+          ))}
+          {filteredNotices.length === 0 && (
+            <div className="card text-center py-6 text-gray-400 text-sm">No notices posted.</div>
+          )}
+        </div>
+
+        <div className="card">
+          <h3 className="font-display font-semibold text-primary mb-4">⊕ Quick Broadcast</h3>
+          <form onSubmit={handlePostNotice} className="space-y-3">
+            <div>
+              <div className="text-xs font-semibold text-gray-600 mb-2">TARGET AUDIENCE</div>
+              <select value={target} onChange={e => setTarget(e.target.value)} className="input text-xs">
+                <option value="ALL">All Users (ALL)</option>
+                <option value="TEACHERS">Teachers Only</option>
+                <option value="STUDENTS">Students Only</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Category</label>
+              <select value={type} onChange={e => setType(e.target.value)} className="input text-xs">
+                <option value="GENERAL">General Notice</option>
+                <option value="URGENT">Urgent Announcement</option>
+                <option value="EVENT">School Event</option>
+              </select>
+            </div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Title</label><input required placeholder="Enter title..." value={title} onChange={e => setTitle(e.target.value)} className="input" /></div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Message Body</label><textarea required placeholder="Type announcement here..." value={body} onChange={e => setBody(e.target.value)} className="input h-28 resize-none" /></div>
+            <button type="submit" disabled={loading} className="w-full bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-all">
+              {loading ? 'Publishing...' : 'Send Now'}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {showNew && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <form onSubmit={handlePostNotice} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-6 text-left">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-display font-bold text-primary text-xl">Create New Notice</h3>
+                <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Target Audience</label>
+                  <select value={target} onChange={e => setTarget(e.target.value)} className="input">
+                    <option value="ALL">All Users (ALL)</option>
+                    <option value="TEACHERS">Teachers Only</option>
+                    <option value="STUDENTS">Students Only</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Category</label>
+                  <select value={type} onChange={e => setType(e.target.value)} className="input">
+                    <option value="GENERAL">General Notice</option>
+                    <option value="URGENT">Urgent Announcement</option>
+                    <option value="EVENT">School Event</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Title</label>
+                  <input required placeholder="Enter title..." value={title} onChange={e => setTitle(e.target.value)} className="input" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Message Body</label>
+                  <textarea required placeholder="Type announcement here..." value={body} onChange={e => setBody(e.target.value)} className="input h-28 resize-none" />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
+              <button type="button" onClick={() => setShowNew(false)} className="btn-outline">Cancel</button>
+              <button type="submit" disabled={loading} className="btn-primary">
+                {loading ? 'Publishing...' : 'Publish Notice'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
 };

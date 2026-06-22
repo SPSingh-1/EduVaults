@@ -17,6 +17,7 @@ const Remark = require('./models/Remark');
 const ChatMessage = require('./models/ChatMessage');
 const DocumentMetadata = require('./models/DocumentMetadata');
 const Homework = require('./models/Homework');
+const TeacherAttendance = require('./models/TeacherAttendance');
 
 const app = express();
 const server = http.createServer(app);
@@ -193,18 +194,23 @@ app.post('/api/logs', authenticateToken, async (req, res) => {
 app.get('/api/notifications', authenticateToken, async (req, res) => {
   try {
     const { id, role, schoolId } = req.user;
-    if (!schoolId) {
-      return res.json([]);
+    let filter = {};
+    if (role === 'superadmin') {
+      filter = { senderRole: 'superadmin' };
+    } else {
+      if (!schoolId) {
+        return res.json([]);
+      }
+      filter = {
+        schoolId: { $in: [schoolId, 'ALL'] },
+        $or: [
+          { recipientId: id },
+          { recipientId: 'ALL' },
+          { recipientId: role.toUpperCase() + 'S' } // e.g. "TEACHERS", "STUDENTS"
+        ]
+      };
     }
-    // Get notifications directly targeting the user or broadcasting to their role
-    const notifications = await Notification.find({
-      schoolId,
-      $or: [
-        { recipientId: id },
-        { recipientId: 'ALL' },
-        { recipientId: role.toUpperCase() + 'S' } // e.g. "TEACHERS", "STUDENTS"
-      ]
-    }).sort({ createdAt: -1 }).limit(50);
+    const notifications = await Notification.find(filter).sort({ createdAt: -1 }).limit(50);
     res.json(notifications);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -239,21 +245,28 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
  *               type:
  *                 type: string
  *                 enum: [URGENT, EVENT, GENERAL, BILLING]
+ *               targetSchoolId:
+ *                 type: string
  *     responses:
  *       201:
  *         description: Notification created.
  */
 app.post('/api/notifications', authenticateToken, async (req, res) => {
   try {
-    const { recipientId, title, body, type } = req.body;
-    const schoolId = req.user.schoolId;
-    if (!schoolId) {
-      return res.status(400).json({ error: 'User has no school associated. Cannot post notices.' });
+    const { recipientId, title, body, type, targetSchoolId } = req.body;
+    let schoolId = req.user.schoolId;
+
+    if (req.user.role === 'superadmin') {
+      schoolId = targetSchoolId || 'ALL';
+    } else {
+      if (!schoolId) {
+        return res.status(400).json({ error: 'User has no school associated. Cannot post notices.' });
+      }
     }
 
     const senderName = req.user.firstName && req.user.lastName 
       ? `${req.user.firstName} ${req.user.lastName}` 
-      : (req.user.email || 'School System');
+      : (req.user.email || 'Platform Administrator');
     const senderRole = req.user.role || 'system';
 
     const recipientList = Array.isArray(recipientId) ? recipientId : [recipientId];
@@ -267,15 +280,26 @@ app.post('/api/notifications', authenticateToken, async (req, res) => {
         body,
         type: type || 'GENERAL',
         senderName,
-        senderRole
+        senderRole,
+        senderId: req.user.id
       });
       await notification.save();
       createdNotifs.push(notification);
     }
 
-    // Broadcast through socket (emit first notification as update trigger)
-    if (createdNotifs.length > 0) {
-      io.to(schoolId).emit('notification', createdNotifs[0]);
+    // Broadcast through socket individually
+    for (const notification of createdNotifs) {
+      const rId = notification.recipientId;
+      if (schoolId === 'ALL') {
+        io.emit('notification', notification);
+      } else {
+        if (rId === 'ALL' || rId === 'TEACHERS' || rId === 'STUDENTS' || rId === 'SCHOOLADMINS' || rId === 'PARENTS') {
+          io.to(schoolId).emit('notification', notification);
+        } else {
+          // Targeted notification to a specific user private room
+          io.to(rId).emit('notification', notification);
+        }
+      }
     }
 
     res.status(201).json(Array.isArray(recipientId) ? createdNotifs : createdNotifs[0]);
@@ -696,6 +720,139 @@ app.get('/api/documents', authenticateToken, async (req, res) => {
     }
     const docs = await DocumentMetadata.find(filter).sort({ uploadDate: -1 });
     res.json(docs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Teacher Attendance Endpoints ---
+/**
+ * @openapi
+ * /api/teacher-attendance:
+ *   get:
+ *     summary: Get teacher attendance for a specific date
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of teacher attendance records.
+ */
+app.get('/api/teacher-attendance', authenticateToken, async (req, res) => {
+  try {
+    const { schoolId } = req.user;
+    const { date } = req.query;
+    if (!schoolId) {
+      return res.status(400).json({ error: 'School ID missing in token' });
+    }
+    if (!date) {
+      return res.status(400).json({ error: 'Date query parameter is required' });
+    }
+    const attendance = await TeacherAttendance.find({ schoolId, date });
+    res.json(attendance);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @openapi
+ * /api/teacher-attendance/submit:
+ *   post:
+ *     summary: Submit teacher attendance
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - date
+ *               - attendance
+ *             properties:
+ *               date:
+ *                 type: string
+ *               attendance:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *     responses:
+ *       200:
+ *         description: Attendance saved successfully.
+ */
+app.post('/api/teacher-attendance/submit', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'schooladmin') {
+      return res.status(403).json({ error: 'Unauthorized. Only School Admins can submit teacher attendance.' });
+    }
+    const { schoolId } = req.user;
+    const { date, attendance } = req.body;
+    
+    if (!schoolId) {
+      return res.status(400).json({ error: 'School ID missing in token' });
+    }
+    if (!date) {
+      return res.status(400).json({ error: 'Date is required' });
+    }
+    if (!Array.isArray(attendance)) {
+      return res.status(400).json({ error: 'Attendance must be an array' });
+    }
+
+    const bulkOps = attendance.map(item => {
+      return {
+        updateOne: {
+          filter: { schoolId, date, teacherId: item.teacherId },
+          update: {
+            $set: {
+              name: item.name,
+              employeeId: item.employeeId,
+              status: item.status,
+              lateMinutes: item.status === 'Late' ? (parseInt(item.lateMinutes) || 0) : 0,
+              remarks: item.remarks || '',
+              updatedAt: new Date()
+            }
+          },
+          upsert: true
+        }
+      };
+    });
+
+    if (bulkOps.length > 0) {
+      await TeacherAttendance.bulkWrite(bulkOps);
+    }
+
+    res.json({ success: true, count: bulkOps.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @openapi
+ * /api/teacher-attendance/my-attendance:
+ *   get:
+ *     summary: Get self attendance history for logged-in teacher
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of attendance records for the teacher.
+ */
+app.get('/api/teacher-attendance/my-attendance', authenticateToken, async (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    if (req.user.role !== 'teacher') {
+      return res.status(403).json({ error: 'Unauthorized. Only teachers can view their self attendance.' });
+    }
+    const attendance = await TeacherAttendance.find({ teacherId }).sort({ date: -1 }).limit(100);
+    res.json(attendance);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

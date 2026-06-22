@@ -112,6 +112,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('eduvault_token');
     localStorage.removeItem('eduvault_user');
+    sessionStorage.removeItem('eduvault_welcome_shown');
     setToken(null);
     setUser(null);
     setMaintenanceActive(false);

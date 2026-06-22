@@ -660,6 +660,10 @@ namespace EduVault.Api.Controllers
             var subscriptions = await _unitOfWork.Subscriptions.FindAsync(s => s.SchoolId == schoolId);
             var subscription = subscriptions.FirstOrDefault();
 
+            // Fetch pending upgrade request
+            var pendingRequests = await _unitOfWork.UpgradeRequests.FindAsync(ur => ur.SchoolId == schoolId && ur.Status == "Pending");
+            var pendingRequest = pendingRequests.FirstOrDefault();
+
             return Ok(new
             {
                 totalStudents,
@@ -670,7 +674,15 @@ namespace EduVault.Api.Controllers
                 subscriptionStatus = subscription?.Status ?? "pending",
                 subscriptionAmount = subscription?.Amount ?? 49.00m,
                 subscriptionPlanType = subscription?.PlanType ?? "Standard",
-                subscriptionId = subscription?.Id
+                subscriptionId = subscription?.Id,
+                subscriptionStartDate = subscription?.StartDate.ToString("MMM dd, yyyy"),
+                subscriptionEndDate = subscription?.EndDate.ToString("MMM dd, yyyy"),
+                pendingUpgradeRequest = pendingRequest != null ? new {
+                    pendingRequest.Id,
+                    pendingRequest.RequestedPlanType,
+                    pendingRequest.Requirements,
+                    pendingRequest.CreatedAt
+                } : null
             });
         }
 
@@ -1687,7 +1699,7 @@ namespace EduVault.Api.Controllers
                     StudentId = id,
                     Name = user != null ? $"{user.FirstName} {user.LastName}" : "Unknown Student",
                     RollNumber = profile?.StudentId ?? string.Empty,
-                    Status = record?.Status ?? "Present",
+                    Status = record?.Status,
                     Remarks = record?.Remarks ?? string.Empty
                 };
             }).OrderBy(s => s.Name);
