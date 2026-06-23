@@ -9,8 +9,8 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -18,19 +18,53 @@ import {
   Legend,
   Cell
 } from 'recharts';
+import { 
+  LayoutDashboard, 
+  Building, 
+  Users, 
+  CheckSquare, 
+  Calendar, 
+  Edit, 
+  PenTool, 
+  MessageSquare, 
+  Megaphone, 
+  User, 
+  DollarSign, 
+  ClipboardList 
+} from 'lucide-react';
 
 const teacherLinks = [
-  { icon: '📊', label: 'Dashboard', path: '/teacher/dashboard' },
-  { icon: '🏫', label: 'My Classes', path: '/teacher/classes' },
-  { icon: '👨‍🎓', label: 'Students', path: '/teacher/students' },
-  { icon: '📋', label: 'Attendance', path: '/teacher/attendance' },
-  { icon: '📅', label: 'My Attendance', path: '/teacher/self-attendance' },
-  { icon: '✏️', label: 'Marks Entry', path: '/teacher/marks' },
-  { icon: '📝', label: 'Homework', path: '/teacher/homework' },
-  { icon: '💬', label: 'Remarks', path: '/teacher/remarks' },
-  { icon: '📢', label: 'Notices', path: '/teacher/notices' },
-  { icon: '👤', label: 'Profile', path: '/teacher/profile' },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/teacher/dashboard' },
+  { icon: Building, label: 'My Classes', path: '/teacher/classes' },
+  { icon: Users, label: 'Students', path: '/teacher/students' },
+  { icon: CheckSquare, label: 'Attendance', path: '/teacher/attendance' },
+  { icon: Calendar, label: 'My Attendance', path: '/teacher/self-attendance' },
+  { icon: Edit, label: 'Marks Entry', path: '/teacher/marks' },
+  { icon: PenTool, label: 'Homework', path: '/teacher/homework' },
+  { icon: MessageSquare, label: 'Remarks', path: '/teacher/remarks' },
+  { icon: Megaphone, label: 'Notices', path: '/teacher/notices' },
+  { icon: User, label: 'Profile', path: '/teacher/profile' },
 ];
+
+const CustomTeacherTooltip = ({ active, payload, label, isSalary }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/95 backdrop-blur-sm border border-slate-100/80 p-3 rounded-2xl shadow-[0_12px_30px_-5px_rgba(0,0,0,0.08)] transition-all">
+        <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
+        {payload.map((item, index) => (
+          <div key={index} className="flex items-center gap-2 mt-0.5">
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm shrink-0" style={{ backgroundColor: item.color || item.fill }} />
+            <span className="text-2xs text-slate-550 font-semibold">{item.name}:</span>
+            <span className="text-xs font-black text-slate-800 font-mono">
+              {isSalary ? `Rs. ${item.value.toLocaleString()}` : `${item.value} students`}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export const TeacherLayout = () => (
   <div className="flex">
@@ -76,40 +110,58 @@ export const TeacherDashboard = () => {
   ) || [];
 
   return (
-    <div>
+    <div className="space-y-6">
       <Topbar title="Teacher Dashboard" subtitle="Academic Year 2023-24" />
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'My Classes', value: stats?.totalClasses ?? '0', sub: stats?.myClassesToday || 'No classes today', icon: '🏫' },
-          { label: 'Total Students', value: stats?.totalStudents ?? '0', sub: 'Across class roster', icon: '👥' },
-          { label: 'Pending Reviews', value: stats?.pendingReviews ?? '0', sub: 'Requires submission', icon: '📋' },
-          { label: 'Base Salary', value: stats?.salary ? `Rs. ${stats.salary.toLocaleString()}` : 'Rs. 55,000', sub: 'Direct deposit', icon: '💰' },
+          { label: 'My Classes', value: stats?.totalClasses ?? '0', sub: stats?.myClassesToday || 'No classes today', icon: Building, color: 'text-blue-500', bgColor: 'bg-blue-50/50' },
+          { label: 'Total Students', value: stats?.totalStudents ?? '0', sub: 'Across class roster', icon: Users, color: 'text-emerald-500', bgColor: 'bg-emerald-50/50' },
+          { label: 'Pending Reviews', value: stats?.pendingReviews ?? '0', sub: 'Requires submission', icon: ClipboardList, color: 'text-amber-500', bgColor: 'bg-amber-50/50' },
+          { label: 'Base Salary', value: stats?.salary ? `Rs. ${stats.salary.toLocaleString()}` : 'Rs. 55,000', sub: 'Direct deposit', icon: DollarSign, color: 'text-violet-500', bgColor: 'bg-violet-50/50' },
         ].map(s => (
-          <div key={s.label} className="stat-card flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-primary/10">{s.icon}</div>
-            <div>
+          <div key={s.label} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
+            <div className="space-y-1">
               <div className="font-display text-2xl font-bold text-primary">{s.value}</div>
-              <div className="text-xs text-gray-500">{s.label}</div>
-              <div className="text-xs font-medium text-blue-500">{s.sub}</div>
+              <div className="text-xs font-semibold text-gray-450">{s.label}</div>
+              <div className="text-2xs font-semibold text-blue-500">{s.sub}</div>
+            </div>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${s.bgColor}`}>
+              <s.icon className={`w-6 h-6 ${s.color} stroke-[1.75]`} />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-2 gap-6">
         {/* Graph 1: Students per Class */}
-        <div className="card">
-          <h3 className="font-display font-bold text-primary text-sm mb-4">👥 Student Enrollment by Class</h3>
-          <div className="h-64">
+        <div className="card flex flex-col justify-between">
+          <div className="mb-4">
+            <h3 className="font-display font-semibold text-primary text-sm m-0">Student Enrollment by Class</h3>
+            <p className="text-2xs text-gray-400">Class roster size distributions</p>
+          </div>
+          <div className="h-64 w-full">
             {stats?.classEnrollments && stats.classEnrollments.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.classEnrollments}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="className" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
-                  <Tooltip formatter={(value) => [`${value} students`, 'Enrolled']} />
-                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <BarChart data={stats.classEnrollments} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="teacherClassSizeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.85}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.55}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="className" stroke="#94a3b8" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTeacherTooltip isSalary={false} />} cursor={{ fill: '#f8fafc', opacity: 0.55 }} transitionDuration={180} />
+                  <Bar 
+                    dataKey="count" 
+                    name="Enrolled Students" 
+                    fill="url(#teacherClassSizeGrad)" 
+                    radius={[4, 4, 0, 0]} 
+                    barSize={28} 
+                    activeBar={{ filter: 'brightness(1.08)', stroke: '#fff', strokeWidth: 1.5 }}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -119,20 +171,33 @@ export const TeacherDashboard = () => {
         </div>
 
         {/* Graph 2: Salary Payout Breakdown */}
-        <div className="card">
-          <h3 className="font-display font-bold text-primary text-sm mb-4">📈 Monthly Salary History</h3>
-          <div className="h-64">
+        <div className="card flex flex-col justify-between">
+          <div className="mb-4">
+            <h3 className="font-display font-semibold text-primary text-sm m-0">Monthly Salary History</h3>
+            <p className="text-2xs text-gray-400">Salary trends and historical payouts</p>
+          </div>
+          <div className="h-64 w-full">
             {stats?.salaryHistory ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats.salaryHistory}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="month" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
-                  <Tooltip formatter={(value) => [`Rs. ${value.toLocaleString()}`, 'Amount']} />
-                  <Legend />
-                  <Line type="monotone" dataKey="net" name="Net Payout" stroke="#10b981" strokeWidth={2.5} />
-                  <Line type="monotone" dataKey="baseSalary" name="Base Salary" stroke="#3b82f6" strokeWidth={1.5} />
-                </LineChart>
+                <AreaChart data={stats.salaryHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="netSalaryGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.24}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                    </linearGradient>
+                    <linearGradient id="baseSalaryGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.16}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="month" stroke="#94a3b8" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTeacherTooltip isSalary={true} />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }} transitionDuration={180} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
+                  <Area type="monotone" dataKey="net" name="Net Payout" stroke="#10b981" strokeWidth={2.5} fill="url(#netSalaryGrad)" dot={{ fill: '#10b981', stroke: '#fff', strokeWidth: 1.5, r: 3 }} activeDot={{ fill: '#10b981', stroke: '#fff', strokeWidth: 2, r: 5 }} />
+                  <Area type="monotone" dataKey="baseSalary" name="Base Salary" stroke="#3b82f6" strokeWidth={1.5} fill="url(#baseSalaryGrad)" dot={{ fill: '#3b82f6', stroke: '#fff', strokeWidth: 1.5, r: 3 }} activeDot={{ fill: '#3b82f6', stroke: '#fff', strokeWidth: 2, r: 5 }} />
+                </AreaChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-400 text-xs">No salary records loaded.</div>
@@ -147,22 +212,24 @@ export const TeacherDashboard = () => {
           <h3 className="font-display font-bold text-primary text-sm flex items-center gap-1.5 m-0">
             🗓️ Assigned Timetable Schedule
           </h3>
-          <div className="flex bg-gray-100 p-0.5 rounded-lg">
+          <div className="flex gap-1 bg-slate-100/60 p-1 rounded-xl w-fit border border-slate-200/30">
             <button
               onClick={() => setScheduleView('today')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${scheduleView === 'today'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-gray-500 hover:text-primary'
-                }`}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg select-none active:scale-95 transition-all duration-250 cursor-pointer ${
+                scheduleView === 'today'
+                  ? 'bg-white text-primary shadow-2xs font-bold border border-slate-200/40'
+                  : 'text-slate-500 hover:text-primary hover:bg-white/30 bg-transparent border border-transparent'
+              }`}
             >
               Today's Schedule
             </button>
             <button
               onClick={() => setScheduleView('weekly')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${scheduleView === 'weekly'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-gray-500 hover:text-primary'
-                }`}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg select-none active:scale-95 transition-all duration-250 cursor-pointer ${
+                scheduleView === 'weekly'
+                  ? 'bg-white text-primary shadow-2xs font-bold border border-slate-200/40'
+                  : 'text-slate-500 hover:text-primary hover:bg-white/30 bg-transparent border border-transparent'
+              }`}
             >
               Weekly Timetable
             </button>
@@ -175,10 +242,10 @@ export const TeacherDashboard = () => {
               <thead>
                 <tr className="border-b border-gray-100">
                   <th className="table-th text-left">Day of Week</th>
-                  <th className="table-th">Period</th>
-                  <th className="table-th">Class Room</th>
-                  <th className="table-th">Subject</th>
-                  <th className="table-th">Status / Remark</th>
+                  <th className="table-th text-center">Period</th>
+                  <th className="table-th text-center">Class Room</th>
+                  <th className="table-th text-left">Subject</th>
+                  <th className="table-th text-left">Status / Remark</th>
                 </tr>
               </thead>
               <tbody>
@@ -238,9 +305,9 @@ export const TeacherDashboard = () => {
               );
               return (
                 <div key={day} className="border-b border-gray-50 pb-4 last:border-0 last:pb-0">
-                  <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider mb-3 flex items-center justify-between">
+                  <h4 className="font-display font-bold text-primary text-xs uppercase tracking-wider mb-3 flex items-center justify-between select-none">
                     <span>{day}</span>
-                    <span className="text-2xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full normal-case">
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-0.5 rounded-lg normal-case">
                       {dayItems.length} {dayItems.length === 1 ? 'class' : 'classes'}
                     </span>
                   </h4>
@@ -249,36 +316,31 @@ export const TeacherDashboard = () => {
                       {dayItems.map((item, idx) => (
                         <div
                           key={item.id || idx}
-                          className="p-3 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-between hover:border-blue-200 transition-colors shadow-sm"
+                          className="p-3.5 bg-white border border-slate-100 hover:border-blue-200/80 rounded-xl flex items-center justify-between hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer shadow-3xs group"
                         >
-                          <div>
-                            <div className="text-2xs font-bold text-blue-600 uppercase tracking-wider">
+                          <div className="space-y-0.5">
+                            <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider group-hover:text-blue-700 transition-colors">
                               Period {item.periodNumber}
                             </div>
-                            <div className="text-xs font-semibold text-gray-800 mt-0.5">
+                            <div className="text-xs font-bold text-slate-800 group-hover:text-primary transition-colors">
                               {item.subjectName}
                             </div>
-                            <div className="text-2xs text-gray-500 mt-0.5">
-                              {item.className}
+                            <div className="text-[10px] font-medium text-slate-400 mt-0.5">
+                              🚪 Room: {item.className}
                             </div>
                           </div>
-                          <div>
+                          <div className="shrink-0">
                             {item.isRescheduled ? (
                               <span
-                                className="badge badge-danger text-2xs font-semibold cursor-help"
+                                className="badge badge-danger text-[9px] py-0.5 font-bold uppercase tracking-wider cursor-help"
                                 title={item.remark}
                               >
                                 {item.remark && item.remark.length > 15 ? item.remark.slice(0, 15) + '...' : item.remark || 'Rescheduled'}
                               </span>
                             ) : (
-                              item.remark && (
-                                <span
-                                  className="text-2xs text-gray-400 italic cursor-help"
-                                  title={item.remark}
-                                >
-                                  {item.remark.length > 15 ? item.remark.slice(0, 15) + '...' : item.remark}
-                                </span>
-                              )
+                              <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100/55 px-2.5 py-0.5 rounded-lg uppercase tracking-wider">
+                                Active
+                              </span>
                             )}
                           </div>
                         </div>

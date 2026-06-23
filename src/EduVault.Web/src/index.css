@@ -54,11 +54,18 @@
   }
 
   .sidebar-link {
-    @apply flex items-center gap-3 px-5 py-3 text-sm font-medium text-blue-200 hover:bg-white/10 hover:text-white rounded-lg mx-2 transition-all cursor-pointer;
+    @apply flex items-center gap-3.5 px-5 py-3 text-[13px] font-semibold text-blue-200/70 rounded-xl mx-2.5 cursor-pointer relative overflow-hidden;
+    transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform: translateZ(0);
+    will-change: transform, background-color, color;
+  }
+
+  .sidebar-link:hover {
+    @apply bg-white/5 text-white translate-x-1;
   }
 
   .sidebar-link.active {
-    @apply bg-white/15 text-white;
+    @apply bg-white/10 text-white font-bold;
   }
 
   .main-content {
@@ -110,11 +117,11 @@
   }
 
   .table-th {
-    @apply text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-4;
+    @apply text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest py-2 px-4 border-b border-gray-100;
   }
 
   .table-td {
-    @apply py-3.5 px-4 text-sm;
+    @apply py-2 px-4 text-xs font-medium text-gray-600 leading-normal;
   }
 
   .page-title {

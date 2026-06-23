@@ -2,6 +2,36 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
+import { 
+  TrendingUp, 
+  CheckCircle2, 
+  AlertCircle, 
+  DollarSign, 
+  Calendar, 
+  Download, 
+  Bell, 
+  ChevronRight 
+} from 'lucide-react';
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/95 backdrop-blur-sm border border-slate-100/80 p-3 rounded-2xl shadow-[0_12px_30px_-5px_rgba(0,0,0,0.08)] transition-all">
+        <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
+        {payload.map((item, index) => (
+          <div key={index} className="flex items-center gap-2 mt-0.5">
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm shrink-0" style={{ backgroundColor: item.color || item.fill }} />
+            <span className="text-2xs text-slate-550 font-semibold">{item.name}:</span>
+            <span className="text-xs font-black text-slate-800 font-mono">
+              Rs. {item.value.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 const Fees = () => {
   const [invoices, setInvoices] = useState([]);
@@ -179,51 +209,91 @@ const Fees = () => {
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       <Topbar
         title="Fees & Payments Overview"
         actions={
           <div className="flex gap-2">
-            <button className="btn-primary text-xs">🔔 Send Bulk Reminders</button>
-            <button className="btn-outline text-xs">↓ Export Report</button>
+            <button className="btn-primary text-xs">
+              <Bell className="w-3.5 h-3.5" />
+              <span>Send Bulk Reminders</span>
+            </button>
+            <button className="btn-outline text-xs">
+              <Download className="w-3.5 h-3.5" />
+              <span>Export Report</span>
+            </button>
           </div>
         }
       />
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4">
         {[
-          { l: 'Total Revenue', v: `Rs. ${totalRevenue.toLocaleString()}`, s: 'All Invoiced', c: 'text-blue-600' },
-          { l: 'Collected Fees', v: `Rs. ${collectedFees.toLocaleString()}`, s: 'Cleared payments', c: 'text-green-600' },
-          { l: 'Pending Dues', v: `Rs. ${pendingDues.toLocaleString()}`, s: 'Outstanding invoice totals', c: 'text-red-600' },
-          { l: 'Late Fees Collected', v: `Rs. ${lateFees.toLocaleString()}`, s: 'Simulated 2% MRR rate', c: 'text-orange-600' }
+          { l: 'Total Revenue', v: `Rs. ${totalRevenue.toLocaleString()}`, s: 'All Invoiced', color: 'text-blue-500', bgColor: 'bg-blue-50/50', icon: TrendingUp },
+          { l: 'Collected Fees', v: `Rs. ${collectedFees.toLocaleString()}`, s: 'Cleared payments', color: 'text-emerald-500', bgColor: 'bg-emerald-50/50', icon: CheckCircle2 },
+          { l: 'Pending Dues', v: `Rs. ${pendingDues.toLocaleString()}`, s: 'Outstanding invoice totals', color: 'text-rose-500', bgColor: 'bg-rose-50/50', icon: AlertCircle },
+          { l: 'Late Fees Collected', v: `Rs. ${lateFees.toLocaleString()}`, s: 'Simulated 2% MRR rate', color: 'text-amber-500', bgColor: 'bg-amber-50/50', icon: DollarSign }
         ].map(s => (
-          <div key={s.l} className="stat-card">
-            <div className="text-xs text-gray-500 mb-1">{s.l}</div>
-            <div className={`font-display text-2xl font-bold ${s.c}`}>{s.v}</div>
-            <div className="text-xs text-gray-400">{s.s}</div>
+          <div key={s.l} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-gray-400">{s.l}</div>
+              <div className="font-display text-xl font-bold text-primary">{s.v}</div>
+              <div className="text-xs text-gray-405 font-light">{s.s}</div>
+            </div>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${s.bgColor}`}>
+              <s.icon className={`w-6 h-6 ${s.color} stroke-[1.75]`} />
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-6 mb-6">
-        <div className="card col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display font-semibold text-primary">Collected vs. Pending Fees</h3>
-            <select className="input w-36 text-xs py-1.5">
+      <div className="grid grid-cols-3 gap-6">
+        <div className="card col-span-2 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-display font-semibold text-primary text-sm m-0">Collected vs. Pending Fees</h3>
+              <p className="text-xs text-gray-405">Fee payments cleared vs outstanding dues</p>
+            </div>
+            <select className="border border-gray-200 text-xs px-2.5 py-1.5 rounded-lg text-gray-505 outline-none bg-white">
               <option>Last 6 Months</option>
             </select>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="collected" name="Collected" fill="#1a2744" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="pending" name="Pending" fill="#e2e8f0" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="collectedFeeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.85}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.55}/>
+                  </linearGradient>
+                  <linearGradient id="pendingFeeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.85}/>
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.55}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc', opacity: 0.55 }} transitionDuration={180} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
+                <Bar 
+                  dataKey="collected" 
+                  name="Collected" 
+                  fill="url(#collectedFeeGrad)" 
+                  radius={[4, 4, 0, 0]} 
+                  barSize={24} 
+                  activeBar={{ filter: 'brightness(1.08)', stroke: '#fff', strokeWidth: 1.5 }}
+                />
+                <Bar 
+                  dataKey="pending" 
+                  name="Pending" 
+                  fill="url(#pendingFeeGrad)" 
+                  radius={[4, 4, 0, 0]} 
+                  barSize={24} 
+                  activeBar={{ filter: 'brightness(1.08)', stroke: '#fff', strokeWidth: 1.5 }}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className="card">

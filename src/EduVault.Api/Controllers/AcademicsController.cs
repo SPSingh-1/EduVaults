@@ -1804,6 +1804,57 @@ namespace EduVault.Api.Controllers
             return Ok(new { success = true });
         }
 
+        [HttpGet("admin/profile")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> GetAdminProfile()
+        {
+            var userId = GetUserId();
+            var schoolId = GetSchoolId();
+
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            if (user == null || user.SchoolId != schoolId || user.Role != "schooladmin")
+            {
+                return NotFound(new { error = "Admin not found" });
+            }
+
+            var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+
+            return Ok(new {
+                user.Id,
+                user.FirstName,
+                user.LastName,
+                user.Email,
+                SchoolName = school?.Name ?? string.Empty,
+                SchoolCode = school?.SchoolCode ?? string.Empty,
+                SchoolAddress = school?.Address ?? string.Empty,
+                SchoolCity = school?.City ?? string.Empty,
+                SchoolWebsite = school?.Website ?? string.Empty,
+                Joined = user.CreatedAt.ToString("yyyy-MM-dd"),
+                IsActive = user.IsActive
+            });
+        }
+
+        [HttpPatch("admin/profile")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> UpdateAdminProfile([FromBody] UpdateAdminProfileRequest request)
+        {
+            var userId = GetUserId();
+            var schoolId = GetSchoolId();
+
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            if (user == null || user.SchoolId != schoolId || user.Role != "schooladmin")
+                return NotFound(new { error = "Admin not found" });
+
+            if (!string.IsNullOrWhiteSpace(request.FirstName)) user.FirstName = request.FirstName;
+            if (!string.IsNullOrWhiteSpace(request.LastName)) user.LastName = request.LastName;
+
+            _unitOfWork.Users.Update(user);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true });
+        }
+
+
         [HttpGet("teacher/classes")]
         [Authorize(Roles = "teacher")]
         public async Task<IActionResult> GetTeacherClasses()

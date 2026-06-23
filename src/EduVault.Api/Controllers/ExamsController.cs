@@ -302,7 +302,7 @@ namespace EduVault.Api.Controllers
 
         [HttpGet("student/performance")]
         [Authorize(Roles = "student,schooladmin")]
-        public async Task<IActionResult> GetStudentPerformance([FromQuery] Guid? studentId)
+        public async Task<IActionResult> GetStudentPerformance([FromQuery] Guid? studentId, [FromQuery] string? examType)
         {
             var userId = GetUserId();
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
@@ -322,6 +322,7 @@ namespace EduVault.Api.Controllers
             }
 
             var schoolId = GetSchoolId();
+            string targetExamType = string.IsNullOrEmpty(examType) ? "Semester Examination" : examType;
 
             // Check if published for student role
             var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == targetStudentId && e.Status == "ACTIVE")).FirstOrDefault();
@@ -341,8 +342,15 @@ namespace EduVault.Api.Controllers
             var exams = await _unitOfWork.Exams.GetAllAsync();
             var subjects = await _unitOfWork.Subjects.FindAsync(s => s.SchoolId == schoolId);
 
-            var detailedResults = examResults.Select(r => {
-                var exam = exams.FirstOrDefault(e => e.Id == r.ExamId);
+            // Filter exams to match targetExamType
+            var filteredExams = exams.Where(e => e.ExamType.Equals(targetExamType, StringComparison.OrdinalIgnoreCase)).ToList();
+            var filteredExamIds = filteredExams.Select(e => e.Id).ToList();
+
+            // Filter results to only match those exams
+            var studentFilteredResults = examResults.Where(r => filteredExamIds.Contains(r.ExamId)).ToList();
+
+            var detailedResults = studentFilteredResults.Select(r => {
+                var exam = filteredExams.FirstOrDefault(e => e.Id == r.ExamId);
                 var subject = exam != null ? subjects.FirstOrDefault(s => s.Id == exam.SubjectId) : null;
                 return new {
                     Subject = subject?.Name ?? "Unknown Subject",
@@ -357,7 +365,7 @@ namespace EduVault.Api.Controllers
             // Calculate actual GPA
             decimal totalGradePoints = 0;
             int countedSubjects = 0;
-            foreach (var r in examResults)
+            foreach (var r in studentFilteredResults)
             {
                 if (r.MarksObtained.HasValue)
                 {
@@ -384,8 +392,12 @@ namespace EduVault.Api.Controllers
                 // Get exam results for all students in this class
                 var classResults = await _unitOfWork.ExamResults.FindAsync(r => classStudentIds.Contains(r.StudentId));
 
-                // Calculate average marks for each student
-                var studentAverages = classResults
+                // Filter class exams and results by targetExamType
+                var classExams = filteredExams.Where(e => e.ClassId == classId).Select(e => e.Id).ToList();
+                var filteredClassResults = classResults.Where(r => classExams.Contains(r.ExamId)).ToList();
+
+                // Calculate average marks for each student using filteredClassResults
+                var studentAverages = filteredClassResults
                     .GroupBy(r => r.StudentId)
                     .Select(g => new {
                         StudentId = g.Key,
