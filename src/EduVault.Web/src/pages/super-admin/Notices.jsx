@@ -102,8 +102,8 @@ const SuperAdminNotices = () => {
         <button onClick={() => setShowNew(true)} className="btn-primary">+ New Notice</button>
       } />
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
           <div className="card">
             <h3 className="font-display font-semibold text-primary mb-4">📢 Announcement History</h3>
             <div className="space-y-4">

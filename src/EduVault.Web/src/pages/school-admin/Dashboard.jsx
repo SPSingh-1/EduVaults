@@ -206,7 +206,7 @@ const SchoolAdminDashboard = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           {label:"Total Students",value: stats?.totalStudents ?? '0',sub:'Active enrollments',icon:Users,color:'text-blue-500',bgColor:'bg-blue-50/50'},
           {label:'Total Teachers',value: stats?.totalTeachers ?? '0',sub:'Staff members',icon:UserCheck,color:'text-emerald-500',bgColor:'bg-emerald-50/50'},
@@ -227,8 +227,8 @@ const SchoolAdminDashboard = () => {
       </div>
 
       {/* Main Grid: Graph and Action Panels */}
-      <div className="grid grid-cols-3 gap-6">
-        <div className="card col-span-2 flex flex-col justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="card lg:col-span-2 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-display font-semibold text-primary text-sm m-0">Student Enrollment Trend</h3>

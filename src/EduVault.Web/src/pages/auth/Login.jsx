@@ -59,10 +59,37 @@ const Login = () => {
 
       return `#${rHex}${gHex}${bHex}`;
     };
-    
+
+    const getContrastColorLocal = (hex) => {
+      if (!hex || hex[0] !== '#') return '#ffffff';
+      let colorStr = hex.replace(/^\s*#|\s*$/g, '');
+      if (colorStr.length === 3) {
+        colorStr = colorStr.replace(/(.)/g, '$1$1');
+      }
+      let r = parseInt(colorStr.substr(0, 2), 16);
+      let g = parseInt(colorStr.substr(2, 2), 16);
+      let b = parseInt(colorStr.substr(4, 2), 16);
+      const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+      return (yiq >= 145) ? '#1a2744' : '#ffffff';
+    };
+
+    const contrast = getContrastColorLocal(color);
     root.style.setProperty('--color-primary', hexToRgbSpace(color));
     root.style.setProperty('--color-primary-light', hexToRgbSpace(adjustColorLocal(color, 20)));
     root.style.setProperty('--color-primary-dark', hexToRgbSpace(adjustColorLocal(color, -20)));
+    root.style.setProperty('--color-primary-contrast', contrast);
+    
+    if (contrast === '#1a2744') {
+      root.style.setProperty('--sidebar-text', 'rgba(26, 39, 68, 0.7)');
+      root.style.setProperty('--sidebar-text-hover', '#1a2744');
+      root.style.setProperty('--sidebar-bg-hover', 'rgba(26, 39, 68, 0.06)');
+      root.style.setProperty('--sidebar-bg-active', 'rgba(26, 39, 68, 0.12)');
+    } else {
+      root.style.setProperty('--sidebar-text', 'rgba(255, 255, 255, 0.7)');
+      root.style.setProperty('--sidebar-text-hover', '#ffffff');
+      root.style.setProperty('--sidebar-bg-hover', 'rgba(255, 255, 255, 0.08)');
+      root.style.setProperty('--sidebar-bg-active', 'rgba(255, 255, 255, 0.15)');
+    }
   };
 
   const resetToGlobal = () => {
@@ -159,7 +186,7 @@ const Login = () => {
           <p className="text-gray-500 text-sm">Manage your institution with ease</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8">
           <h2 className="font-display font-bold text-primary text-xl mb-1">Welcome back</h2>
           <p className="text-gray-500 text-sm mb-6">Please enter your details to sign in</p>
 

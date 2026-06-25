@@ -1,16 +1,10 @@
 import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
-
-const catColor = {
-  LOGIN: 'bg-green-100 text-green-700',
-  SETTINGS_UPDATE: 'bg-blue-100 text-blue-700',
-  SCHOOL_UPDATE: 'bg-purple-100 text-purple-700',
-  SECURITY: 'bg-red-100 text-red-700',
-  SYSTEM: 'bg-gray-100 text-gray-700'
-};
+import { useAuth } from '../../contexts/AuthContext';
 
 const Settings = () => {
+  const { user, setUser } = useAuth();
   const [schools, setSchools] = useState([]);
   const [selectedScope, setSelectedScope] = useState('global'); // 'global' or schoolId
 
@@ -39,6 +33,71 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  const getContrastColor = (hexColor) => {
+    if (!hexColor) return '#1a2744';
+    let hex = hexColor.trim();
+    if (hex.startsWith('#')) {
+      hex = hex.substring(1);
+    }
+    if (hex.length === 3) {
+      hex = hex.split('').map(c => c + c).join('');
+    }
+    if (hex.length !== 6) return '#1a2744';
+    
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    return (yiq >= 145) ? '#1a2744' : '#ffffff';
+  };
+
+  const getActionTypeStyle = (actionType) => {
+    let bgColor = '#6b7280';
+    
+    switch (actionType) {
+      case 'SETTINGS_UPDATE':
+        bgColor = primaryColor || '#1a2744';
+        break;
+      case 'SCHOOL_UPDATE':
+        bgColor = selectedScope !== 'global' ? schoolThemeColor : '#9333ea';
+        break;
+      case 'LOGIN':
+        bgColor = '#10b981';
+        break;
+      case 'SECURITY':
+        bgColor = '#ef4444';
+        break;
+      case 'SYSTEM':
+        bgColor = '#f59e0b';
+        break;
+      default:
+        bgColor = '#6b7280';
+    }
+
+    const textColor = getContrastColor(bgColor);
+    
+    let r = parseInt(bgColor.substring(1, 3), 16);
+    let g = parseInt(bgColor.substring(3, 5), 16);
+    let b = parseInt(bgColor.substring(5, 7), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) {
+      r = 107; g = 114; b = 128;
+    }
+    
+    const isLight = textColor === '#1a2744';
+    const borderColor = isLight 
+      ? `rgba(${r}, ${g}, ${b}, 0.25)` 
+      : `rgba(255, 255, 255, 0.15)`;
+
+    return {
+      backgroundColor: bgColor,
+      color: textColor,
+      borderColor: borderColor,
+      borderWidth: '1px',
+      borderStyle: 'solid'
+    };
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -115,6 +174,13 @@ const Settings = () => {
         const res = await apiClient.post('/super/settings', payload);
         setGlobalSettings(res.data);
         setSaveSuccess(true);
+
+        // Update local user theme for super admin immediately
+        if (user && user.role === 'superadmin') {
+          const updatedUser = { ...user, themeColor: primaryColor };
+          setUser(updatedUser);
+          localStorage.setItem('eduvault_user', JSON.stringify(updatedUser));
+        }
 
         // Record log in MongoDB
         await expressClient.post('/logs', {
@@ -256,7 +322,7 @@ const Settings = () => {
         </p>
         
         {selectedScope === 'global' ? (
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2">Platform Logo</label>
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center bg-gray-50">
@@ -281,22 +347,24 @@ const Settings = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-2">Primary Brand Color</label>
-                <div className="flex items-center gap-3">
-                  <input 
-                    type="color" 
-                    value={primaryColor} 
-                    onChange={e => setPrimaryColor(e.target.value)} 
-                    className="w-10 h-10 rounded-full border-0 cursor-pointer overflow-hidden shadow-sm" 
-                  />
-                  <input 
-                    type="text" 
-                    value={primaryColor} 
-                    onChange={e => setPrimaryColor(e.target.value)} 
-                    placeholder="#1a2744" 
-                    className="input text-xs w-28 font-mono" 
-                  />
-                  <div className="flex gap-1.5">
-                    {['#1a2744','#2563eb','#16a34a','#dc2626','#d97706','#9333ea'].map(c=>(
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex items-center gap-3 shrink-0">
+                    <input 
+                      type="color" 
+                      value={primaryColor} 
+                      onChange={e => setPrimaryColor(e.target.value)} 
+                      className="w-10 h-10 rounded-full border-0 cursor-pointer overflow-hidden shadow-sm shrink-0" 
+                    />
+                    <input 
+                      type="text" 
+                      value={primaryColor} 
+                      onChange={e => setPrimaryColor(e.target.value)} 
+                      placeholder="#1a2744" 
+                      className="input text-xs w-28 font-mono" 
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-w-xs">
+                    {['#1a2744', '#2563EB', '#1E40AF', '#059669', '#4F46E5', '#0284C7', '#334155', '#0F766E', '#7C3AED', '#1E3A8A', '#0EA5A4'].map(c=>(
                       <div 
                         key={c} 
                         onClick={() => setPrimaryColor(c)} 
@@ -310,7 +378,7 @@ const Settings = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2">School Logo</label>
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center bg-gray-50">
@@ -341,22 +409,24 @@ const Settings = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-2">Primary Brand Color</label>
-                <div className="flex items-center gap-3">
-                  <input 
-                    type="color" 
-                    value={schoolThemeColor} 
-                    onChange={e => setSchoolThemeColor(e.target.value)} 
-                    className="w-10 h-10 rounded-full border-0 cursor-pointer overflow-hidden shadow-sm" 
-                  />
-                  <input 
-                    type="text" 
-                    value={schoolThemeColor} 
-                    onChange={e => setSchoolThemeColor(e.target.value)} 
-                    placeholder="#1a2744" 
-                    className="input text-xs w-28 font-mono" 
-                  />
-                  <div className="flex gap-1.5">
-                    {['#1a2744','#2563eb','#16a34a','#dc2626','#d97706','#9333ea'].map(c=>(
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex items-center gap-3 shrink-0">
+                    <input 
+                      type="color" 
+                      value={schoolThemeColor} 
+                      onChange={e => setSchoolThemeColor(e.target.value)} 
+                      className="w-10 h-10 rounded-full border-0 cursor-pointer overflow-hidden shadow-sm shrink-0" 
+                    />
+                    <input 
+                      type="text" 
+                      value={schoolThemeColor} 
+                      onChange={e => setSchoolThemeColor(e.target.value)} 
+                      placeholder="#1a2744" 
+                      className="input text-xs w-28 font-mono" 
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-w-xs">
+                    {['#1a2744', '#2563EB', '#1E40AF', '#059669', '#4F46E5', '#0284C7', '#334155', '#0F766E', '#7C3AED', '#1E3A8A', '#0EA5A4'].map(c=>(
                       <div 
                         key={c} 
                         onClick={() => setSchoolThemeColor(c)} 
@@ -373,7 +443,7 @@ const Settings = () => {
       </div>
 
       {/* Global settings section (Maintenance & Backup) */}
-      <div className="grid grid-cols-2 gap-6 mb-6 relative">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 relative">
         {selectedScope !== 'global' && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-xl border border-gray-100">
             <div className="bg-white px-5 py-3 rounded-xl shadow border border-gray-100 text-xs font-semibold text-gray-500">
@@ -452,58 +522,65 @@ const Settings = () => {
 
       {/* Audit Logs Table */}
       <div className="card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <h3 className="font-semibold text-primary">Audit Logs</h3>
             <p className="text-xs text-gray-400">Recent system-wide administrative actions</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <input 
               placeholder="Search logs..." 
               value={searchQuery} 
               onChange={e => setSearchQuery(e.target.value)} 
-              className="input text-xs w-52" 
+              className="input text-xs flex-1 sm:w-52" 
             />
-            <button onClick={exportLogsCSV} className="btn-outline text-xs py-1.5">↓ Export CSV</button>
+            <button onClick={exportLogsCSV} className="btn-outline text-xs py-1.5 whitespace-nowrap">↓ Export CSV</button>
           </div>
         </div>
         
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="table-th">Timestamp</th>
-                <th className="table-th">User (Email)</th>
-                <th className="table-th">Role</th>
-                <th className="table-th">Action Type</th>
-                <th className="table-th">Description</th>
-                <th className="table-th">IP Address</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLogs.map((l, i) => (
-                <tr key={l._id || i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="table-td text-xs text-gray-500 font-mono">
-                    {l.timestamp ? new Date(l.timestamp).toLocaleString() : ''}
-                  </td>
-                  <td className="table-td font-semibold text-primary text-xs">{l.email}</td>
-                  <td className="table-td text-xs text-gray-500 capitalize">{l.role}</td>
-                  <td className="table-td">
-                    <span className={`badge ${catColor[l.actionType] || 'badge-gray'}`}>
-                      {l.actionType || 'SYSTEM'}
-                    </span>
-                  </td>
-                  <td className="table-td text-xs text-gray-600 font-medium">{l.description}</td>
-                  <td className="table-td text-xs text-gray-400 font-mono">{l.ipAddress || '127.0.0.1'}</td>
-                </tr>
-              ))}
-              {filteredLogs.length === 0 && (
-                <tr>
-                  <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No activity logs recorded.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
+            <div className="max-h-[305px] overflow-y-auto relative border border-gray-100 rounded-lg">
+              <table className="w-full" style={{ minWidth: '720px', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr className="border-b border-gray-100 sticky top-0 bg-white z-10">
+                    <th className="table-th bg-white">Timestamp</th>
+                    <th className="table-th bg-white">User (Email)</th>
+                    <th className="table-th bg-white">Role</th>
+                    <th className="table-th bg-white">Action Type</th>
+                    <th className="table-th bg-white">Description</th>
+                    <th className="table-th bg-white">IP Address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLogs.map((l, i) => (
+                    <tr key={l._id || i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                      <td className="table-td text-xs text-gray-500 font-mono">
+                        {l.timestamp ? new Date(l.timestamp).toLocaleString() : ''}
+                      </td>
+                      <td className="table-td font-semibold text-primary text-xs">{l.email}</td>
+                      <td className="table-td text-xs text-gray-500 capitalize">{l.role}</td>
+                      <td className="table-td">
+                        <span 
+                          className="badge transition-all shadow-sm"
+                          style={getActionTypeStyle(l.actionType || 'SYSTEM')}
+                        >
+                          {l.actionType || 'SYSTEM'}
+                        </span>
+                      </td>
+                      <td className="table-td text-xs text-gray-600 font-medium">{l.description}</td>
+                      <td className="table-td text-xs text-gray-400 font-mono">{l.ipAddress || '127.0.0.1'}</td>
+                    </tr>
+                  ))}
+                  {filteredLogs.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No activity logs recorded.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">

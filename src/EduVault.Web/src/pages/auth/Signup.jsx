@@ -60,7 +60,7 @@ const Signup = () => {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="bg-primary px-8 py-6">
+          <div className="bg-primary px-6 sm:px-8 py-6">
             <div className="flex items-center gap-3 text-white mb-4">
               <span className="text-2xl"><img src="/logo.jpeg" alt="EduVault Logo" className="w-12 h-12 rounded-full" /></span>
               <span className="font-display font-bold text-xl">EduVault</span>
@@ -69,14 +69,14 @@ const Signup = () => {
             <h2 className="font-display text-2xl font-bold text-white mb-1">Register New School</h2>
             <p className="text-blue-200 text-sm">Enter the required information to onboard a new educational institution.</p>
           </div>
-          <div className="p-8">
+          <div className="p-6 sm:p-8">
             <div className="mb-6">
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 text-sm">
                 {['School Details','Primary Administrator','Subscription'].map((s,i)=>(
                   <div key={s} className={`flex items-center gap-2 ${step > i+1 ? 'text-green-600' : step === i+1 ? 'text-primary font-semibold' : 'text-gray-400'}`}>
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step > i+1 ? 'bg-green-100 text-green-600' : step === i+1 ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400'}`}>{step > i+1 ? '✓' : i+1}</div>
                     {s}
-                    {i < 2 && <span className="text-gray-300">—</span>}
+                    {i < 2 && <span className="text-gray-300 hidden sm:inline">—</span>}
                   </div>
                 ))}
               </div>

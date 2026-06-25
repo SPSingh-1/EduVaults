@@ -79,7 +79,7 @@ const ForgotPassword = () => {
           <p className="text-gray-500 text-sm">Manage your institution with ease</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8">
           <h2 className="font-display font-bold text-primary text-xl mb-1">Reset Password</h2>
           <p className="text-gray-500 text-sm mb-6">Enter your email address and choose a new password</p>
 

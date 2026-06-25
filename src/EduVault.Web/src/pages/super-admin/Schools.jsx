@@ -95,66 +95,88 @@ const Schools = () => {
       } />
       {added && <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4 text-sm text-green-700 flex items-center gap-2">✅ School registered successfully!</div>}
       <div className="card">
-        <div className="flex items-center gap-4 mb-5">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 mb-5">
           <div className="flex-1 relative">
             <input placeholder="Search schools by name..." value={search} onChange={e => setSearch(e.target.value)} className="input pl-9" />
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
           </div>
-          <select className="input w-36"><option>All Types</option><option>Private</option><option>Public</option></select>
-          <select className="input w-36"><option>All Status</option><option>Active</option><option>Pending</option><option>Suspended</option></select>
-        </div>
-        <div className="grid grid-cols-3 gap-4 mb-5">
-          <div className="bg-blue-50 rounded-xl p-4">
-            <div className="text-xs text-gray-500 mb-1">Total Schools</div>
-            <div className="font-display text-2xl font-bold text-primary">{totalSchools} <span className="text-xs text-green-500 font-medium">Real-time</span></div>
-          </div>
-          <div className="bg-green-50 rounded-xl p-4">
-            <div className="text-xs text-gray-500 mb-1">Active Schools</div>
-            <div className="font-display text-2xl font-bold text-green-700">{activeSchools} <span className="text-xs text-green-500 font-medium">Enrolled</span></div>
-          </div>
-          <div className="bg-yellow-50 rounded-xl p-4">
-            <div className="text-xs text-gray-500 mb-1">Pending/Suspended</div>
-            <div className="font-display text-2xl font-bold text-yellow-700">{totalSchools - activeSchools} <span className="text-xs text-red-500 font-medium">Requires review</span></div>
+          <div style={{ display: 'flex', gap: '8px', width: '100%' }} className="md:w-auto">
+            <select className="input" style={{ flex: 1, minWidth: 0, width: '50%' }}><option>All Types</option><option>Private</option><option>Public</option></select>
+            <select className="input" style={{ flex: 1, minWidth: 0, width: '50%' }}><option>All Status</option><option>Active</option><option>Pending</option><option>Suspended</option></select>
           </div>
         </div>
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="table-th">School Name</th>
-              <th className="table-th">Code</th>
-              <th className="table-th">Students</th>
-              <th className="table-th">Status</th>
-              <th className="table-th">Date Joined</th>
-              <th className="table-th">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(s => (
-              <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                <td className="table-td">
-                  <div className="font-semibold text-primary">{s.name}</div>
-                  <div className="text-xs text-gray-400">ID: {s.id}</div>
-                </td>
-                <td className="table-td"><span className="badge badge-gray font-mono">{s.schoolCode}</span></td>
-                <td className="table-td font-medium">{s.studentsCount}</td>
-                <td className="table-td"><span className={statusColor[s.status] || 'badge-gray'}>{s.status}</span></td>
-                <td className="table-td text-gray-500">{new Date(s.createdAt).toLocaleDateString()}</td>
-                <td className="table-td">
-                  <div className="flex gap-2">
-                    <button onClick={() => toggleStatus(s.id, s.status)} className="text-blue-600 hover:underline text-xs font-medium">
-                      {s.status === 'Active' ? 'Suspend' : 'Activate'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No schools registered yet.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <div 
+          style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(3, 1fr)', 
+            gap: '8px', 
+            marginBottom: '20px' 
+          }}
+        >
+          <div className="bg-blue-50 rounded-xl p-2.5 sm:p-4 flex flex-col justify-between" style={{ minHeight: '85px' }}>
+            <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 truncate">Total Schools</div>
+            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
+              <span className="font-display text-sm sm:text-2xl font-bold text-primary leading-tight">{totalSchools}</span>
+              <span className="text-[8px] sm:text-xs text-green-500 font-medium whitespace-nowrap">Real-time</span>
+            </div>
+          </div>
+          <div className="bg-green-50 rounded-xl p-2.5 sm:p-4 flex flex-col justify-between" style={{ minHeight: '85px' }}>
+            <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 truncate">Active Schools</div>
+            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
+              <span className="font-display text-sm sm:text-2xl font-bold text-green-700 leading-tight">{activeSchools}</span>
+              <span className="text-[8px] sm:text-xs text-green-500 font-medium whitespace-nowrap">Enrolled</span>
+            </div>
+          </div>
+          <div className="bg-yellow-50 rounded-xl p-2.5 sm:p-4 flex flex-col justify-between" style={{ minHeight: '85px' }}>
+            <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 truncate">Pending/Review</div>
+            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
+              <span className="font-display text-sm sm:text-2xl font-bold text-yellow-700 leading-tight">{totalSchools - activeSchools}</span>
+              <span className="text-[8px] sm:text-xs text-red-500 font-medium whitespace-nowrap">Review req.</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
+            <table className="w-full" style={{ minWidth: '720px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="table-th">School Name</th>
+                  <th className="table-th">Code</th>
+                  <th className="table-th">Students</th>
+                  <th className="table-th">Status</th>
+                  <th className="table-th">Date Joined</th>
+                  <th className="table-th">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(s => (
+                  <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <td className="table-td">
+                      <div className="font-semibold text-primary">{s.name}</div>
+                      <div className="text-xs text-gray-400">ID: {s.id}</div>
+                    </td>
+                    <td className="table-td"><span className="badge badge-gray font-mono">{s.schoolCode}</span></td>
+                    <td className="table-td font-medium">{s.studentsCount}</td>
+                    <td className="table-td"><span className={statusColor[s.status] || 'badge-gray'}>{s.status}</span></td>
+                    <td className="table-td text-gray-500">{new Date(s.createdAt).toLocaleDateString()}</td>
+                    <td className="table-td">
+                      <div className="flex gap-2">
+                        <button onClick={() => toggleStatus(s.id, s.status)} className="text-blue-600 hover:underline text-xs font-medium">
+                          {s.status === 'Active' ? 'Suspend' : 'Activate'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No schools registered yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {showModal && (

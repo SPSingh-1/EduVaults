@@ -228,7 +228,7 @@ const Setup = () => {
         }
       } else {
         const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (response){
+        rzp.on('payment.failed', function (response) {
           alert("Payment failed: " + response.error.description);
         });
         rzp.open();
@@ -960,18 +960,16 @@ const Setup = () => {
                 setSuccess('');
                 if (tab.action) tab.action();
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 border ${
-                isActive
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 border ${isActive
                   ? 'bg-primary text-white border-primary shadow-md shadow-primary/20 scale-[1.02]'
                   : 'bg-white text-gray-500 border-gray-200/60 hover:text-primary hover:border-primary/20 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <span className="text-sm">{tab.icon}</span>
               <span>{tab.label}</span>
               {tab.badge > 0 && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-rose-500 text-white' : 'bg-rose-500 text-white animate-pulse'
-                }`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? 'bg-rose-500 text-white' : 'bg-rose-500 text-white animate-pulse'
+                  }`}>
                   {tab.badge}
                 </span>
               )}
@@ -993,7 +991,7 @@ const Setup = () => {
                 📂 School Sections
               </h3>
               <p className="text-gray-400 text-xs mb-4">Add and organize sections for your school classes.</p>
- 
+
               <form onSubmit={handleAddSection} className="flex gap-2 mb-5">
                 <input
                   required
@@ -1006,7 +1004,7 @@ const Setup = () => {
                   {loadingSec ? 'Adding...' : '+ Add Section'}
                 </button>
               </form>
- 
+
               <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
                 <table className="w-full text-left">
                   <thead className="sticky top-0 bg-white z-10">
@@ -1044,14 +1042,14 @@ const Setup = () => {
                 </table>
               </div>
             </div>
- 
+
             {/* Room Management */}
             <div className="card flex flex-col h-[420px]">
               <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">
                 Classrooms & Rooms
               </h3>
               <p className="text-gray-400 text-xs mb-4">Manage room codes and locations for educational scheduling.</p>
- 
+
               <form onSubmit={handleAddRoom} className="flex gap-2 mb-5">
                 <input
                   required
@@ -1064,7 +1062,7 @@ const Setup = () => {
                   {loadingRm ? 'Adding...' : '+ Add Room'}
                 </button>
               </form>
- 
+
               <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
                 <table className="w-full text-left">
                   <thead className="sticky top-0 bg-white z-10">
@@ -1102,14 +1100,14 @@ const Setup = () => {
                 </table>
               </div>
             </div>
- 
+
             {/* Grade Level Management */}
             <div className="card flex flex-col h-[420px]">
               <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">
                 🎓 Grade Levels
               </h3>
               <p className="text-gray-400 text-xs mb-4">Add and manage class grades configured for your school.</p>
- 
+
               <form onSubmit={handleAddGradeLevel} className="flex gap-2 mb-5">
                 <input
                   required
@@ -1122,7 +1120,7 @@ const Setup = () => {
                   {loadingGl ? 'Adding...' : '+ Add Grade'}
                 </button>
               </form>
- 
+
               <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
                 <table className="w-full text-left">
                   <thead className="sticky top-0 bg-white z-10">
@@ -1167,7 +1165,7 @@ const Setup = () => {
                 👥 Classroom Capacities
               </h3>
               <p className="text-gray-400 text-xs mb-4">Set standard class enrollment thresholds.</p>
- 
+
               <form onSubmit={handleAddCapacity} className="flex gap-2 mb-5">
                 <input
                   required
@@ -1181,7 +1179,7 @@ const Setup = () => {
                   {loadingCap ? 'Adding...' : '+ Add Capacity'}
                 </button>
               </form>
- 
+
               <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
                 <table className="w-full text-left">
                   <thead className="sticky top-0 bg-white z-10">
@@ -1219,14 +1217,14 @@ const Setup = () => {
                 </table>
               </div>
             </div>
- 
+
             {/* Department Management */}
             <div className="card flex flex-col h-[420px]">
               <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">
                 🏢 Academic Departments
               </h3>
               <p className="text-gray-400 text-xs mb-4">Add and manage departments for teacher profiles.</p>
- 
+
               <form onSubmit={handleAddDepartment} className="flex gap-2 mb-5">
                 <input
                   required
@@ -1239,7 +1237,7 @@ const Setup = () => {
                   {loadingDept ? 'Adding...' : '+ Add Dept'}
                 </button>
               </form>
- 
+
               <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
                 <table className="w-full text-left">
                   <thead className="sticky top-0 bg-white z-10">
@@ -1277,14 +1275,14 @@ const Setup = () => {
                 </table>
               </div>
             </div>
- 
+
             {/* Subjects Management */}
             <div className="card flex flex-col h-[420px]">
               <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">
                 📚 School Subjects
               </h3>
               <p className="text-gray-400 text-xs mb-4">Add and manage subjects for classrooms and exam configurations.</p>
- 
+
               <div className="flex gap-2 mb-5">
                 <input
                   required
@@ -1307,7 +1305,7 @@ const Setup = () => {
                   {loadingSub ? 'Adding...' : '+ Add Subject'}
                 </button>
               </div>
- 
+
               <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
                 <table className="w-full text-left">
                   <thead className="sticky top-0 bg-white z-10">
@@ -1349,7 +1347,7 @@ const Setup = () => {
                 📋 Examinations Setup
               </h3>
               <p className="text-gray-400 text-xs mb-4">Add and manage examination types/cycles for scheduling and report cards.</p>
-  
+
               <form onSubmit={handleAddExamType} className="flex gap-2 mb-5">
                 <input
                   required
@@ -1362,7 +1360,7 @@ const Setup = () => {
                   {loadingExamTypes ? 'Adding...' : '+ Add Exam'}
                 </button>
               </form>
-  
+
               <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
                 <table className="w-full text-left">
                   <thead className="sticky top-0 bg-white z-10">
@@ -1478,17 +1476,17 @@ const Setup = () => {
 
             {/* Timetable Scheduler Grid */}
             <div className="card space-y-5">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                 <div>
                   <h3 className="font-display font-bold text-primary text-lg">Weekly Class Timetable Scheduler</h3>
                   <p className="text-gray-400 text-xs">Configure subjects, times, and teacher assignments. Double-bookings are automatically prevented.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase">Selected Class:</label>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <label className="text-xs font-bold text-gray-500 uppercase whitespace-nowrap">Selected Class:</label>
                   <select
                     value={selectedClassId}
                     onChange={e => setSelectedClassId(e.target.value)}
-                    className="input w-56 text-sm"
+                    className="input flex-1 sm:w-56 text-sm"
                   >
                     <option value="">Select Class Section</option>
                     {classes.map(c => (
@@ -1893,74 +1891,76 @@ const Setup = () => {
                 </h3>
                 <p className="text-gray-400 text-xs mb-4">View and delete established fee rules. Deleting a rule deletes any unpaid stagered invoices associated with it.</p>
 
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="py-2 text-xs font-bold text-gray-500 uppercase">Rule Description</th>
-                      <th className="py-2 text-xs font-bold text-gray-500 uppercase">Scope / Target</th>
-                      <th className="py-2 text-xs font-bold text-gray-500 uppercase">Total Amount</th>
-                      <th className="py-2 text-xs font-bold text-gray-500 uppercase">Steps</th>
-                      <th className="py-2 text-xs font-bold text-gray-500 uppercase">Timeline</th>
-                      <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {feeRules.map(fr => (
-                      <tr key={fr.id} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-3 text-sm font-semibold text-primary">
-                          <div className="font-semibold text-sm">{fr.name}</div>
-                          {fr.breakdown && (() => {
-                            try {
-                              const parsed = JSON.parse(fr.breakdown);
-                              return (
-                                <div className="mt-1 flex flex-wrap gap-1">
-                                  {parsed.map((item, idx) => (
-                                    <span key={idx} className="inline-block px-2 py-0.5 bg-primary/5 text-primary text-[10px] font-bold rounded-lg border border-primary/10">
-                                      {item.category}: Rs. {item.amount.toLocaleString()}
-                                    </span>
-                                  ))}
-                                </div>
-                              );
-                            } catch (e) {
-                              return null;
-                            }
-                          })()}
-                        </td>
-                        <td className="py-3 text-sm text-gray-600 font-medium">
-                          {fr.studentName ? (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-3xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
-                              👤 {fr.studentName}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-3xs font-bold bg-primary/5 text-primary border border-primary/10">
-                              🏫 {fr.grade}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 text-sm font-bold text-gray-700">Rs. {fr.amount.toLocaleString()}</td>
-                        <td className="py-3 text-sm font-semibold text-primary">{fr.installments} {fr.installments === 1 ? 'step' : 'steps'}</td>
-                        <td className="py-3 text-sm text-gray-400 font-medium">{fr.submissionTime}</td>
-                        <td className="py-3 text-sm text-right">
-                          <button
-                            onClick={() => handleDeleteFeeRule(fr.id)}
-                            disabled={loadingFees}
-                            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
-                            title="Delete Fee Rule"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="py-2 text-xs font-bold text-gray-500 uppercase min-w-[150px]">Rule Description</th>
+                        <th className="py-2 text-xs font-bold text-gray-500 uppercase min-w-[120px]">Scope / Target</th>
+                        <th className="py-2 text-xs font-bold text-gray-500 uppercase min-w-[100px]">Total Amount</th>
+                        <th className="py-2 text-xs font-bold text-gray-500 uppercase min-w-[80px]">Steps</th>
+                        <th className="py-2 text-xs font-bold text-gray-500 uppercase min-w-[120px]">Timeline</th>
+                        <th className="py-2 text-xs font-bold text-gray-500 uppercase text-right w-16">Action</th>
                       </tr>
-                    ))}
-                    {feeRules.length === 0 && (
-                      <tr>
-                        <td colSpan="6" className="text-center py-6 text-gray-400 text-xs">No fee setup rules defined yet.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {feeRules.map(fr => (
+                        <tr key={fr.id} className="border-b border-gray-50 hover:bg-gray-50">
+                          <td className="py-3 text-sm font-semibold text-primary">
+                            <div className="font-semibold text-sm">{fr.name}</div>
+                            {fr.breakdown && (() => {
+                              try {
+                                const parsed = JSON.parse(fr.breakdown);
+                                return (
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {parsed.map((item, idx) => (
+                                      <span key={idx} className="inline-block px-2 py-0.5 bg-primary/5 text-primary text-[10px] font-bold rounded-lg border border-primary/10">
+                                        {item.category}: Rs. {item.amount.toLocaleString()}
+                                      </span>
+                                    ))}
+                                  </div>
+                                );
+                              } catch (e) {
+                                return null;
+                              }
+                            })()}
+                          </td>
+                          <td className="py-3 text-sm text-gray-600 font-medium">
+                            {fr.studentName ? (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-3xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                                👤 {fr.studentName}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-3xs font-bold bg-primary/5 text-primary border border-primary/10">
+                                🏫 {fr.grade}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 text-sm font-bold text-gray-700">Rs. {fr.amount.toLocaleString()}</td>
+                          <td className="py-3 text-sm font-semibold text-primary">{fr.installments} {fr.installments === 1 ? 'step' : 'steps'}</td>
+                          <td className="py-3 text-sm text-gray-400 font-medium">{fr.submissionTime}</td>
+                          <td className="py-3 text-sm text-right">
+                            <button
+                              onClick={() => handleDeleteFeeRule(fr.id)}
+                              disabled={loadingFees}
+                              className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                              title="Delete Fee Rule"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {feeRules.length === 0 && (
+                        <tr>
+                          <td colSpan="6" className="text-center py-6 text-gray-400 text-xs">No fee setup rules defined yet.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           );
@@ -1983,8 +1983,8 @@ const Setup = () => {
                       key={c.id}
                       onClick={() => setMappingClassId(c.id)}
                       className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center justify-between ${isActive
-                          ? 'bg-primary text-white shadow-md shadow-primary/25'
-                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-primary'
+                        ? 'bg-primary text-white shadow-md shadow-primary/25'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-primary'
                         }`}
                     >
                       <span>Class {c.grade} - {c.section}</span>
@@ -2108,8 +2108,8 @@ const Setup = () => {
                   <div className="border-l border-gray-100 pl-3">
                     <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Validity Period</div>
                     <div className="text-xs font-semibold text-primary mt-0.5">
-                      {subInfo.startDate && subInfo.endDate 
-                        ? `from ${subInfo.startDate} to ${subInfo.endDate}` 
+                      {subInfo.startDate && subInfo.endDate
+                        ? `from ${subInfo.startDate} to ${subInfo.endDate}`
                         : '1 Year Recurring'}
                     </div>
                   </div>
@@ -2135,29 +2135,28 @@ const Setup = () => {
                 </div>
               </div>
             )}
- 
+
             {/* Plans List Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {platformPlans.map(p => {
                 const isCurrent = subInfo && (p.planName.toLowerCase().includes(subInfo.planType.toLowerCase()) || subInfo.planType.toLowerCase().includes(p.planName.toLowerCase()));
                 return (
-                  <div 
-                    key={p.id} 
-                    className={`card relative transition-all duration-300 flex flex-col justify-between min-h-[350px] border-2 ${
-                      isCurrent 
-                        ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20 bg-primary/[0.01]' 
+                  <div
+                    key={p.id}
+                    className={`card relative transition-all duration-300 flex flex-col justify-between min-h-[350px] border-2 ${isCurrent
+                        ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20 bg-primary/[0.01]'
                         : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
-                    }`}
+                      }`}
                   >
                     {p.isTopRevenue && (
                       <div className="absolute -top-3 right-4 bg-accent text-white text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
                         TOP REVENUE
                       </div>
                     )}
-                    
+
                     <div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{p.tierLabel}</div>
-                      
+
                       <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-2">
                         <div className="font-display font-bold text-primary text-xl">{p.planName}</div>
                         {isCurrent && (
@@ -2166,7 +2165,7 @@ const Setup = () => {
                           </span>
                         )}
                       </div>
- 
+
                       <div className="space-y-3 mb-6 text-xs">
                         <div className="flex items-center justify-between py-1 border-b border-gray-50/50">
                           <span className="text-gray-400">Implementation Cost</span>
@@ -2186,7 +2185,7 @@ const Setup = () => {
                         </div>
                       </div>
                     </div>
- 
+
                     <div className="border-t border-gray-50 pt-4 mt-auto">
                       <div className="flex items-baseline justify-between mb-4">
                         <div>
@@ -2196,7 +2195,7 @@ const Setup = () => {
                           </span>
                         </div>
                       </div>
- 
+
                       {isCurrent ? (
                         subInfo.status === 'success' ? (
                           <div className="space-y-2 w-full animate-in fade-in duration-200">
@@ -2232,9 +2231,9 @@ const Setup = () => {
                           </button>
                         )
                       ) : (() => {
-                        const isPendingThisPlan = subInfo?.pendingUpgradeRequest && 
-                          (subInfo.pendingUpgradeRequest.requestedPlanType.toLowerCase().includes(p.planName.toLowerCase()) || 
-                           p.planName.toLowerCase().includes(subInfo.pendingUpgradeRequest.requestedPlanType.toLowerCase()));
+                        const isPendingThisPlan = subInfo?.pendingUpgradeRequest &&
+                          (subInfo.pendingUpgradeRequest.requestedPlanType.toLowerCase().includes(p.planName.toLowerCase()) ||
+                            p.planName.toLowerCase().includes(subInfo.pendingUpgradeRequest.requestedPlanType.toLowerCase()));
 
                         if (isPendingThisPlan) {
                           return (
@@ -2440,8 +2439,8 @@ const Setup = () => {
                 {upgradeRequirementsPlanType === 'Custom' ? '📝 Submit Modification Requirements' : '🚀 Request Enterprise Upgrade'}
               </h3>
               <p className="text-blue-200 text-xxs mt-1">
-                {upgradeRequirementsPlanType === 'Custom' 
-                  ? 'Specify new requirements/features to change in your custom plan.' 
+                {upgradeRequirementsPlanType === 'Custom'
+                  ? 'Specify new requirements/features to change in your custom plan.'
                   : 'Specify requirements to customize and scale your platform to Enterprise Plan.'}
               </p>
             </div>
@@ -2469,16 +2468,16 @@ const Setup = () => {
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
-                <button 
-                  type="button" 
-                  onClick={() => setShowUpgradeRequirementsModal(false)} 
+                <button
+                  type="button"
+                  onClick={() => setShowUpgradeRequirementsModal(false)}
                   disabled={payingSub}
                   className="btn-outline text-xs py-2"
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={payingSub || !upgradeRequirementsText.trim()}
                   className="btn-primary text-xs py-2 px-4"
                 >

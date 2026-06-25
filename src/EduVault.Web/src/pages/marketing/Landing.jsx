@@ -61,7 +61,7 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-primary to-blue-900 text-white">
       {/* Navbar */}
-      <nav className="flex items-center justify-between px-8 py-5 border-b border-white/10">
+      <nav className="flex items-center justify-between px-4 sm:px-8 py-5 border-b border-white/10">
         <EduFlowLogo size={42} />
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-blue-200">
           <span className="hover:text-white cursor-pointer" onClick={() => scrollToSection('features')}>Features</span>
@@ -70,37 +70,37 @@ const Landing = () => {
           <span className="hover:text-white cursor-pointer" onClick={() => scrollToSection('pricing')}>Pricing</span>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/login')} className="bg-accent hover:bg-accent-light text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-all">Login</button>
+          <button onClick={() => navigate('/login')} className="bg-accent hover:bg-accent-light text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-all">Login</button>
         </div>
       </nav>
 
       {/* Hero */}
-      <div className="max-w-6xl mx-auto px-8 py-20 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-10 md:py-20 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
         <div>
           <div className="inline-flex items-center gap-2 bg-white/10 text-blue-200 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 border border-white/20">
             ⭐ TRUSTED BY <CountUp to={1248} />+ SCHOOLS
           </div>
-          <h1 className="font-display text-5xl font-bold leading-tight mb-6">
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-6">
             Simplify Your<br /><span className="text-accent">School</span> Management
           </h1>
-          <p className="text-blue-200 text-lg leading-relaxed mb-8">
+          <p className="text-blue-200 text-base md:text-lg leading-relaxed mb-8">
             The all-in-one platform to manage students, teachers, attendance, fees, exams, and parent communications effortlessly.
           </p>
           <div className="flex items-center gap-4 flex-wrap">
-            <button onClick={() => navigate('/login')} className="bg-accent hover:bg-accent-light text-white font-bold px-7 py-3.5 rounded-xl transition-all text-sm">
+            <button onClick={() => navigate('/login')} className="w-full sm:w-auto bg-accent hover:bg-accent-light text-white font-bold px-7 py-3.5 rounded-xl transition-all text-sm">
               🚀 Login to Dashboard
             </button>
-            <button className="flex items-center gap-2 text-blue-200 hover:text-white text-sm font-medium">
+            <button className="flex items-center justify-center gap-2 text-blue-200 hover:text-white text-sm font-medium w-full sm:w-auto py-2 sm:py-0">
               ▶ Watch Demo
             </button>
           </div>
-          <div className="flex items-center gap-6 mt-8 text-xs text-blue-300">
+          <div className="flex items-center gap-4 sm:gap-6 mt-8 text-[11px] sm:text-xs text-blue-300 flex-wrap">
             <span>✓ No credit card required</span>
             <span>✓ Setup in 5 minutes</span>
             <span>✓ Free support</span>
           </div>
         </div>
-        <div className="bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20">
+        <div className="bg-white/10 backdrop-blur rounded-2xl p-4 sm:p-6 border border-white/20">
           <div className="bg-primary rounded-xl p-4 mb-3 border border-white/10">
             <div className="text-xs text-blue-300 mb-2">Today's Overview</div>
             <div className="grid grid-cols-2 gap-3">
@@ -123,10 +123,10 @@ const Landing = () => {
 
       {/* Features */}
       <div id="features" className="bg-white/5 py-16">
-        <div className="max-w-6xl mx-auto px-8">
-          <h2 className="font-display text-3xl font-bold text-center mb-3">Everything You Need to Run Your Institution</h2>
-          <p className="text-blue-200 text-center text-sm mb-10">Powerful features designed for admins, teachers, and parents</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8">
+          <h2 className="font-display text-2xl sm:text-3xl font-bold text-center mb-3">Everything You Need to Run Your Institution</h2>
+          <p className="text-blue-200 text-center text-xs sm:text-sm mb-10">Powerful features designed for admins, teachers, and parents</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
               ['🎓','Multi-School System','Manage multiple campuses from one super admin dashboard'],
               ['👨‍🎓','Student Lifecycle','From admission to graduation, track every student milestone'],
@@ -232,22 +232,22 @@ const Landing = () => {
       </div>
 
       {/* CTA */}
-      <div id="benefits" className="max-w-4xl mx-auto px-8 py-16 text-center">
-        <div className="bg-accent/20 rounded-2xl p-12 border border-accent/30">
-          <h2 className="font-display text-3xl font-bold mb-4">Ready to Modernize Your School?</h2>
-          <p className="text-blue-200 text-sm mb-8">Join hundreds of schools already using EduFlow. No credit card required.</p>
-          <div className="flex items-center justify-center gap-4">
-            <button onClick={() => navigate('/login')} className="bg-accent hover:bg-accent-light text-white font-bold px-8 py-3.5 rounded-xl transition-all">Login to Portal</button>
-            <button className="border border-white/30 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-white/10 transition-all">Talk to an Expert</button>
+      <div id="benefits" className="max-w-4xl mx-auto px-4 sm:px-8 py-16 text-center">
+        <div className="bg-accent/20 rounded-2xl p-6 sm:p-12 border border-accent/30">
+          <h2 className="font-display text-2xl sm:text-3xl font-bold mb-4">Ready to Modernize Your School?</h2>
+          <p className="text-blue-200 text-xs sm:text-sm mb-8">Join hundreds of schools already using EduFlow. No credit card required.</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button onClick={() => navigate('/login')} className="w-full sm:w-auto bg-accent hover:bg-accent-light text-white font-bold px-8 py-3.5 rounded-xl transition-all">Login to Portal</button>
+            <button className="w-full sm:w-auto border border-white/30 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-white/10 transition-all">Talk to an Expert</button>
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 px-8 py-8">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <footer className="border-t border-white/10 px-4 sm:px-8 py-8">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center">
           <EduFlowLogo size={32} />
-          <div className="flex gap-6 text-xs text-blue-300">
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs text-blue-300">
             <span className="hover:text-white cursor-pointer">Privacy Policy</span>
             <span className="hover:text-white cursor-pointer">Terms of Service</span>
             <span className="hover:text-white cursor-pointer">Cookie Settings</span>

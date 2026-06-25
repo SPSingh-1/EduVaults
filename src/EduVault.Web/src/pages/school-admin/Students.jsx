@@ -8,7 +8,7 @@ const Students = () => {
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [search, setSearch] = useState('');
-  
+
   // Dropdown filter states
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
@@ -18,7 +18,7 @@ const Students = () => {
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewStudentData, setViewStudentData] = useState(null);
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [classSections, setClassSections] = useState([]);
@@ -204,105 +204,111 @@ const Students = () => {
       } />
       <div className="card">
         <p className="text-xs text-gray-400 mb-4">Manage and organize all student records across all classes.</p>
-        <div className="flex items-center gap-3 mb-5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-5">
           <div className="flex-1 relative">
             <input placeholder="Search students by name..." value={search} onChange={e => setSearch(e.target.value)} className="input pl-9 text-sm" />
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
           </div>
-          
-          {/* Class Filter Dropdown */}
-          <select className="input w-32 text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
-            <option value="">Class All</option>
-            {classes.map(c => (
-              <option key={c.id} value={c.name}>{c.name}</option>
-            ))}
-          </select>
-          
-          {/* Section Filter Dropdown */}
-          <select className="input w-32 text-sm" value={selectedSection} onChange={e => setSelectedSection(e.target.value)}>
-            <option value="">Section All</option>
-            {uniqueSections.length > 0 ? (
-              uniqueSections.map((sec, idx) => (
-                <option key={idx} value={sec}>{sec}</option>
-              ))
-            ) : (
-              <>
-                <option value="Section A">Section A</option>
-                <option value="Section B">Section B</option>
-                <option value="Section C">Section C</option>
-              </>
-            )}
-          </select>
-          
-          {/* Status Filter Dropdown */}
-          <select className="input w-32 text-sm" value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)}>
-            <option value="">Status: All</option>
-            <option value="ACTIVE">Active</option>
-            <option value="WITHDRAWN">Withdrawn</option>
-            <option value="SUSPENDED">Suspended</option>
-          </select>
+
+          <div className="grid grid-cols-3 gap-2 shrink-0">
+            {/* Class Filter Dropdown */}
+            <select className="input w-full text-xs sm:text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+              <option value="">Class All</option>
+              {classes.map(c => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+
+            {/* Section Filter Dropdown */}
+            <select className="input w-full text-xs sm:text-sm" value={selectedSection} onChange={e => setSelectedSection(e.target.value)}>
+              <option value="">Section All</option>
+              {uniqueSections.length > 0 ? (
+                uniqueSections.map((sec, idx) => (
+                  <option key={idx} value={sec}>{sec}</option>
+                ))
+              ) : (
+                <>
+                  <option value="Section A">Section A</option>
+                  <option value="Section B">Section B</option>
+                  <option value="Section C">Section C</option>
+                </>
+              )}
+            </select>
+
+            {/* Status Filter Dropdown */}
+            <select className="input w-full text-xs sm:text-sm" value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)}>
+              <option value="">Status: All</option>
+              <option value="ACTIVE">Active</option>
+              <option value="WITHDRAWN">Withdrawn</option>
+              <option value="SUSPENDED">Suspended</option>
+            </select>
+          </div>
         </div>
-        
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="table-th">Student Name</th>
-              <th className="table-th">Student ID</th>
-              <th className="table-th">Class</th>
-              <th className="table-th">Section</th>
-              <th className="table-th">Father's Name</th>
-              <th className="table-th">Status</th>
-              <th className="table-th">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(s => (
-              <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="table-td">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                      {s.name ? s.name[0] : '?'}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-primary text-sm">{s.name}</div>
-                      <div className="text-xs text-gray-400">{s.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="table-td text-xs font-mono text-gray-500">{s.studentId}</td>
-                <td className="table-td text-sm">{s.class}</td>
-                <td className="table-td text-sm">{s.section}</td>
-                <td className="table-td text-sm">{s.father}</td>
-                <td className="table-td"><span className={sc[s.status] || 'badge-success'}>{s.status}</span></td>
-                <td className="table-td">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => handleView(s.id)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="View Profile">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    </button>
-                    <button onClick={() => handleEdit(s.id)} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Edit Profile">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button onClick={() => handleDelete(s.id)} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Delete Profile">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan="7" className="text-center py-6 text-gray-400 text-sm">No students registered yet matching filters.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+
+        <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
+            <table className="w-full" style={{ minWidth: '780px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="table-th">Student Name</th>
+                  <th className="table-th">Student ID</th>
+                  <th className="table-th">Class</th>
+                  <th className="table-th">Section</th>
+                  <th className="table-th">Father's Name</th>
+                  <th className="table-th">Status</th>
+                  <th className="table-th">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(s => (
+                  <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="table-td">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                          {s.name ? s.name[0] : '?'}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-primary text-sm">{s.name}</div>
+                          <div className="text-xs text-gray-400">{s.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="table-td text-xs font-mono text-gray-500">{s.studentId}</td>
+                    <td className="table-td text-sm">{s.class}</td>
+                    <td className="table-td text-sm">{s.section}</td>
+                    <td className="table-td text-sm">{s.father}</td>
+                    <td className="table-td"><span className={sc[s.status] || 'badge-success'}>{s.status}</span></td>
+                    <td className="table-td">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => handleView(s.id)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="View Profile">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
+                        <button onClick={() => handleEdit(s.id)} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Edit Profile">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button onClick={() => handleDelete(s.id)} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Delete Profile">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="text-center py-6 text-gray-400 text-sm">No students registered yet matching filters.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
           <div className="text-xs text-gray-500">Showing 1 to {filtered.length} of {students.length} students</div>
         </div>
@@ -342,9 +348,9 @@ const Students = () => {
                   <div className="text-primary font-medium">{viewStudentData.bloodGroup || 'Not Specified'}</div>
                 </div>
               </div>
-              
+
               <hr className="border-gray-100" />
-              
+
               <div>
                 <h4 className="font-semibold text-primary text-xs uppercase mb-3 tracking-wide">👪 Guardian Information</h4>
                 <div className="grid grid-cols-2 gap-4">
@@ -362,9 +368,9 @@ const Students = () => {
                   </div>
                 </div>
               </div>
-              
+
               <hr className="border-gray-100" />
-              
+
               <div>
                 <div className="text-xs text-gray-400 font-semibold uppercase mb-1">Residential Address</div>
                 <div className="text-primary font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">{viewStudentData.address || 'No address registered.'}</div>
@@ -422,7 +428,7 @@ const Students = () => {
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Blood Group</label>
                     <input value={form.bloodGroup} onChange={e => setForm(f => ({ ...f, bloodGroup: e.target.value }))} placeholder="e.g. O+" className="input" />
                   </div>
-                  
+
                   {editMode && (
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 mb-1.5">Account Status *</label>
@@ -436,7 +442,7 @@ const Students = () => {
 
                   {capacityWarning && (
                     <div className="col-span-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold rounded-lg p-3.5 mb-2">
-                      ⚠️ <strong>Room Capacity Warning</strong>: Class {capacityWarning.grade} - {capacityWarning.section} ({capacityWarning.room}) has reached its capacity limit of {capacityWarning.capacity} students. 
+                      ⚠️ <strong>Room Capacity Warning</strong>: Class {capacityWarning.grade} - {capacityWarning.section} ({capacityWarning.room}) has reached its capacity limit of {capacityWarning.capacity} students.
                       <span className="text-gray-600 font-normal mt-1 block">Suggestion: Consider enrolling in other rooms/sections with remaining capacity:</span>
                       <ul className="list-disc list-inside mt-1.5 pl-1 text-gray-700">
                         {suggestions.map((s, idx) => (

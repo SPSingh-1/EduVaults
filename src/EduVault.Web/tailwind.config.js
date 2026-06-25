@@ -7,7 +7,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: '#1a2744', light: '#243457', dark: '#111b33' },
+        primary: {
+          DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
+          light: 'rgb(var(--color-primary-light) / <alpha-value>)',
+          dark: 'rgb(var(--color-primary-dark) / <alpha-value>)',
+        },
         accent: { DEFAULT: '#d4a017', light: '#e8b52a' },
         success: '#22c55e',
         warning: '#f59e0b',

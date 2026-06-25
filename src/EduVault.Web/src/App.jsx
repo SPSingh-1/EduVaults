@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { SidebarProvider } from './contexts/SidebarContext';
 import { ProtectedRoute } from './router/ProtectedRoute';
 import './index.css';
 
@@ -69,7 +70,8 @@ export default function App() {
     <AuthProvider>
       <NotificationProvider>
         <BrowserRouter>
-          <Routes>
+          <SidebarProvider>
+            <Routes>
           {/* Public */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
@@ -144,7 +146,8 @@ export default function App() {
 
           {/* Catch All */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+          </Routes>
+        </SidebarProvider>
       </BrowserRouter>
       </NotificationProvider>
     </AuthProvider>

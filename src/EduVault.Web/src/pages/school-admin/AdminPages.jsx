@@ -98,72 +98,76 @@ export const Classes = () => {
     <div>
       <Topbar title="Class & Section Management" subtitle="Dashboard › Academics › Classes"
         actions={<button onClick={() => { setError(''); setShowNew(true); }} className="btn-primary">⊕ Create New Class/Section</button>} />
-      
+
       <div className="card">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100">
-              {['Class & Section', 'Class Teacher', 'Room', 'Occupancy', 'Actions'].map(h => <th key={h} className="table-th">{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {classesList.map((c, i) => (
-              <tr key={c.id || i} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="table-td">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm ${c.grade === '12' ? 'bg-red-500' : c.grade === '11' ? 'bg-yellow-500' : 'bg-primary'}`}>{c.grade}</div>
-                    <div><div className="font-semibold text-sm text-primary">Class {c.grade} - {c.section}</div><div className="text-xs text-gray-400">{c.level}</div></div>
-                  </div>
-                </td>
-                <td className="table-td">
-                  {c.teacher ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold text-accent">{c.teacher[0]}</div>
-                      <div><div className="text-sm font-medium">{c.teacher}</div><div className="text-xs text-gray-400">{c.email}</div></div>
-                    </div>
-                  ) : <span className="text-xs text-red-500 font-semibold">TEACHER UNASSIGNED</span>}
-                </td>
-                <td className="table-td text-sm text-gray-500">{c.room}</td>
-                <td className="table-td">
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm">{c.enrolled}/{c.capacity} Students</div>
-                    {c.enrolled >= c.capacity && <span className="badge badge-danger text-xs">FULL</span>}
-                    <span className={`text-xs font-semibold ${c.pct >= 90 ? 'text-red-500' : c.pct >= 70 ? 'text-yellow-500' : 'text-green-500'}`}>{c.pct}%</span>
-                  </div>
-                  <div className="mt-1 h-1.5 bg-gray-100 rounded-full w-32">
-                    <div className={`h-full rounded-full ${c.pct >= 90 ? 'bg-red-400' : c.pct >= 70 ? 'bg-yellow-400' : 'bg-green-400'}`} style={{width: `${c.pct}%`}} />
-                  </div>
-                </td>
-                <td className="table-td">
-                  <div className="flex gap-2 items-center">
-                    {!c.teacher && (
-                      <button 
-                        onClick={() => { setSelectedClassId(c.id); setSelectedTeacherId(''); setShowAssign(true); }} 
-                        className="btn-primary text-xs py-1.5 px-3"
-                      >
-                        Assign Teacher
-                      </button>
-                    )}
-                    <button 
-                      onClick={() => { setSelectedClassId(c.id); setSelectedTeacherId(c.teacherId || ''); setShowAssign(true); }}
-                      className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" 
-                      title="Edit Teacher Assignment"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {classesList.length === 0 && (
-              <tr>
-                <td colSpan="5" className="text-center py-6 text-gray-400 text-sm">No classes registered yet.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
+            <table className="w-full" style={{ minWidth: '720px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {['Class & Section', 'Class Teacher', 'Room', 'Occupancy', 'Actions'].map(h => <th key={h} className="table-th">{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {classesList.map((c, i) => (
+                  <tr key={c.id || i} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="table-td">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm ${c.grade === '12' ? 'bg-red-500' : c.grade === '11' ? 'bg-yellow-500' : 'bg-primary'}`}>{c.grade}</div>
+                        <div><div className="font-semibold text-sm text-primary">Class {c.grade} - {c.section}</div><div className="text-xs text-gray-400">{c.level}</div></div>
+                      </div>
+                    </td>
+                    <td className="table-td">
+                      {c.teacher ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold text-accent">{c.teacher[0]}</div>
+                          <div><div className="text-sm font-medium">{c.teacher}</div><div className="text-xs text-gray-400">{c.email}</div></div>
+                        </div>
+                      ) : <span className="text-xs text-red-500 font-semibold">TEACHER UNASSIGNED</span>}
+                    </td>
+                    <td className="table-td text-sm text-gray-500">{c.room}</td>
+                    <td className="table-td">
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm">{c.enrolled}/{c.capacity} Students</div>
+                        {c.enrolled >= c.capacity && <span className="badge badge-danger text-xs">FULL</span>}
+                        <span className={`text-xs font-semibold ${c.pct >= 90 ? 'text-red-500' : c.pct >= 70 ? 'text-yellow-500' : 'text-green-500'}`}>{c.pct}%</span>
+                      </div>
+                      <div className="mt-1 h-1.5 bg-gray-100 rounded-full w-32">
+                        <div className={`h-full rounded-full ${c.pct >= 90 ? 'bg-red-400' : c.pct >= 70 ? 'bg-yellow-400' : 'bg-green-400'}`} style={{ width: `${c.pct}%` }} />
+                      </div>
+                    </td>
+                    <td className="table-td">
+                      <div className="flex gap-2 items-center">
+                        {!c.teacher && (
+                          <button
+                            onClick={() => { setSelectedClassId(c.id); setSelectedTeacherId(''); setShowAssign(true); }}
+                            className="btn-primary text-xs py-1.5 px-3"
+                          >
+                            Assign Teacher
+                          </button>
+                        )}
+                        <button
+                          onClick={() => { setSelectedClassId(c.id); setSelectedTeacherId(c.teacherId || ''); setShowAssign(true); }}
+                          className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95"
+                          title="Edit Teacher Assignment"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {classesList.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="text-center py-6 text-gray-400 text-sm">No classes registered yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {showNew && (
@@ -333,7 +337,7 @@ export const Notices = () => {
       <Topbar title="Notices & Announcements" actions={
         <button onClick={() => setShowNew(true)} className="btn-primary">+ New Notice</button>
       } />
-      
+
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 space-y-4">
           {/* Filtering Tabs */}
@@ -347,11 +351,10 @@ export const Notices = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveFilterTab(tab.id)}
-                className={`pb-2.5 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all ${
-                  activeFilterTab === tab.id
+                className={`pb-2.5 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all ${activeFilterTab === tab.id
                     ? 'border-primary text-primary font-black'
                     : 'border-transparent text-gray-400 hover:text-gray-600'
-                }`}
+                  }`}
               >
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>
@@ -522,7 +525,7 @@ export const Exams = () => {
 
       const title = `Exam Schedule Published: ${filterExamType}`;
       const body = `The exam schedule for ${className} during the ${filterExamType} cycle has been published. Please check your Exams dashboard.`;
-      
+
       await expressClient.post('/notifications', {
         recipientId: recipients,
         title,
@@ -612,7 +615,7 @@ export const Exams = () => {
 
   const handleEdit = (exam) => {
     setModalError('');
-    
+
     // Parse rawDate or date reliably to YYYY-MM-DD
     const d = new Date(exam.rawDate || exam.date);
     const yyyy = d.getFullYear();
@@ -676,7 +679,7 @@ export const Exams = () => {
       <Topbar title="Exams & Assessment Schedule" actions={
         <button onClick={() => { resetForm(); setShowNew(true); }} className="btn-primary">+ Schedule Exam</button>
       } />
-      
+
       {/* Visual Timeline Section */}
       <div className="card mb-6 bg-gradient-to-r from-slate-900 to-indigo-950 text-white border-0 shadow-xl p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-4">
@@ -684,36 +687,38 @@ export const Exams = () => {
             <h3 className="font-display font-bold text-lg text-white">🗓 Chronological Exam Timeline</h3>
             <p className="text-blue-200 text-xs">Viewing schedule for {selectedClassName || 'Selected Class'} ({filterExamType})</p>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:w-auto">
             {filterClassId && (
               <button
                 type="button"
                 onClick={handleSendSchedule}
                 disabled={sendingSchedule || cycleExams.length === 0}
-                className="btn-primary text-xs py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed border-0 font-semibold flex items-center gap-1.5 whitespace-nowrap shadow-sm shrink-0"
+                className="btn-primary text-xs py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed border-0 font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm shrink-0"
               >
                 {sendingSchedule ? 'Sending...' : '📢 Send Schedule'}
               </button>
             )}
-            <select
-              value={filterClassId}
-              onChange={e => setFilterClassId(e.target.value)}
-              className="input bg-white/10 border-white/20 text-white text-xs w-40"
-            >
-              <option value="" className="text-primary">All Classes</option>
-              {classes.map(c => (
-                <option key={c.id} value={c.id} className="text-primary">Class {c.grade} - {c.section}</option>
-              ))}
-            </select>
-            <select
-              value={filterExamType}
-              onChange={e => setFilterExamType(e.target.value)}
-              className="input bg-white/10 border-white/20 text-white text-xs w-48"
-            >
-              {examTypes.map(et => (
-                <option key={et.id} value={et.name} className="text-primary">{et.name}</option>
-              ))}
-            </select>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <select
+                value={filterClassId}
+                onChange={e => setFilterClassId(e.target.value)}
+                className="input bg-white/10 border-white/20 text-white text-xs flex-1 sm:w-40"
+              >
+                <option value="" className="text-primary">All Classes</option>
+                {classes.map(c => (
+                  <option key={c.id} value={c.id} className="text-primary">Class {c.grade} - {c.section}</option>
+                ))}
+              </select>
+              <select
+                value={filterExamType}
+                onChange={e => setFilterExamType(e.target.value)}
+                className="input bg-white/10 border-white/20 text-white text-xs flex-1 sm:w-48"
+              >
+                {examTypes.map(et => (
+                  <option key={et.id} value={et.name} className="text-primary">{et.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -749,49 +754,53 @@ export const Exams = () => {
       </div>
 
       <div className="card">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100">
-              {['Subject', 'Grade Level', 'Exam Date', 'Time', 'Proctor', 'Status', 'Actions'].map(h => <th key={h} className="table-th">{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {cycleExams.map((e, i) => (
-              <tr key={e.id || i} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="table-td">
-                  <div className="font-semibold text-sm text-primary">{e.subject}</div>
-                  {e.subjectCode && e.subjectCode.toUpperCase() !== e.subject.toUpperCase().replace(/\s+/g, '') && (
-                    <div className="text-xs text-gray-400">{e.subjectCode}</div>
-                  )}
-                </td>
-                <td className="table-td text-sm text-gray-500">{e.grade} {e.section}</td>
-                <td className="table-td text-sm">📅 {e.date}</td>
-                <td className="table-td text-sm font-semibold text-primary">⏱️ {e.time || 'N/A'}</td>
-                <td className="table-td"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{e.proctor ? e.proctor[0] : '?'}</div><span className="text-sm">{e.proctor}</span></div></td>
-                <td className="table-td"><span className={e.status === 'Completed' ? 'badge-success' : 'badge-warning'}>{e.status}</span></td>
-                <td className="table-td">
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => handleEdit(e)} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Edit Schedule">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button type="button" onClick={() => handleDelete(e.id)} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Delete Schedule">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {cycleExams.length === 0 && (
-              <tr>
-                <td colSpan="7" className="text-center py-6 text-gray-400 text-sm">No exams scheduled yet.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
+            <table className="w-full" style={{ minWidth: '780px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {['Subject', 'Grade Level', 'Exam Date', 'Time', 'Proctor', 'Status', 'Actions'].map(h => <th key={h} className="table-th">{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {cycleExams.map((e, i) => (
+                  <tr key={e.id || i} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="table-td">
+                      <div className="font-semibold text-sm text-primary">{e.subject}</div>
+                      {e.subjectCode && e.subjectCode.toUpperCase() !== e.subject.toUpperCase().replace(/\s+/g, '') && (
+                        <div className="text-xs text-gray-400">{e.subjectCode}</div>
+                      )}
+                    </td>
+                    <td className="table-td text-sm text-gray-500">{e.grade} {e.section}</td>
+                    <td className="table-td text-sm">📅 {e.date}</td>
+                    <td className="table-td text-sm font-semibold text-primary">⏱️ {e.time || 'N/A'}</td>
+                    <td className="table-td"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{e.proctor ? e.proctor[0] : '?'}</div><span className="text-sm">{e.proctor}</span></div></td>
+                    <td className="table-td"><span className={e.status === 'Completed' ? 'badge-success' : 'badge-warning'}>{e.status}</span></td>
+                    <td className="table-td">
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => handleEdit(e)} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Edit Schedule">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button type="button" onClick={() => handleDelete(e.id)} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Delete Schedule">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {cycleExams.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="text-center py-6 text-gray-400 text-sm">No exams scheduled yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {showNew && (
@@ -884,28 +893,32 @@ export const Admission = () => {
     <div>
       <Topbar title="Admission Registry" subtitle="Manage incoming application cycles." />
       <div className="card">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100">
-              {['Student ID', 'Student Name', 'Class / Section', 'Status'].map(h => <th key={h} className="table-th">{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {admissions.map((a, i) => (
-              <tr key={a.id || i} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="table-td text-xs font-mono text-gray-500">#{a.studentId}</td>
-                <td className="table-td font-semibold text-primary">{a.name}</td>
-                <td className="table-td text-sm">{a.class} - {a.section}</td>
-                <td className="table-td"><span className="badge-success">{a.status}</span></td>
-              </tr>
-            ))}
-            {admissions.length === 0 && (
-              <tr>
-                <td colSpan="4" className="text-center py-6 text-gray-400 text-sm">No student admissions registered yet.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
+            <table className="w-full" style={{ minWidth: '600px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {['Student ID', 'Student Name', 'Class / Section', 'Status'].map(h => <th key={h} className="table-th">{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {admissions.map((a, i) => (
+                  <tr key={a.id || i} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="table-td text-xs font-mono text-gray-500">#{a.studentId}</td>
+                    <td className="table-td font-semibold text-primary">{a.name}</td>
+                    <td className="table-td text-sm">{a.class} - {a.section}</td>
+                    <td className="table-td"><span className="badge-success">{a.status}</span></td>
+                  </tr>
+                ))}
+                {admissions.length === 0 && (
+                  <tr>
+                    <td colSpan="4" className="text-center py-6 text-gray-400 text-sm">No student admissions registered yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );

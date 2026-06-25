@@ -21,7 +21,7 @@ const Teachers = () => {
   const [isEditingAttendance, setIsEditingAttendance] = useState(false);
   const [attendanceSubmitted, setAttendanceSubmitted] = useState(false);
   const [attendanceTeachers, setAttendanceTeachers] = useState([]);
-  
+
   // Dropdown filter states
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
@@ -30,7 +30,7 @@ const Teachers = () => {
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewTeacherData, setViewTeacherData] = useState(null);
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -260,9 +260,9 @@ const Teachers = () => {
     const nameStr = t.name || '';
     const emailStr = t.email || '';
     const empIdStr = t.employeeId || '';
-    const matchesSearch = !search || 
-      nameStr.toLowerCase().includes(search.toLowerCase()) || 
-      emailStr.toLowerCase().includes(search.toLowerCase()) || 
+    const matchesSearch = !search ||
+      nameStr.toLowerCase().includes(search.toLowerCase()) ||
+      emailStr.toLowerCase().includes(search.toLowerCase()) ||
       empIdStr.toLowerCase().includes(search.toLowerCase());
     const matchesDept = !selectedDepartment || t.department === selectedDepartment;
     const matchesStatus = !selectedStatus || t.status === selectedStatus;
@@ -277,10 +277,10 @@ const Teachers = () => {
   return (
     <div>
       <Topbar title="Teacher Management" actions={activeTab === 'directory' && <button onClick={() => { setError(''); resetForm(); setShowModal(true); }} className="btn-primary">+ Add New Teacher</button>} />
-      
+
       <div className="card">
         <p className="text-xs text-gray-400 mb-4">Efficiently manage and monitor your faculty records.</p>
-        
+
         {/* Tab Headers */}
         <div className="flex border-b border-gray-100 mb-6 gap-6">
           {[
@@ -290,11 +290,10 @@ const Teachers = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-3 text-sm font-semibold border-b-2 flex items-center gap-1.5 transition-all ${
-                activeTab === tab.id
+              className={`pb-3 text-sm font-semibold border-b-2 flex items-center gap-1.5 transition-all ${activeTab === tab.id
                   ? 'border-primary text-primary font-bold'
                   : 'border-transparent text-gray-400 hover:text-gray-600'
-              }`}
+                }`}
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
@@ -314,94 +313,98 @@ const Teachers = () => {
               ))}
             </div>
 
-            <div className="flex gap-3 mb-4">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 mb-4">
               <div className="flex-1 relative">
                 <input placeholder="Search teachers by name, email, or employee ID..." value={search} onChange={e => setSearch(e.target.value)} className="input pl-9 text-sm" />
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
               </div>
-              
-              <select className="input w-48 text-sm" value={selectedDepartment} onChange={e => setSelectedDepartment(e.target.value)}>
-                <option value="">All Departments</option>
-                {uniqueDepartments.map((dept, idx) => (
-                  <option key={idx} value={dept}>{dept}</option>
-                ))}
-              </select>
-              
-              <select className="input w-36 text-sm" value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)}>
-                <option value="">All Statuses</option>
-                {uniqueStatuses.map((stat, idx) => (
-                  <option key={idx} value={stat}>{stat}</option>
-                ))}
-              </select>
+              <div style={{ display: 'flex', gap: '8px', width: '100%' }} className="md:w-auto">
+                <select className="input" style={{ flex: 1, minWidth: 0, width: '50%' }} value={selectedDepartment} onChange={e => setSelectedDepartment(e.target.value)}>
+                  <option value="">All Departments</option>
+                  {uniqueDepartments.map((dept, idx) => (
+                    <option key={idx} value={dept}>{dept}</option>
+                  ))}
+                </select>
+                <select className="input" style={{ flex: 1, minWidth: 0, width: '50%' }} value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)}>
+                  <option value="">All Statuses</option>
+                  {uniqueStatuses.map((stat, idx) => (
+                    <option key={idx} value={stat}>{stat}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="table-th text-left">Teacher Info</th>
-                  <th className="table-th text-left">ID</th>
-                  <th className="table-th text-left">Department</th>
-                  <th className="table-th text-left">Qualifications</th>
-                  <th className="table-th text-left">Specialization</th>
-                  <th className="table-th text-left">Assigned Classes</th>
-                  <th className="table-th text-left">Contact</th>
-                  <th className="table-th text-left">Status</th>
-                  <th className="table-th text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(t => (
-                  <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="table-td">
-                      <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                          {t.name ? t.name.split(' ').map(n => n[0]).join('').slice(0, 2) : '?'}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-primary text-sm">{t.name}</div>
-                          <div className="text-xs text-gray-400">Joined {t.joined}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="table-td text-xs font-mono text-gray-500">{t.employeeId}</td>
-                    <td className="table-td text-sm">{t.department}</td>
-                    <td className="table-td text-sm">{t.qualifications}</td>
-                    <td className="table-td text-sm font-semibold text-primary">{t.specialization || 'N/A'}</td>
-                    <td className="table-td text-xs text-gray-600">{t.classes || 'None'}</td>
-                    <td className="table-td">
-                      <div className="text-xs text-gray-500">{t.email}</div>
-                      <div className="text-xs text-gray-400">{t.phone}</div>
-                    </td>
-                    <td className="table-td"><span className={sc[t.status] || 'badge-success'}>{t.status}</span></td>
-                    <td className="table-td">
-                      <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => handleView(t.id)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="View Profile">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </button>
-                        <button type="button" onClick={() => handleEdit(t.id)} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Edit Profile">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button type="button" onClick={() => handleDelete(t.id)} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Delete Profile">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan="9" className="text-center py-6 text-gray-400 text-sm">No teachers registered yet matching filters.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
+              <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
+                <table className="w-full" style={{ minWidth: '950px', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="table-th text-left">Teacher Info</th>
+                      <th className="table-th text-left">ID</th>
+                      <th className="table-th text-left">Department</th>
+                      <th className="table-th text-left">Qualifications</th>
+                      <th className="table-th text-left">Specialization</th>
+                      <th className="table-th text-left">Assigned Classes</th>
+                      <th className="table-th text-left">Contact</th>
+                      <th className="table-th text-left">Status</th>
+                      <th className="table-th text-left">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map(t => (
+                      <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="table-td">
+                          <div className="flex items-center gap-2">
+                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                              {t.name ? t.name.split(' ').map(n => n[0]).join('').slice(0, 2) : '?'}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-primary text-sm">{t.name}</div>
+                              <div className="text-xs text-gray-400">Joined {t.joined}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="table-td text-xs font-mono text-gray-500">{t.employeeId}</td>
+                        <td className="table-td text-sm">{t.department}</td>
+                        <td className="table-td text-sm">{t.qualifications}</td>
+                        <td className="table-td text-sm font-semibold text-primary">{t.specialization || 'N/A'}</td>
+                        <td className="table-td text-xs text-gray-600">{t.classes || 'None'}</td>
+                        <td className="table-td">
+                          <div className="text-xs text-gray-500">{t.email}</div>
+                          <div className="text-xs text-gray-400">{t.phone}</div>
+                        </td>
+                        <td className="table-td"><span className={sc[t.status] || 'badge-success'}>{t.status}</span></td>
+                        <td className="table-td">
+                          <div className="flex items-center gap-2">
+                            <button type="button" onClick={() => handleView(t.id)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="View Profile">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                            <button type="button" onClick={() => handleEdit(t.id)} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Edit Profile">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button type="button" onClick={() => handleDelete(t.id)} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Delete Profile">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filtered.length === 0 && (
+                      <tr>
+                        <td colSpan="9" className="text-center py-6 text-gray-400 text-sm">No teachers registered yet matching filters.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </>
         )}
 
@@ -457,7 +460,7 @@ const Teachers = () => {
 
             {/* Summary Row */}
             {attendanceTeachers.length > 0 && (
-              <div className="grid grid-cols-5 gap-4 mb-5">
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 mb-5">
                 {[
                   { label: 'Total Staff', value: attendanceTeachers.length, color: 'text-primary bg-primary/5' },
                   { label: 'Present', value: attPresentCount, color: 'text-green-600 bg-green-50' },
@@ -465,9 +468,9 @@ const Teachers = () => {
                   { label: 'Absent', value: attAbsentCount, color: 'text-red-500 bg-red-50' },
                   { label: 'On Leave', value: attLeaveCount, color: 'text-orange-500 bg-orange-50/50' }
                 ].map(metric => (
-                  <div key={metric.label} className={`rounded-xl p-3 text-center ${metric.color}`}>
-                    <div className="text-2xs font-semibold uppercase tracking-wide opacity-80">{metric.label}</div>
-                    <div className="font-display text-lg font-bold mt-0.5">{metric.value}</div>
+                  <div key={metric.label} className={`rounded-xl px-4 py-2.5 sm:p-3 ${metric.color} flex flex-row sm:flex-col justify-between sm:justify-center items-center gap-1`}>
+                    <div className="text-xs sm:text-[10px] font-bold uppercase tracking-wide opacity-85">{metric.label}</div>
+                    <div className="font-display text-sm sm:text-base font-bold">{metric.value}</div>
                   </div>
                 ))}
               </div>
@@ -485,83 +488,87 @@ const Teachers = () => {
               </div>
             ) : (
               <div>
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="table-th text-left">Teacher Name</th>
-                      <th className="table-th text-left">Employee ID</th>
-                      <th className="table-th text-left">Department</th>
-                      <th className="table-th">Status</th>
-                      <th className="table-th">Remarks</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attendanceTeachers.map(t => (
-                      <tr key={t.id} className={`border-b border-gray-50 hover:bg-gray-50 ${attendanceSaved && !isEditingAttendance ? 'opacity-85' : ''}`}>
-                        <td className="table-td">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${t.status === 'Absent' ? 'bg-red-100 text-red-600'
-                              : t.status === 'Late' ? 'bg-amber-100 text-amber-700'
-                                : t.status === 'On Leave' ? 'bg-orange-100 text-orange-700'
-                                  : 'bg-green-100 text-green-700'
-                              }`}>
-                              {t.name ? t.name.split(' ').map(n => n[0]).join('').slice(0, 2) : '?'}
-                            </div>
-                            <div className="font-semibold text-primary text-sm">{t.name}</div>
-                          </div>
-                        </td>
-                        <td className="table-td text-xs font-mono text-gray-500">{t.employeeId}</td>
-                        <td className="table-td text-sm text-gray-600">{t.department}</td>
-                        <td className="table-td">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {[
-                              { key: 'Present', activeClass: 'bg-green-500 text-white border-green-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-green-300 hover:text-green-600' },
-                              { key: 'Late', activeClass: 'bg-amber-500 text-white border-amber-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600' },
-                              { key: 'Absent', activeClass: 'bg-red-500 text-white border-red-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-red-300 hover:text-red-500' },
-                              { key: 'On Leave', activeClass: 'bg-orange-500 text-white border-orange-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-orange-300 hover:text-orange-600' }
-                            ].map(({ key, activeClass, inactiveClass }) => (
-                              <button
-                                key={key}
-                                type="button"
-                                disabled={attendanceSaved && !isEditingAttendance}
-                                onClick={() => handleSetAttendanceStatus(t.id, key)}
-                                className={`px-2.5 py-1.5 rounded-lg text-2xs font-bold border transition-all min-w-[64px] ${t.status === key ? activeClass : inactiveClass
-                                  } ${attendanceSaved && !isEditingAttendance ? 'cursor-not-allowed opacity-60' : ''}`}
-                              >
-                                {key}
-                              </button>
-                            ))}
-
-                            {t.status === 'Late' && (
-                              <div className="flex items-center gap-1 ml-2">
-                                <span className="text-[10px] text-amber-700 font-semibold whitespace-nowrap">Mins:</span>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="120"
-                                  disabled={attendanceSaved && !isEditingAttendance}
-                                  value={t.lateMinutes || ''}
-                                  onChange={e => handleSetLateMinutes(t.id, e.target.value)}
-                                  placeholder="10"
-                                  className="w-12 border border-amber-200 bg-amber-50 rounded px-1.5 py-1 text-2xs text-center focus:outline-none focus:ring-1 focus:ring-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
-                                />
+                <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
+                  <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
+                    <table className="w-full" style={{ minWidth: '750px', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="table-th text-left">Teacher Name</th>
+                          <th className="table-th text-left">Employee ID</th>
+                          <th className="table-th text-left">Department</th>
+                          <th className="table-th">Status</th>
+                          <th className="table-th">Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {attendanceTeachers.map(t => (
+                          <tr key={t.id} className={`border-b border-gray-50 hover:bg-gray-50 ${attendanceSaved && !isEditingAttendance ? 'opacity-85' : ''}`}>
+                            <td className="table-td">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${t.status === 'Absent' ? 'bg-red-100 text-red-600'
+                                  : t.status === 'Late' ? 'bg-amber-100 text-amber-700'
+                                    : t.status === 'On Leave' ? 'bg-orange-100 text-orange-700'
+                                      : 'bg-green-100 text-green-700'
+                                  }`}>
+                                  {t.name ? t.name.split(' ').map(n => n[0]).join('').slice(0, 2) : '?'}
+                                </div>
+                                <div className="font-semibold text-primary text-sm">{t.name}</div>
                               </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="table-td">
-                          <input
-                            disabled={attendanceSaved && !isEditingAttendance}
-                            value={t.remarks || ''}
-                            onChange={e => handleSetRemarks(t.id, e.target.value)}
-                            placeholder="Optional remark"
-                            className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/20 bg-gray-50 placeholder-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                            </td>
+                            <td className="table-td text-xs font-mono text-gray-500">{t.employeeId}</td>
+                            <td className="table-td text-sm text-gray-600">{t.department}</td>
+                            <td className="table-td">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {[
+                                  { key: 'Present', activeClass: 'bg-green-500 text-white border-green-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-green-300 hover:text-green-600' },
+                                  { key: 'Late', activeClass: 'bg-amber-500 text-white border-amber-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600' },
+                                  { key: 'Absent', activeClass: 'bg-red-500 text-white border-red-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-red-300 hover:text-red-500' },
+                                  { key: 'On Leave', activeClass: 'bg-orange-500 text-white border-orange-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-orange-300 hover:text-orange-600' }
+                                ].map(({ key, activeClass, inactiveClass }) => (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    disabled={attendanceSaved && !isEditingAttendance}
+                                    onClick={() => handleSetAttendanceStatus(t.id, key)}
+                                    className={`px-2.5 py-1.5 rounded-lg text-2xs font-bold border transition-all min-w-[64px] ${t.status === key ? activeClass : inactiveClass
+                                      } ${attendanceSaved && !isEditingAttendance ? 'cursor-not-allowed opacity-60' : ''}`}
+                                  >
+                                    {key}
+                                  </button>
+                                ))}
+
+                                {t.status === 'Late' && (
+                                  <div className="flex items-center gap-1 ml-2">
+                                    <span className="text-[10px] text-amber-700 font-semibold whitespace-nowrap">Mins:</span>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max="120"
+                                      disabled={attendanceSaved && !isEditingAttendance}
+                                      value={t.lateMinutes || ''}
+                                      onChange={e => handleSetLateMinutes(t.id, e.target.value)}
+                                      placeholder="10"
+                                      className="w-12 border border-amber-200 bg-amber-50 rounded px-1.5 py-1 text-2xs text-center focus:outline-none focus:ring-1 focus:ring-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="table-td">
+                              <input
+                                disabled={attendanceSaved && !isEditingAttendance}
+                                value={t.remarks || ''}
+                                onChange={e => handleSetRemarks(t.id, e.target.value)}
+                                placeholder="Optional remark"
+                                className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/20 bg-gray-50 placeholder-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
 
                 {/* Save / Update buttons */}
                 <div className="flex justify-end gap-3 mt-5">
@@ -627,7 +634,7 @@ const Teachers = () => {
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Office Location</div>
                   <div className="text-primary font-medium">{viewTeacherData.officeLocation || 'Not Specified'}</div>
                 </div>
-                 <div>
+                <div>
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Highest Qualifications</div>
                   <div className="text-primary font-medium">{viewTeacherData.qualifications || 'Not Specified'}</div>
                 </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
+import { DollarSign, Users, CreditCard } from 'lucide-react';
 
 const Subscriptions = () => {
   const [data, setData] = useState({
@@ -386,10 +387,10 @@ const Subscriptions = () => {
       )}
 
       {/* Sub Tabs */}
-      <div className="flex border-b border-gray-100 mb-6 gap-6">
+      <div className="flex border-b border-gray-100 mb-6 gap-x-6 gap-y-2 sticky top-[72px] lg:top-[80px] z-30 bg-[#f4f6fb]/95 backdrop-blur-sm -mx-4 px-4 lg:-mx-6 lg:px-6 py-3 -mt-3 flex-wrap">
         <button 
           onClick={() => handleSubTabChange('global')}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${activeSubTab === 'global' ? 'border-primary text-primary font-bold' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${activeSubTab === 'global' ? 'border-primary text-primary font-bold' : 'border-transparent text-gray-405 hover:text-gray-600'}`}
         >
           📊 Global Plans & Analytics
         </button>
@@ -426,16 +427,21 @@ const Subscriptions = () => {
       {activeSubTab === 'global' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Metrics Cards */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { label: 'Total MRR', value: `$${totalMrr.toLocaleString()}`, change: 'Real-time' },
-              { label: 'Active Subscribers', value: activeSubscribers.toString(), change: 'Platform Stats' },
-              { label: 'Avg. Revenue / User', value: `$${avgArpu.toLocaleString()}`, change: 'Computed' },
+              { label: 'Total MRR', value: `$${totalMrr.toLocaleString()}`, change: 'Real-time', icon: DollarSign, color: 'text-violet-500', bgColor: 'bg-violet-50/50' },
+              { label: 'Active Subscribers', value: activeSubscribers.toString(), change: 'Platform Stats', icon: Users, color: 'text-blue-500', bgColor: 'bg-blue-50/50' },
+              { label: 'Avg. Revenue / User', value: `$${avgArpu.toLocaleString()}`, change: 'Computed', icon: CreditCard, color: 'text-orange-500', bgColor: 'bg-orange-50/50' },
             ].map(s => (
-              <div key={s.label} className="stat-card">
-                <div className="text-xs text-gray-500 mb-1">{s.label}</div>
-                <div className="font-display text-2xl font-bold text-primary">{s.value}</div>
-                <div className="text-xs text-green-500 font-semibold">{s.change}</div>
+              <div key={s.label} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all bg-white border border-gray-100 rounded-xl shadow-sm">
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-gray-400">{s.label}</div>
+                  <div className="font-display text-2xl font-bold text-primary">{s.value}</div>
+                  <div className="text-2xs font-semibold text-green-500 uppercase tracking-wider">{s.change}</div>
+                </div>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${s.bgColor}`}>
+                  <s.icon className={`w-6 h-6 ${s.color} stroke-[1.75]`} />
+                </div>
               </div>
             ))}
           </div>
@@ -443,7 +449,7 @@ const Subscriptions = () => {
           {/* Plan Configurations */}
           <div className="card">
             <h3 className="font-display font-semibold text-primary mb-4">Active Plan Configuration</h3>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {plans.map(p => {
                 const isEditing = editingPlanId === p.id;
                 return (
@@ -556,35 +562,37 @@ const Subscriptions = () => {
           {/* Renewals History Table */}
           <div className="card">
             <h3 className="font-display font-semibold text-primary mb-4">Recent Subscription Renewals</h3>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="table-th">Institution Name</th>
-                  <th className="table-th">Plan Type</th>
-                  <th className="table-th">Amount</th>
-                  <th className="table-th">Method</th>
-                  <th className="table-th">Renew Date</th>
-                  <th className="table-th">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.renewals.map(r => (
-                  <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="table-td font-semibold text-primary">{r.institutionName}</td>
-                    <td className="table-td"><span className="badge badge-gray">{r.planType}</span></td>
-                    <td className="table-td font-medium">${r.amount}</td>
-                    <td className="table-td text-gray-500">Stripe</td>
-                    <td className="table-td text-gray-500">{r.renewDate}</td>
-                    <td className="table-td"><span className={r.status === 'success' ? 'badge-success' : r.status === 'pending' ? 'badge-warning' : 'badge-danger'}>{r.status.toUpperCase()}</span></td>
+            <div className="overflow-x-auto scrollbar-none">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="table-th">Institution Name</th>
+                    <th className="table-th">Plan Type</th>
+                    <th className="table-th">Amount</th>
+                    <th className="table-th">Method</th>
+                    <th className="table-th">Renew Date</th>
+                    <th className="table-th">Status</th>
                   </tr>
-                ))}
-                {data.renewals.length === 0 && (
-                  <tr>
-                    <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No renewals found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.renewals.map(r => (
+                    <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="table-td font-semibold text-primary">{r.institutionName}</td>
+                      <td className="table-td"><span className="badge badge-gray">{r.planType}</span></td>
+                      <td className="table-td font-medium">${r.amount}</td>
+                      <td className="table-td text-gray-500">Stripe</td>
+                      <td className="table-td text-gray-500">{r.renewDate}</td>
+                      <td className="table-td"><span className={r.status === 'success' ? 'badge-success' : r.status === 'pending' ? 'badge-warning' : 'badge-danger'}>{r.status.toUpperCase()}</span></td>
+                    </tr>
+                  ))}
+                  {data.renewals.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No renewals found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

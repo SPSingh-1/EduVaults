@@ -60,17 +60,6 @@ const SuperAdminDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Notice Banner */}
-      <div className="bg-amber-50/60 border border-amber-200/50 rounded-2xl px-4 py-3 flex items-center justify-between text-sm shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-amber-100/80 flex items-center justify-center text-amber-700 shrink-0">
-            <Info className="w-4 h-4" />
-          </div>
-          <span className="text-amber-850 text-xs font-medium">System Update Notice: V2.4 scheduled for June 15th at 02:00 UTC. Expected downtime is 15 minutes.</span>
-        </div>
-        <button className="text-amber-750 text-xs font-semibold hover:underline shrink-0">View Details</button>
-      </div>
-
       {/* Topbar */}
       <Topbar title="Dashboard Overview" subtitle="EduFlow Platform" actions={
         <div className="flex gap-2">
@@ -86,7 +75,7 @@ const SuperAdminDashboard = () => {
       } />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           {label:'Total Schools',value: stats?.totalSchools ?? '0',change:'Real-time',icon: School,color:'text-blue-500',bgColor:'bg-blue-50/50'},
           {label:'Active Subscriptions',value: stats?.activeSubscriptions ?? '0',change:'Active',icon: CheckCircle2,color:'text-emerald-500',bgColor:'bg-emerald-50/50'},
@@ -107,8 +96,8 @@ const SuperAdminDashboard = () => {
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-3 gap-6">
-        <div className="card col-span-2 flex flex-col justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="card lg:col-span-2 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-display font-semibold text-primary text-sm">School Onboarding Trend</h3>

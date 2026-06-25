@@ -288,7 +288,7 @@ export const StudentDashboard = () => {
     <div className="space-y-6">
       <Topbar title="Student Dashboard Overview" subtitle={`Welcome back, ${profile?.firstName || 'Student'}. Here's your academic summary.`} />
       
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Attendance', value: totalDays > 0 ? realAttendancePercent : '98.1%', sub: 'On Track', icon: CheckSquare, color: 'text-blue-500', bgColor: 'bg-blue-50/50' },
           { label: 'Semester GPA', value: performance?.areMarksPublished !== false ? (performance?.semesterGpa || '0.00') : '🔒 Locked', sub: performance?.areMarksPublished !== false ? 'Target: 4.00' : 'Awaiting Release', icon: Award, color: 'text-emerald-500', bgColor: 'bg-emerald-50/50' },
@@ -351,7 +351,7 @@ export const StudentDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         <div className="card flex flex-col justify-between">
           <div className="mb-4">
@@ -838,12 +838,12 @@ export const StudentResults = () => {
   };
 
   const examDropdown = (
-    <div className="relative flex items-center">
+    <div className="relative flex items-center w-full sm:w-auto">
       <BookOpen className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
       <select
         value={selectedExamType}
         onChange={(e) => setSelectedExamType(e.target.value)}
-        className="pl-9 pr-8 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-350 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all cursor-pointer appearance-none min-w-[200px]"
+        className="pl-9 pr-8 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-350 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all cursor-pointer appearance-none w-full sm:min-w-[200px]"
       >
         {examTypes.map((et, i) => (
           <option key={i} value={et}>
@@ -858,11 +858,22 @@ export const StudentResults = () => {
   if (perf && perf.areMarksPublished === false) {
     return (
       <div>
-        <Topbar title="Academic Performance" subtitle="Academic Records › Final Results" actions={
-          <div className="flex items-center gap-3">
+        {/* Mobile View Header */}
+        <div className="sm:hidden no-print">
+          <Topbar title="Academic Performance" subtitle="Academic Records › Final Results" />
+          <div className="flex flex-col gap-2.5 mb-5 bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
             {examDropdown}
           </div>
-        } />
+        </div>
+        {/* Desktop View Header */}
+        <div className="hidden sm:block no-print">
+          <Topbar title="Academic Performance" subtitle="Academic Records › Final Results" actions={
+            <div className="flex items-center gap-3">
+              {examDropdown}
+            </div>
+          } />
+        </div>
+
         <div className="card text-center py-20 max-w-md mx-auto mt-12 border border-slate-100 bg-white shadow-lg rounded-2xl p-8">
           <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100">🔒</div>
           <h3 className="font-display font-bold text-lg text-primary mb-2">Report Cards Not Released</h3>
@@ -880,14 +891,27 @@ export const StudentResults = () => {
   return (
     <div>
       <div className="no-print">
-        <Topbar title="Academic Performance" subtitle="Academic Records › Final Results" actions={
-          <div className="flex items-center gap-3">
+        {/* Mobile View Header */}
+        <div className="sm:hidden">
+          <Topbar title="Academic Performance" subtitle="Academic Records › Final Results" />
+          <div className="flex flex-col gap-2.5 mb-5 bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
             {examDropdown}
-            <button onClick={handlePrint} className="btn-primary text-xs flex items-center gap-1.5 select-none active:scale-95 transition-all">
-              <Printer className="w-4 h-4" /> Download PDF Report Card
+            <button onClick={handlePrint} className="btn-primary text-xs flex items-center justify-center gap-1.5 py-2.5 select-none active:scale-95 transition-all w-full">
+              <Printer className="w-4.5 h-4.5" /> Download PDF Report Card
             </button>
           </div>
-        } />
+        </div>
+        {/* Desktop View Header */}
+        <div className="hidden sm:block">
+          <Topbar title="Academic Performance" subtitle="Academic Records › Final Results" actions={
+            <div className="flex items-center gap-3">
+              {examDropdown}
+              <button onClick={handlePrint} className="btn-primary text-xs flex items-center gap-1.5 select-none active:scale-95 transition-all">
+                <Printer className="w-4 h-4" /> Download PDF Report Card
+              </button>
+            </div>
+          } />
+        </div>
       </div>
       
       <style dangerouslySetInnerHTML={{__html: `
@@ -1931,7 +1955,7 @@ export const StudentSchedule = () => {
       )}
 
       {/* Days Tabs */}
-      <div className="flex gap-1.5 bg-slate-100/60 p-1 rounded-2xl w-fit border border-slate-200/30 mb-6 overflow-x-auto scrollbar-none">
+      <div className="flex gap-1.5 bg-slate-100/60 p-1 rounded-2xl w-full sm:w-fit border border-slate-200/30 mb-6 overflow-x-auto scrollbar-none">
         {days.map(d => {
           const isToday = d.toLowerCase() === currentDayName.toLowerCase();
           const isActive = d.toLowerCase() === activeDay.toLowerCase();

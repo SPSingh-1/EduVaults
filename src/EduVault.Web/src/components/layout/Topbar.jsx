@@ -1,11 +1,13 @@
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useSidebar } from '../../contexts/SidebarContext';
 import { useNavigate } from 'react-router-dom';
-import { Bell } from 'lucide-react';
+import { Bell, Menu } from 'lucide-react';
 
 const Topbar = ({ title, subtitle, actions }) => {
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
+  const { openSidebar } = useSidebar();
   const navigate = useNavigate();
 
   const handleBellClick = () => {
@@ -35,15 +37,29 @@ const Topbar = ({ title, subtitle, actions }) => {
   };
 
   return (
-    <div className="flex items-center justify-between mb-6">
-      <div>
-        {subtitle && <div className="text-xs text-gray-400 font-medium mb-0.5">{subtitle}</div>}
-        <h1 className="page-title">{title}</h1>
+    <div className="sticky top-0 lg:top-0 z-40 bg-[#f4f6fb]/90 backdrop-blur-md -mx-4 px-4 lg:-mx-6 lg:px-6 py-4 -mt-4 lg:-mt-6 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-gray-100/30 shadow-2xs">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <button
+          onClick={openSidebar}
+          className="lg:hidden p-2 -ml-2 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-primary active:scale-95 transition-all select-none cursor-pointer shrink-0"
+          title="Open Menu"
+        >
+          <Menu className="w-5.5 h-5.5 stroke-[2]" />
+        </button>
+        <div className="min-w-0">
+          {subtitle && <div className="text-[10px] sm:text-xs text-gray-400 font-medium mb-0.5 truncate">{subtitle}</div>}
+          {typeof title === 'string' ? (
+            <h1 className="page-title truncate text-lg sm:text-2xl">{title}</h1>
+          ) : (
+            <div className="page-title text-lg sm:text-2xl">{title}</div>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        {actions}
-        <button 
-          onClick={handleBellClick} 
+
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto">
+        {actions && <div className="flex items-center gap-1.5 sm:gap-2">{actions}</div>}
+        <button
+          onClick={handleBellClick}
           className="relative w-9 h-9 flex items-center justify-center bg-white rounded-full border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 hover:shadow-2xs active:scale-95 transition-all duration-200 cursor-pointer select-none group shrink-0"
           title="View Notifications"
         >
@@ -54,7 +70,7 @@ const Topbar = ({ title, subtitle, actions }) => {
             </span>
           )}
         </button>
-        <button 
+        <button
           onClick={handleProfileClick}
           className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm select-none shrink-0 cursor-pointer hover:brightness-110 active:scale-95 transition-all duration-200 border border-primary-light/10 shadow-2xs"
           title="View Profile"

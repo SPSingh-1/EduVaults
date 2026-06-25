@@ -137,7 +137,7 @@ const Support = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'Open Tickets', value: stats.openTickets, note: '-5%', color: 'text-blue-600' },
           { label: 'Avg. Response', value: stats.avgResponse, note: '-10%', color: 'text-green-600' },
@@ -152,9 +152,9 @@ const Support = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content Area */}
-        <div className="card col-span-2">
+        <div className="card lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-display font-semibold text-primary">Active Support Tickets</h3>
             <button onClick={() => setShowModal(true)} className="btn-primary text-xs">
@@ -162,49 +162,51 @@ const Support = () => {
             </button>
           </div>
 
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="table-th">Ticket</th>
-                <th className="table-th">Submitter/School</th>
-                <th className="table-th">Status</th>
-                <th className="table-th">Priority</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tickets.map((t) => (
-                <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="table-td">
-                    <div className="font-semibold text-primary text-xs">#{t.ticketNumber}</div>
-                    <div className="text-xs text-gray-500">{t.title}</div>
-                  </td>
-                  <td className="table-td text-xs text-gray-500">{t.schoolName}</td>
-                  <td className="table-td">
-                    <span className={statusColor[t.status.toUpperCase()] || 'badge-gray'}>
-                      {t.status}
-                    </span>
-                  </td>
-                  <td className="table-td">
-                    <span className={`badge ${priorityColor[t.priority.toUpperCase()] || 'text-gray-600 bg-gray-100'}`}>
-                      {t.priority}
-                    </span>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="table-th">Ticket</th>
+                  <th className="table-th">Submitter/School</th>
+                  <th className="table-th">Status</th>
+                  <th className="table-th">Priority</th>
                 </tr>
-              ))}
-              {tickets.length === 0 && (
-                <tr>
-                  <td colSpan="4" className="text-center py-6 text-gray-400 text-sm">
-                    No active support tickets found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {tickets.map((t) => (
+                  <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <td className="table-td">
+                      <div className="font-semibold text-primary text-xs">#{t.ticketNumber}</div>
+                      <div className="text-xs text-gray-500">{t.title}</div>
+                    </td>
+                    <td className="table-td text-xs text-gray-500">{t.schoolName}</td>
+                    <td className="table-td">
+                      <span className={statusColor[t.status.toUpperCase()] || 'badge-gray'}>
+                        {t.status}
+                      </span>
+                    </td>
+                    <td className="table-td">
+                      <span className={`badge ${priorityColor[t.priority.toUpperCase()] || 'text-gray-600 bg-gray-100'}`}>
+                        {t.priority}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {tickets.length === 0 && (
+                  <tr>
+                    <td colSpan="4" className="text-center py-6 text-gray-400 text-sm">
+                      No active support tickets found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
           {/* Knowledge Base */}
           <div className="mt-4 border-t border-gray-100 pt-4">
             <h4 className="font-semibold text-primary text-sm mb-3">Knowledge Base Management</h4>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {categories.map((c) => (
                 <div
                   key={c.id}

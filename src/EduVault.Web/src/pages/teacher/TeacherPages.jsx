@@ -113,7 +113,7 @@ export const TeacherDashboard = () => {
     <div className="space-y-6">
       <Topbar title="Teacher Dashboard" subtitle="Academic Year 2023-24" />
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'My Classes', value: stats?.totalClasses ?? '0', sub: stats?.myClassesToday || 'No classes today', icon: Building, color: 'text-blue-500', bgColor: 'bg-blue-50/50' },
           { label: 'Total Students', value: stats?.totalStudents ?? '0', sub: 'Across class roster', icon: Users, color: 'text-emerald-500', bgColor: 'bg-emerald-50/50' },
@@ -133,7 +133,7 @@ export const TeacherDashboard = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Graph 1: Students per Class */}
         <div className="card flex flex-col justify-between">
           <div className="mb-4">
@@ -481,85 +481,89 @@ export const TeacherClasses = () => {
               📅 Timetable Schedule: Class {selectedClass?.grade} - {selectedClass?.section}
             </h3>
 
-            <div className="grid grid-cols-6 gap-2 mb-2 text-center text-xs font-bold text-gray-400">
-              <div className="py-2 border border-transparent">Time</div>
-              {days.map(d => <div key={d} className="py-2 border border-transparent">{d}</div>)}
-            </div>
-
-            {periods.map(period => (
-              <div key={period} className="grid grid-cols-6 gap-2 mb-2 text-center">
-                <div className="flex flex-col items-center justify-center p-2 bg-gray-50 border border-gray-100 rounded-lg text-2xs font-bold text-gray-500">
-                  <span>Period {period}</span>
+            <div className="overflow-x-auto">
+              <div className="min-w-[700px] md:min-w-0">
+                <div className="grid grid-cols-6 gap-2 mb-2 text-center text-xs font-bold text-gray-400">
+                  <div className="py-2 border border-transparent">Time</div>
+                  {days.map(d => <div key={d} className="py-2 border border-transparent">{d}</div>)}
                 </div>
 
-                {days.map(day => {
-                  const cell = schedule.find(s => s.periodNumber === period && s.dayOfWeek === day);
-                  const isCancelled = cell?.isRescheduled && cell?.remark?.startsWith('Cancelled');
-                  return (
-                    <div
-                      key={day}
-                      className={`p-3 border rounded-xl flex flex-col justify-between min-h-[90px] text-left relative ${isCancelled
-                          ? 'border-red-200 bg-red-50/50'
-                          : cell
-                            ? 'border-blue-200 bg-blue-50/30'
-                            : 'border-dashed border-gray-200 bg-gray-50/20'
-                        }`}
-                    >
-                      {cell ? (
-                        <>
-                          <div>
-                            <div className="text-xs font-bold text-primary leading-tight">{cell.subjectName}</div>
-                            <div className="text-[10px] text-gray-400 mt-0.5">{cell.teacherName}</div>
-                            {cell.remark && (
-                              <div
-                                title={cell.remark}
-                                className={`text-[10px] leading-snug font-medium mt-1.5 p-1 px-2 rounded-md border cursor-help transition-all ${isCancelled
-                                    ? 'text-red-700 bg-red-50 border-red-100'
-                                    : 'text-blue-700 bg-blue-50 border-blue-100'
-                                  }`}
-                              >
-                                💬 {cell.remark.length > 30 ? cell.remark.slice(0, 30) + '...' : cell.remark}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex gap-2 mt-3 border-t border-gray-100 pt-2 no-print">
-                            <button
-                              onClick={() => {
-                                setActiveItem(cell);
-                                const isCancelledClass = cell.isRescheduled && cell.remark?.startsWith('Cancelled');
-                                setRemarkText(isCancelledClass ? cell.remark.replace(/^Cancelled:\s*/, '') : cell.remark || '');
-                                setShowRemarkModal(true);
-                              }}
-                              className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-                            >
-                              Remark
-                            </button>
-                            {isCancelled ? (
-                              <button
-                                onClick={() => handleRestoreClass(cell)}
-                                className="text-[11px] font-semibold text-green-600 hover:text-green-800 hover:underline transition-colors ml-auto"
-                              >
-                                Restore
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => { setActiveItem(cell); setCancelReason(''); setShowCancelModal(true); }}
-                                className="text-[11px] font-semibold text-red-500 hover:text-red-700 hover:underline transition-colors ml-auto"
-                              >
-                                Cancel
-                              </button>
-                            )}
-                          </div>
-                        </>
-                      ) : (
-                        <div className="text-2xs text-gray-300 font-medium italic m-auto">Free Period</div>
-                      )}
+                {periods.map(period => (
+                  <div key={period} className="grid grid-cols-6 gap-2 mb-2 text-center">
+                    <div className="flex flex-col items-center justify-center p-2 bg-gray-50 border border-gray-100 rounded-lg text-2xs font-bold text-gray-500">
+                      <span>Period {period}</span>
                     </div>
-                  );
-                })}
+
+                    {days.map(day => {
+                      const cell = schedule.find(s => s.periodNumber === period && s.dayOfWeek === day);
+                      const isCancelled = cell?.isRescheduled && cell?.remark?.startsWith('Cancelled');
+                      return (
+                        <div
+                          key={day}
+                          className={`p-3 border rounded-xl flex flex-col justify-between min-h-[90px] text-left relative ${isCancelled
+                              ? 'border-red-200 bg-red-50/50'
+                              : cell
+                                ? 'border-blue-200 bg-blue-50/30'
+                                : 'border-dashed border-gray-200 bg-gray-50/20'
+                            }`}
+                        >
+                          {cell ? (
+                            <>
+                              <div>
+                                <div className="text-xs font-bold text-primary leading-tight">{cell.subjectName}</div>
+                                <div className="text-[10px] text-gray-400 mt-0.5">{cell.teacherName}</div>
+                                {cell.remark && (
+                                  <div
+                                    title={cell.remark}
+                                    className={`text-[10px] leading-snug font-medium mt-1.5 p-1 px-2 rounded-md border cursor-help transition-all ${isCancelled
+                                        ? 'text-red-700 bg-red-50 border-red-100'
+                                        : 'text-blue-700 bg-blue-50 border-blue-100'
+                                      }`}
+                                  >
+                                    💬 {cell.remark.length > 30 ? cell.remark.slice(0, 30) + '...' : cell.remark}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex gap-2 mt-3 border-t border-gray-100 pt-2 no-print">
+                                <button
+                                  onClick={() => {
+                                    setActiveItem(cell);
+                                    const isCancelledClass = cell.isRescheduled && cell.remark?.startsWith('Cancelled');
+                                    setRemarkText(isCancelledClass ? cell.remark.replace(/^Cancelled:\s*/, '') : cell.remark || '');
+                                    setShowRemarkModal(true);
+                                  }}
+                                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                                >
+                                  Remark
+                                </button>
+                                {isCancelled ? (
+                                  <button
+                                    onClick={() => handleRestoreClass(cell)}
+                                    className="text-[11px] font-semibold text-green-600 hover:text-green-800 hover:underline transition-colors ml-auto"
+                                  >
+                                    Restore
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => { setActiveItem(cell); setCancelReason(''); setShowCancelModal(true); }}
+                                    className="text-[11px] font-semibold text-red-500 hover:text-red-700 hover:underline transition-colors ml-auto"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-2xs text-gray-300 font-medium italic m-auto">Free Period</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       )}
@@ -726,111 +730,115 @@ export const TeacherStudents = () => {
         </div>
 
         {activeTab === 'roster' ? (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="table-th text-left">Student Name</th>
-                <th className="table-th">Student ID</th>
-                <th className="table-th">Class</th>
-                <th className="table-th">Section</th>
-                <th className="table-th">Father's Name</th>
-                <th className="table-th">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(s => (
-                <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="table-td">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                        {s.name ? s.name[0] : '?'}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-primary text-sm">{s.name}</div>
-                        <div className="text-xs text-gray-400">{s.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="table-td text-xs font-mono text-gray-500">{s.studentId}</td>
-                  <td className="table-td text-sm">{s.class}</td>
-                  <td className="table-td text-sm">{s.section}</td>
-                  <td className="table-td text-sm">{s.father}</td>
-                  <td className="table-td">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => { setViewStudent(s); setShowViewModal(true); }}
-                        className="px-2.5 py-1 text-2xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded hover:bg-indigo-100 transition-all"
-                      >
-                        👤 Details
-                      </button>
-                      <button
-                        onClick={() => { setViewStudent(s); setTag('NEUTRAL'); setRemarkText(''); setShowRemarkModal(true); }}
-                        className="px-2.5 py-1 text-2xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded hover:bg-amber-100 transition-all"
-                      >
-                        💬 Add Remark
-                      </button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="table-th text-left min-w-[150px]">Student Name</th>
+                  <th className="table-th min-w-[120px]">Student ID</th>
+                  <th className="table-th min-w-[80px]">Class</th>
+                  <th className="table-th min-w-[80px]">Section</th>
+                  <th className="table-th min-w-[120px]">Father's Name</th>
+                  <th className="table-th min-w-[180px]">Actions</th>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No students matched.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map(s => (
+                  <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="table-td">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                          {s.name ? s.name[0] : '?'}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-primary text-sm">{s.name}</div>
+                          <div className="text-xs text-gray-400">{s.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="table-td text-xs font-mono text-gray-500">{s.studentId}</td>
+                    <td className="table-td text-sm">{s.class}</td>
+                    <td className="table-td text-sm">{s.section}</td>
+                    <td className="table-td text-sm">{s.father}</td>
+                    <td className="table-td">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { setViewStudent(s); setShowViewModal(true); }}
+                          className="px-2.5 py-1 text-2xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded hover:bg-indigo-100 transition-all"
+                        >
+                          👤 Details
+                        </button>
+                        <button
+                          onClick={() => { setViewStudent(s); setTag('NEUTRAL'); setRemarkText(''); setShowRemarkModal(true); }}
+                          className="px-2.5 py-1 text-2xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded hover:bg-amber-100 transition-all"
+                        >
+                          💬 Add Remark
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No students matched.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="table-th text-left">Student Info</th>
-                <th className="table-th">Class</th>
-                <th className="table-th">Section</th>
-                <th className="table-th">Parent/Guardian Name</th>
-                <th className="table-th">Guardian Contact No.</th>
-                <th className="table-th">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(s => (
-                <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="table-td">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                        {s.name ? s.name[0] : '?'}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-primary text-sm">{s.name}</div>
-                        <div className="text-xs text-gray-400">ID: {s.studentId}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="table-td text-sm">{s.class}</td>
-                  <td className="table-td text-sm">{s.section}</td>
-                  <td className="table-td font-semibold text-gray-700 text-sm">{s.father || 'N/A'}</td>
-                  <td className="table-td font-mono text-sm text-gray-600">{s.guardianPhone || 'N/A'}</td>
-                  <td className="table-td">
-                    {s.guardianPhone ? (
-                      <a
-                        href={`tel:${s.guardianPhone}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-2xs font-bold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-all"
-                      >
-                        📞 Call Parent
-                      </a>
-                    ) : (
-                      <span className="text-2xs text-gray-400">No Phone</span>
-                    )}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="table-th text-left min-w-[150px]">Student Info</th>
+                  <th className="table-th min-w-[80px]">Class</th>
+                  <th className="table-th min-w-[80px]">Section</th>
+                  <th className="table-th min-w-[150px]">Parent/Guardian Name</th>
+                  <th className="table-th min-w-[120px]">Guardian Contact No.</th>
+                  <th className="table-th min-w-[120px]">Actions</th>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No parent contact details found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map(s => (
+                  <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="table-td">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                          {s.name ? s.name[0] : '?'}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-primary text-sm">{s.name}</div>
+                          <div className="text-xs text-gray-400">ID: {s.studentId}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="table-td text-sm">{s.class}</td>
+                    <td className="table-td text-sm">{s.section}</td>
+                    <td className="table-td font-semibold text-gray-700 text-sm">{s.father || 'N/A'}</td>
+                    <td className="table-td font-mono text-sm text-gray-600">{s.guardianPhone || 'N/A'}</td>
+                    <td className="table-td">
+                      {s.guardianPhone ? (
+                        <a
+                          href={`tel:${s.guardianPhone}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-2xs font-bold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-all"
+                        >
+                          📞 Call Parent
+                        </a>
+                      ) : (
+                        <span className="text-2xs text-gray-400">No Phone</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No parent contact details found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -1482,70 +1490,72 @@ export const MarksEntry = () => {
           <div className="py-12 text-center text-gray-400 text-sm">Loading assigned curriculum subjects...</div>
         ) : (
           <div>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="table-th text-left">Subject Code</th>
-                  <th className="table-th text-left">Subject Name</th>
-                  <th className="table-th">Theory Marks (70)</th>
-                  <th className="table-th">Practical Marks (30)</th>
-                  <th className="table-th">Total (100)</th>
-                  <th className="table-th">Subject Remarks</th>
-                </tr>
-              </thead>
-              <tbody>
-                {subjectsList.map((s, idx) => {
-                  const theory = parseFloat(s.theoryMarks ?? 0);
-                  const practical = parseFloat(s.practicalMarks ?? 0);
-                  const total = s.theoryMarks !== null || s.practicalMarks !== null ? theory + practical : '-';
-                  return (
-                    <tr key={s.subjectId || idx} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="table-td font-mono text-xs text-gray-400">{s.subjectCode}</td>
-                      <td className="table-td font-semibold text-primary text-sm">{s.subjectName}</td>
-                      <td className="table-td">
-                        <input
-                          type="number"
-                          min="0"
-                          max="70"
-                          disabled={isApproved}
-                          value={s.theoryMarks ?? ''}
-                          onChange={e => updateSubjectField(s.subjectId, 'theoryMarks', e.target.value)}
-                          placeholder="e.g. 55"
-                          className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center m-auto focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-100"
-                        />
-                      </td>
-                      <td className="table-td">
-                        <input
-                          type="number"
-                          min="0"
-                          max="30"
-                          disabled={isApproved}
-                          value={s.practicalMarks ?? ''}
-                          onChange={e => updateSubjectField(s.subjectId, 'practicalMarks', e.target.value)}
-                          placeholder="e.g. 25"
-                          className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center m-auto focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-100"
-                        />
-                      </td>
-                      <td className="table-td text-center font-bold text-primary text-sm">{total}</td>
-                      <td className="table-td">
-                        <input
-                          disabled={isApproved}
-                          value={s.remarks || ''}
-                          onChange={e => updateSubjectField(s.subjectId, 'remarks', e.target.value)}
-                          placeholder="Feedback remark..."
-                          className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-100"
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-                {subjectsList.length === 0 && (
-                  <tr>
-                    <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No subjects linked to this student's class.</td>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="table-th text-left min-w-[100px]">Subject Code</th>
+                    <th className="table-th text-left min-w-[150px]">Subject Name</th>
+                    <th className="table-th min-w-[120px]">Theory Marks (70)</th>
+                    <th className="table-th min-w-[120px]">Practical Marks (30)</th>
+                    <th className="table-th min-w-[80px]">Total (100)</th>
+                    <th className="table-th min-w-[200px]">Subject Remarks</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {subjectsList.map((s, idx) => {
+                    const theory = parseFloat(s.theoryMarks ?? 0);
+                    const practical = parseFloat(s.practicalMarks ?? 0);
+                    const total = s.theoryMarks !== null || s.practicalMarks !== null ? theory + practical : '-';
+                    return (
+                      <tr key={s.subjectId || idx} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="table-td font-mono text-xs text-gray-400">{s.subjectCode}</td>
+                        <td className="table-td font-semibold text-primary text-sm">{s.subjectName}</td>
+                        <td className="table-td">
+                          <input
+                            type="number"
+                            min="0"
+                            max="70"
+                            disabled={isApproved}
+                            value={s.theoryMarks ?? ''}
+                            onChange={e => updateSubjectField(s.subjectId, 'theoryMarks', e.target.value)}
+                            placeholder="e.g. 55"
+                            className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center m-auto focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-100"
+                          />
+                        </td>
+                        <td className="table-td">
+                          <input
+                            type="number"
+                            min="0"
+                            max="30"
+                            disabled={isApproved}
+                            value={s.practicalMarks ?? ''}
+                            onChange={e => updateSubjectField(s.subjectId, 'practicalMarks', e.target.value)}
+                            placeholder="e.g. 25"
+                            className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center m-auto focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-100"
+                          />
+                        </td>
+                        <td className="table-td text-center font-bold text-primary text-sm">{total}</td>
+                        <td className="table-td">
+                          <input
+                            disabled={isApproved}
+                            value={s.remarks || ''}
+                            onChange={e => updateSubjectField(s.subjectId, 'remarks', e.target.value)}
+                            placeholder="Feedback remark..."
+                            className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-100"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {subjectsList.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No subjects linked to this student's class.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
             {subjectsList.length > 0 && !isApproved && (
               <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
@@ -1973,79 +1983,89 @@ export const Homework = () => {
           ))}
         </div>
         <div className="card">
-          <table className="w-full">
-            <thead><tr className="border-b border-gray-100">{['Assignment & Class', 'Due Date', 'Submissions', 'Status', 'Actions'].map(h => <th key={h} className="table-th">{h}</th>)}</tr></thead>
-            <tbody>
-              {homeworks.map((h, i) => {
-                // Parse submissions: prefer numeric fields, fall back to parsing "X/Y" string
-                const subStr = (h.submissions || '0/0').split('/');
-                const submittedFallback = parseInt(subStr[0]) || 0;
-                const totalFallback = parseInt(subStr[1]) || 0;
-                const submitted = (typeof h.submittedCount === 'number') ? h.submittedCount : submittedFallback;
-                const total = (typeof h.totalStudents === 'number' && h.totalStudents > 0) ? h.totalStudents : totalFallback;
-                const pct = total > 0 ? Math.min(100, Math.round((submitted / total) * 100)) : 0;
-                const menuId = h._id || i;
-                return (
-                  <tr key={menuId} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="table-td"><div className="font-semibold text-sm text-primary">{h.title}</div><div className="text-xs text-gray-400">{h.className}</div></td>
-                    <td className="table-td text-sm text-gray-500">📅 {new Date(h.dueDate).toLocaleDateString()}</td>
-                    <td className="table-td">
-                      <div className="text-xs font-semibold mb-1 text-gray-700">{submitted}/{total}</div>
-                      <div className="h-2 bg-gray-100 rounded-full w-28 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : pct >= 70 ? 'bg-blue-500' : 'bg-yellow-400'}`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <div className="text-xs text-gray-400 mt-0.5">{pct}% submitted</div>
-                    </td>
-                    <td className="table-td"><span className={h.status === 'Active' ? 'badge-info' : h.status === 'Pending Review' ? 'badge-warning' : 'badge-success'}>{h.status}</span></td>
-                    <td className="table-td relative" data-hw-menu>
-                      <button
-                        data-hw-menu
-                        onClick={() => setOpenMenuId(openMenuId === menuId ? null : menuId)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors font-bold text-lg"
-                      >⋮</button>
-                      {openMenuId === menuId && (
-                        <div data-hw-menu className="absolute right-0 top-10 z-50 bg-white border border-gray-200 rounded-xl shadow-xl w-52 py-1">
-                          <button
-                            onClick={() => handleSimulateSubmit(h._id)}
-                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                          >📥 Log Submission</button>
-                          <button
-                            onClick={() => handleSyncCount(h._id, h.className)}
-                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
-                          >🔢 Sync Enrollment Count</button>
-                          {h.status !== 'Completed' && (
-                            <button
-                              onClick={() => handleUpdateStatus(h._id, 'Completed')}
-                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
-                            >✅ Mark Completed</button>
-                          )}
-                          {h.status !== 'Active' && (
-                            <button
-                              onClick={() => handleUpdateStatus(h._id, 'Active')}
-                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                            >🔄 Mark Active</button>
-                          )}
-                          <div className="border-t border-gray-100 my-1" />
-                          <button
-                            onClick={() => handleDeleteHomework(h._id)}
-                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors"
-                          >🗑️ Delete</button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {homeworks.length === 0 && (
-                <tr>
-                  <td colSpan="5" className="text-center py-6 text-gray-400 text-sm">No assignments posted yet.</td>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="table-th text-left min-w-[200px]">Assignment & Class</th>
+                  <th className="table-th min-w-[120px]">Due Date</th>
+                  <th className="table-th min-w-[150px]">Submissions</th>
+                  <th className="table-th min-w-[100px]">Status</th>
+                  <th className="table-th min-w-[80px]">Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {homeworks.map((h, i) => {
+                  // Parse submissions: prefer numeric fields, fall back to parsing "X/Y" string
+                  const subStr = (h.submissions || '0/0').split('/');
+                  const submittedFallback = parseInt(subStr[0]) || 0;
+                  const totalFallback = parseInt(subStr[1]) || 0;
+                  const submitted = (typeof h.submittedCount === 'number') ? h.submittedCount : submittedFallback;
+                  const total = (typeof h.totalStudents === 'number' && h.totalStudents > 0) ? h.totalStudents : totalFallback;
+                  const pct = total > 0 ? Math.min(100, Math.round((submitted / total) * 100)) : 0;
+                  const menuId = h._id || i;
+                  return (
+                    <tr key={menuId} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="table-td"><div className="font-semibold text-sm text-primary">{h.title}</div><div className="text-xs text-gray-400">{h.className}</div></td>
+                      <td className="table-td text-sm text-gray-500">📅 {new Date(h.dueDate).toLocaleDateString()}</td>
+                      <td className="table-td">
+                        <div className="text-xs font-semibold mb-1 text-gray-700">{submitted}/{total}</div>
+                        <div className="h-2 bg-gray-100 rounded-full w-28 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : pct >= 70 ? 'bg-blue-500' : 'bg-yellow-400'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-gray-400 mt-0.5">{pct}% submitted</div>
+                      </td>
+                      <td className="table-td"><span className={h.status === 'Active' ? 'badge-info' : h.status === 'Pending Review' ? 'badge-warning' : 'badge-success'}>{h.status}</span></td>
+                      <td className="table-td relative" data-hw-menu>
+                        <button
+                          data-hw-menu
+                          onClick={() => setOpenMenuId(openMenuId === menuId ? null : menuId)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors font-bold text-lg"
+                        >⋮</button>
+                        {openMenuId === menuId && (
+                          <div data-hw-menu className="absolute right-0 top-10 z-50 bg-white border border-gray-200 rounded-xl shadow-xl w-52 py-1">
+                            <button
+                              onClick={() => handleSimulateSubmit(h._id)}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                            >📥 Log Submission</button>
+                            <button
+                              onClick={() => handleSyncCount(h._id, h.className)}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                            >🔢 Sync Enrollment Count</button>
+                            {h.status !== 'Completed' && (
+                              <button
+                                onClick={() => handleUpdateStatus(h._id, 'Completed')}
+                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                              >✅ Mark Completed</button>
+                            )}
+                            {h.status !== 'Active' && (
+                              <button
+                                onClick={() => handleUpdateStatus(h._id, 'Active')}
+                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                              >🔄 Mark Active</button>
+                            )}
+                            <div className="border-t border-gray-100 my-1" />
+                            <button
+                              onClick={() => handleDeleteHomework(h._id)}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors"
+                            >🗑️ Delete</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {homeworks.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="text-center py-6 text-gray-400 text-sm">No assignments posted yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {showNew && (
@@ -2159,29 +2179,29 @@ export const TeacherProfile = () => {
         <div className="card max-w-3xl">
 
           {/* Header */}
-          <div className="flex items-start justify-between mb-6 pb-6 border-b border-gray-100">
-            <div className="flex items-center gap-5">
-              <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center text-3xl font-bold text-accent">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 pb-6 border-b border-gray-100">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 w-full sm:w-auto">
+              <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center text-3xl font-bold text-accent shrink-0">
                 {profile?.firstName ? `${profile.firstName[0]}${profile.lastName[0]}` : '👤'}
               </div>
-              <div>
+              <div className="text-center sm:text-left w-full">
                 <h2 className="font-display text-2xl font-bold text-primary">{profile?.firstName} {profile?.lastName}</h2>
                 <p className="text-accent font-semibold text-sm mt-0.5">{profile?.department || 'Faculty'}</p>
-                <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                  <span>👩‍🏫 Faculty Account</span>
-                  <span>📧 {profile?.email}</span>
-                  <span>🆔 Employee ID: #{profile?.employeeId}</span>
+                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 mt-2 text-xs text-gray-500">
+                  <span className="flex items-center justify-center sm:justify-start gap-1">👩‍🏫 Faculty Account</span>
+                  <span className="flex items-center justify-center sm:justify-start gap-1">📧 {profile?.email}</span>
+                  <span className="flex items-center justify-center sm:justify-start gap-1">🆔 Employee ID: #{profile?.employeeId}</span>
                 </div>
               </div>
             </div>
             {!editing ? (
-              <button onClick={() => setEditing(true)} className="btn-outline text-xs flex items-center gap-1.5">
+              <button onClick={() => setEditing(true)} className="btn-outline text-xs flex items-center justify-center gap-1.5 w-full sm:w-auto shrink-0">
                 ✏️ Edit Profile
               </button>
             ) : (
-              <div className="flex gap-2">
-                <button onClick={handleCancel} className="btn-outline text-xs">Cancel</button>
-                <button onClick={handleSave} disabled={saving} className="btn-primary text-xs">
+              <div className="flex gap-2 w-full sm:w-auto shrink-0">
+                <button onClick={handleCancel} className="btn-outline text-xs flex-1 sm:flex-none justify-center">Cancel</button>
+                <button onClick={handleSave} disabled={saving} className="btn-primary text-xs flex-1 sm:flex-none justify-center">
                   {saving ? 'Saving...' : '💾 Save Changes'}
                 </button>
               </div>
@@ -2365,7 +2385,7 @@ export const TeacherSelfAttendance = () => {
     <div>
       <Topbar title="My Attendance Logs" subtitle="Track your daily attendance status and details" />
       
-      <div className="grid grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
         {[
           { label: 'Attendance Rate', value: attendanceRate, color: 'text-primary', icon: '📈' },
           { label: 'Present Days', value: presentCount, color: 'text-green-600', icon: '✅' },
@@ -2401,11 +2421,11 @@ export const TeacherSelfAttendance = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-gray-400">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-xs font-bold text-gray-400">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="py-2">{d}</div>)}
             </div>
 
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
               {calendarDays.map(item => {
                 if (item.padding) {
                   return <div key={item.key} className="h-16 bg-gray-50/30 rounded-xl border border-dashed border-gray-100" />;
