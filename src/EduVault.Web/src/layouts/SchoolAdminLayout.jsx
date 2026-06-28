@@ -10,6 +10,7 @@ import {
   ClipboardList, 
   BarChart3, 
   Megaphone, 
+  HelpCircle,
   Settings 
 } from 'lucide-react';
 
@@ -23,6 +24,7 @@ const links = [
   { icon: ClipboardList, label: 'Exams', path: '/school-admin/exams' },
   { icon: BarChart3, label: 'Reports', path: '/school-admin/reports' },
   { icon: Megaphone, label: 'Notices', path: '/school-admin/notices' },
+  { icon: HelpCircle, label: 'Support & Tickets', path: '/school-admin/tickets' },
   { icon: Settings, label: 'Setup', path: '/school-admin/setup' },
 ];
 

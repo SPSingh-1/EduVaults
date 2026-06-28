@@ -28,14 +28,9 @@ const Support = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Modal / Form state
-  const [showModal, setShowModal] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [newTicket, setNewTicket] = useState({
-    title: '',
-    schoolName: '',
-    priority: 'MEDIUM'
-  });
+  // School filter state
+  const [selectedSchool, setSelectedSchool] = useState('');
+  const [schoolsList, setSchoolsList] = useState([]);
 
   // Password reset utility state
   const [resetEmail, setResetEmail] = useState('');
@@ -50,6 +45,7 @@ const Support = () => {
       setTickets(res.data.tickets || []);
       setCategories(res.data.categories || []);
       setEvents(res.data.events || []);
+      setSchoolsList(res.data.schools || []);
       setStats({
         openTickets: res.data.stats?.openTickets || '00',
         avgResponse: res.data.stats?.avgResponse || '1.5h',
@@ -71,22 +67,15 @@ const Support = () => {
     fetchData();
   }, []);
 
-  const handleCreateTicket = async () => {
-    if (!newTicket.title || !newTicket.schoolName) {
-      alert('Please enter a ticket title and school name.');
-      return;
-    }
-    setSubmitting(true);
+  const handleUpdateStatus = async (ticketId, newStatus) => {
     try {
-      await apiClient.post('/support/tickets', newTicket);
-      setNewTicket({ title: '', schoolName: '', priority: 'MEDIUM' });
-      setShowModal(false);
-      fetchData();
+      await apiClient.patch(`/support/tickets/${ticketId}/status`, { status: newStatus });
+      setTickets((prev) =>
+        prev.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t))
+      );
     } catch (err) {
-      console.error('Error creating ticket:', err);
-      alert('Failed to submit ticket. Please try again.');
-    } finally {
-      setSubmitting(false);
+      console.error('Error updating status:', err);
+      alert('Failed to update ticket status.');
     }
   };
 
@@ -117,6 +106,17 @@ const Support = () => {
     alert('Copied temporary password to clipboard!');
   };
 
+  const uniqueSchools = [...new Set(tickets.map((t) => t.schoolName).filter(Boolean))].sort();
+
+  const filteredTickets = selectedSchool
+    ? tickets.filter((t) => t.schoolName === selectedSchool)
+    : tickets;
+
+  const openCount = filteredTickets.filter(t => t.status.toUpperCase() === 'OPEN' || t.status.toUpperCase() === 'IN PROGRESS').length;
+  const resolvedCount = filteredTickets.filter(t => t.status.toUpperCase() === 'RESOLVED').length;
+  const criticalCount = filteredTickets.filter(t => t.priority.toUpperCase() === 'HIGH' && t.status.toUpperCase() !== 'RESOLVED').length;
+  const totalCount = filteredTickets.length;
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
@@ -139,10 +139,10 @@ const Support = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Open Tickets', value: stats.openTickets, note: '-5%', color: 'text-blue-600' },
-          { label: 'Avg. Response', value: stats.avgResponse, note: '-10%', color: 'text-green-600' },
-          { label: 'System Uptime', value: stats.systemUptime, note: 'Stable', color: 'text-purple-600' },
-          { label: 'Critical Issues', value: stats.criticalIssues, note: 'Low Risk', color: 'text-red-600' }
+          { label: 'Open Tickets', value: String(openCount).padStart(2, '0'), note: 'Active queue', color: 'text-blue-600' },
+          { label: 'Resolved Tickets', value: String(resolvedCount).padStart(2, '0'), note: 'Resolved issues', color: 'text-green-600' },
+          { label: 'Critical Issues', value: String(criticalCount).padStart(2, '0'), note: criticalCount === 0 ? 'No critical issues' : 'Requires attention', color: 'text-red-600' },
+          { label: 'Total Tickets', value: String(totalCount).padStart(2, '0'), note: 'All tickets', color: 'text-purple-600' }
         ].map((s) => (
           <div key={s.label} className="stat-card">
             <div className="text-xs text-gray-500 mb-1">{s.label}</div>
@@ -155,35 +155,63 @@ const Support = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content Area */}
         <div className="card lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <h3 className="font-display font-semibold text-primary">Active Support Tickets</h3>
-            <button onClick={() => setShowModal(true)} className="btn-primary text-xs">
-              + New Ticket
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 font-medium">Filter by School:</span>
+              <select
+                value={selectedSchool}
+                onChange={(e) => setSelectedSchool(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white outline-none text-primary font-medium focus:border-primary min-w-[160px]"
+              >
+                <option value="">All Schools</option>
+                {uniqueSchools.map((school) => (
+                  <option key={school} value={school}>
+                    {school}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="table-th">Ticket</th>
-                  <th className="table-th">Submitter/School</th>
-                  <th className="table-th">Status</th>
-                  <th className="table-th">Priority</th>
+                  <th className="table-th text-left">Ticket</th>
+                  <th className="table-th text-left">School</th>
+                  <th className="table-th text-left">Contact Info</th>
+                  <th className="table-th text-left">Details</th>
+                  <th className="table-th text-left">Status</th>
+                  <th className="table-th text-left">Priority</th>
                 </tr>
               </thead>
               <tbody>
-                {tickets.map((t) => (
+                {filteredTickets.map((t) => (
                   <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                     <td className="table-td">
                       <div className="font-semibold text-primary text-xs">#{t.ticketNumber}</div>
-                      <div className="text-xs text-gray-500">{t.title}</div>
+                      <div className="text-xs text-gray-500 font-medium">{t.title}</div>
                     </td>
-                    <td className="table-td text-xs text-gray-500">{t.schoolName}</td>
+                    <td className="table-td text-xs text-gray-600 font-semibold">{t.schoolName}</td>
+                    <td className="table-td text-xs text-gray-500 font-mono">{t.contactNumber || '—'}</td>
+                    <td className="table-td text-xs text-gray-500 max-w-[200px] truncate" title={t.details}>
+                      {t.details || '—'}
+                    </td>
                     <td className="table-td">
-                      <span className={statusColor[t.status.toUpperCase()] || 'badge-gray'}>
-                        {t.status}
-                      </span>
+                      <select
+                        value={t.status.toUpperCase()}
+                        onChange={(e) => handleUpdateStatus(t.id, e.target.value)}
+                        className={`text-xs font-semibold rounded-lg px-2 py-1 border outline-none cursor-pointer ${
+                          t.status.toUpperCase() === 'OPEN' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                          t.status.toUpperCase() === 'IN PROGRESS' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                          'bg-green-50 text-green-700 border-green-200'
+                        }`}
+                      >
+                        <option value="OPEN">OPEN</option>
+                        <option value="IN PROGRESS">IN PROGRESS</option>
+                        <option value="RESOLVED">RESOLVED</option>
+                      </select>
                     </td>
                     <td className="table-td">
                       <span className={`badge ${priorityColor[t.priority.toUpperCase()] || 'text-gray-600 bg-gray-100'}`}>
@@ -192,9 +220,9 @@ const Support = () => {
                     </td>
                   </tr>
                 ))}
-                {tickets.length === 0 && (
+                {filteredTickets.length === 0 && (
                   <tr>
-                    <td colSpan="4" className="text-center py-6 text-gray-400 text-sm">
+                    <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">
                       No active support tickets found.
                     </td>
                   </tr>
@@ -302,65 +330,6 @@ const Support = () => {
           </div>
         </div>
       </div>
-
-      {/* New Ticket Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="bg-primary px-6 py-4">
-              <h3 className="font-display font-bold text-white text-base">Submit Support Ticket</h3>
-              <p className="text-blue-200 text-xs">Add a new internal ticket to the tracking queue.</p>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">School / Submitter *</label>
-                <input
-                  value={newTicket.schoolName}
-                  onChange={(e) => setNewTicket((p) => ({ ...p, schoolName: e.target.value }))}
-                  placeholder="e.g. Lincoln High School"
-                  className="input text-xs"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Ticket Description *</label>
-                <input
-                  value={newTicket.title}
-                  onChange={(e) => setNewTicket((p) => ({ ...p, title: e.target.value }))}
-                  placeholder="e.g. SSO Login failure for faculty staff"
-                  className="input text-xs"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Priority *</label>
-                <select
-                  value={newTicket.priority}
-                  onChange={(e) => setNewTicket((p) => ({ ...p, priority: e.target.value }))}
-                  className="input text-xs"
-                >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
-              <button
-                onClick={() => setShowModal(false)}
-                className="btn-outline text-xs py-1.5 px-3"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateTicket}
-                disabled={submitting}
-                className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
-              >
-                {submitting ? 'Submitting...' : 'Create Ticket'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

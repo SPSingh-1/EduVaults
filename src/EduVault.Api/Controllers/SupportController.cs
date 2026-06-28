@@ -10,7 +10,7 @@ namespace EduVault.Api.Controllers
 {
     [ApiController]
     [Route("api/support")]
-    [Authorize(Roles = "superadmin")]
+    [Authorize(Roles = "superadmin,schooladmin")]
     public class SupportController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -22,10 +22,25 @@ namespace EduVault.Api.Controllers
             _authService = authService;
         }
 
+        private Guid? GetSchoolId()
+        {
+            var schoolIdStr = User.FindFirst("schoolId")?.Value;
+            if (string.IsNullOrEmpty(schoolIdStr)) return null;
+            return Guid.Parse(schoolIdStr);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetDashboardData()
         {
+            var isSuperAdmin = User.IsInRole("superadmin");
+            Guid? userSchoolId = null;
+            if (!isSuperAdmin)
+            {
+                userSchoolId = GetSchoolId();
+            }
+
             var tickets = (await _unitOfWork.SupportTickets.GetAllAsync())
+                .Where(t => isSuperAdmin || t.SchoolId == userSchoolId)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToList();
 
@@ -33,10 +48,21 @@ namespace EduVault.Api.Controllers
                 .OrderBy(c => c.Title)
                 .ToList();
 
-            var events = (await _unitOfWork.SystemEvents.GetAllAsync())
-                .OrderByDescending(e => e.CreatedAt)
-                .Take(5)
-                .ToList();
+            var events = isSuperAdmin 
+                ? (await _unitOfWork.SystemEvents.GetAllAsync())
+                    .OrderByDescending(e => e.CreatedAt)
+                    .Take(5)
+                    .ToList()
+                : new System.Collections.Generic.List<SystemEvent>();
+
+            object schools = null;
+            if (isSuperAdmin)
+            {
+                schools = (await _unitOfWork.Schools.GetAllAsync())
+                    .OrderBy(s => s.Name)
+                    .Select(s => new { id = s.Id, name = s.Name })
+                    .ToList();
+            }
 
             // Calculate stats
             var openTicketsCount = tickets.Count(t => t.Status == "OPEN" || t.Status == "IN PROGRESS");
@@ -46,7 +72,6 @@ namespace EduVault.Api.Controllers
             var settings = (await _unitOfWork.PlatformSettings.GetAllAsync()).FirstOrDefault();
             var uptime = "99.9%";
             
-            // Simple default stat values matching original UI
             var stats = new
             {
                 OpenTickets = openTicketsCount.ToString("D2"),
@@ -61,17 +86,28 @@ namespace EduVault.Api.Controllers
                 Categories = categories,
                 Events = events,
                 Stats = stats,
+                Schools = schools,
                 SystemStatus = "Healthy"
             });
         }
 
         [HttpPost("tickets")]
+        [Authorize(Roles = "schooladmin")]
         public async Task<IActionResult> CreateTicket([FromBody] CreateTicketRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.SchoolName))
+            if (string.IsNullOrWhiteSpace(request.Title))
             {
-                return BadRequest(new { error = "Title and School Name are required." });
+                return BadRequest(new { error = "Title is required." });
             }
+
+            var schoolIdStr = User.FindFirst("schoolId")?.Value;
+            if (string.IsNullOrEmpty(schoolIdStr))
+            {
+                return Unauthorized(new { error = "School ID missing from token." });
+            }
+            var schoolId = Guid.Parse(schoolIdStr);
+            var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+            var schoolName = school?.Name ?? "Unknown School";
 
             var random = new Random();
             var ticketNumber = $"TK-{random.Next(1000, 9999)}";
@@ -80,7 +116,10 @@ namespace EduVault.Api.Controllers
             {
                 TicketNumber = ticketNumber,
                 Title = request.Title,
-                SchoolName = request.SchoolName,
+                SchoolName = schoolName,
+                SchoolId = schoolId,
+                Details = request.Details ?? string.Empty,
+                ContactNumber = request.ContactNumber ?? string.Empty,
                 Status = "OPEN",
                 Priority = string.IsNullOrWhiteSpace(request.Priority) ? "MEDIUM" : request.Priority.ToUpper(),
                 CreatedAt = DateTime.UtcNow
@@ -93,7 +132,7 @@ namespace EduVault.Api.Controllers
             {
                 Icon = "🎫",
                 Title = "New Ticket Created",
-                Description = $"Ticket {ticketNumber} submitted by {request.SchoolName}",
+                Description = $"Ticket {ticketNumber} submitted by {schoolName}",
                 CreatedAt = DateTime.UtcNow
             };
             await _unitOfWork.SystemEvents.AddAsync(newEvent);
@@ -104,6 +143,7 @@ namespace EduVault.Api.Controllers
         }
 
         [HttpPost("reset-password")]
+        [Authorize(Roles = "superadmin")]
         public async Task<IActionResult> ResetUserPassword([FromBody] ResetPasswordRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email))
@@ -141,17 +181,56 @@ namespace EduVault.Api.Controllers
                 tempPassword = tempPassword
             });
         }
+
+        [HttpPatch("tickets/{id}/status")]
+        [Authorize(Roles = "superadmin")]
+        public async Task<IActionResult> UpdateTicketStatus(Guid id, [FromBody] UpdateStatusRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Status))
+            {
+                return BadRequest(new { error = "Status is required." });
+            }
+
+            var ticket = await _unitOfWork.SupportTickets.GetByIdAsync(id);
+            if (ticket == null)
+            {
+                return NotFound(new { error = "Ticket not found." });
+            }
+
+            ticket.Status = request.Status.ToUpper();
+            _unitOfWork.SupportTickets.Update(ticket);
+
+            // Log a system event for the status update
+            var newEvent = new SystemEvent
+            {
+                Icon = "⚙️",
+                Title = "Ticket Status Updated",
+                Description = $"Ticket {ticket.TicketNumber} status changed to {ticket.Status}",
+                CreatedAt = DateTime.UtcNow
+            };
+            await _unitOfWork.SystemEvents.AddAsync(newEvent);
+
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(ticket);
+        }
     }
 
     public class CreateTicketRequest
     {
         public string Title { get; set; } = string.Empty;
-        public string SchoolName { get; set; } = string.Empty;
         public string Priority { get; set; } = "MEDIUM";
+        public string Details { get; set; } = string.Empty;
+        public string ContactNumber { get; set; } = string.Empty;
     }
 
     public class ResetPasswordRequest
     {
         public string Email { get; set; } = string.Empty;
+    }
+
+    public class UpdateStatusRequest
+    {
+        public string Status { get; set; } = string.Empty;
     }
 }

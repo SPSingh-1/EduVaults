@@ -11,5 +11,8 @@ namespace EduVault.Core.Entities
         public string Status { get; set; } = "OPEN"; // OPEN, IN PROGRESS, RESOLVED
         public string Priority { get; set; } = "MEDIUM"; // HIGH, MEDIUM, LOW
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string Details { get; set; } = string.Empty;
+        public string ContactNumber { get; set; } = string.Empty;
+        public Guid? SchoolId { get; set; }
     }
 }

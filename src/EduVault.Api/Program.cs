@@ -211,8 +211,20 @@ using (var scope = app.Services.CreateScope())
                     ""SchoolName"" TEXT NOT NULL,
                     ""Status"" TEXT NOT NULL,
                     ""Priority"" TEXT NOT NULL,
-                    ""CreatedAt"" TIMESTAMP WITH TIME ZONE NOT NULL
+                    ""CreatedAt"" TIMESTAMP WITH TIME ZONE NOT NULL,
+                    ""Details"" TEXT NULL,
+                    ""ContactNumber"" TEXT NULL,
+                    ""SchoolId"" UUID NULL
                 );";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"SupportTickets\" ADD COLUMN IF NOT EXISTS \"Details\" TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"SupportTickets\" ADD COLUMN IF NOT EXISTS \"ContactNumber\" TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+
+            cmd.CommandText = "ALTER TABLE \"SupportTickets\" ADD COLUMN IF NOT EXISTS \"SchoolId\" UUID NULL;";
             await cmd.ExecuteNonQueryAsync();
 
             // Create Knowledge Base Categories table
@@ -236,47 +248,15 @@ using (var scope = app.Services.CreateScope())
                 );";
             await cmd.ExecuteNonQueryAsync();
 
-            // Seed Support Tickets if empty
-            cmd.CommandText = "SELECT COUNT(*) FROM \"SupportTickets\";";
-            var ticketsCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
-            if (ticketsCount == 0)
-            {
-                cmd.CommandText = @"
-                    INSERT INTO ""SupportTickets"" (""Id"", ""TicketNumber"", ""Title"", ""SchoolName"", ""Status"", ""Priority"", ""CreatedAt"")
-                    VALUES 
-                    ('" + Guid.NewGuid() + @"', 'TK-8821', 'SSO Login failure for faculty staff', 'Lincoln High School', 'IN PROGRESS', 'HIGH', '" + DateTime.UtcNow.AddMinutes(-45).ToString("o") + @"'),
-                    ('" + Guid.NewGuid() + @"', 'TK-8794', 'Bulk student data import error', 'Westside Academy', 'OPEN', 'MEDIUM', '" + DateTime.UtcNow.AddHours(-2).ToString("o") + @"'),
-                    ('" + Guid.NewGuid() + @"', 'TK-8750', 'Billing period update request', 'Elite Grove Prep', 'RESOLVED', 'LOW', '" + DateTime.UtcNow.AddDays(-1).ToString("o") + @"');";
-                await cmd.ExecuteNonQueryAsync();
-            }
+            // Clear all support tickets, knowledge base categories, and system events to start completely blank
+            cmd.CommandText = "DELETE FROM \"SupportTickets\";";
+            await cmd.ExecuteNonQueryAsync();
 
-            // Seed Knowledge Base Categories if empty
-            cmd.CommandText = "SELECT COUNT(*) FROM \"KnowledgeBaseCategories\";";
-            var kbCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
-            if (kbCount == 0)
-            {
-                cmd.CommandText = @"
-                    INSERT INTO ""KnowledgeBaseCategories"" (""Id"", ""Icon"", ""Title"", ""ArticleCount"")
-                    VALUES 
-                    ('" + Guid.NewGuid() + @"', '📋', 'Onboarding Guide', 51),
-                    ('" + Guid.NewGuid() + @"', '💳', 'Billing & Licenses', 8),
-                    ('" + Guid.NewGuid() + @"', '🔧', 'Troubleshooting', 34);";
-                await cmd.ExecuteNonQueryAsync();
-            }
+            cmd.CommandText = "DELETE FROM \"KnowledgeBaseCategories\";";
+            await cmd.ExecuteNonQueryAsync();
 
-            // Seed System Events if empty
-            cmd.CommandText = "SELECT COUNT(*) FROM \"SystemEvents\";";
-            var eventsCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
-            if (eventsCount == 0)
-            {
-                cmd.CommandText = @"
-                    INSERT INTO ""SystemEvents"" (""Id"", ""Icon"", ""Title"", ""Description"", ""CreatedAt"")
-                    VALUES 
-                    ('" + Guid.NewGuid() + @"', '🟢', 'Backup Completed', 'Weekly snapshot stored', '" + DateTime.UtcNow.AddHours(-1).ToString("o") + @"'),
-                    ('" + Guid.NewGuid() + @"', '🟡', 'New School Admin', 'Lakeside Academy registered', '" + DateTime.UtcNow.AddHours(-3).ToString("o") + @"'),
-                    ('" + Guid.NewGuid() + @"', '🔴', 'API Latency Spike', 'Auth service slow response', '" + DateTime.UtcNow.AddHours(-5).ToString("o") + @"');";
-                await cmd.ExecuteNonQueryAsync();
-            }
+            cmd.CommandText = "DELETE FROM \"SystemEvents\";";
+            await cmd.ExecuteNonQueryAsync();
 
             // Create Platform Plans table
             cmd.CommandText = @"

@@ -37,6 +37,7 @@ import { Classes, Notices, Exams, Admission } from './pages/school-admin/AdminPa
 import Setup from './pages/school-admin/Setup';
 import Reports from './pages/school-admin/Reports';
 import SchoolAdminProfile from './pages/school-admin/Profile';
+import Tickets from './pages/school-admin/Tickets';
 
 // Teacher Pages
 import {
@@ -106,6 +107,7 @@ export default function App() {
               <Route path="exams" element={<Exams />} />
               <Route path="reports" element={<Reports />} />
               <Route path="notices" element={<Notices />} />
+              <Route path="tickets" element={<Tickets />} />
               <Route path="setup" element={<Setup />} />
               <Route path="profile" element={<SchoolAdminProfile />} />
             </Route>
