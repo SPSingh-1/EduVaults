@@ -795,18 +795,18 @@ export const Exams = () => {
                 type="button"
                 onClick={handleSendSchedule}
                 disabled={sendingSchedule || cycleExams.length === 0}
-                className="btn-primary text-xs py-1.5 px-3 bg-white/20 hover:bg-white/30 text-white disabled:opacity-50 disabled:cursor-not-allowed border-0 font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm shrink-0"
+                className="btn-primary text-xs py-1.5 px-3 bg-white/20 hover:bg-white/30 border border-white/30 hover:border-white/50 text-white disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-md transition-all active:scale-95 shrink-0"
               >
                 {sendingSchedule ? 'Sending...' : '📢 Send Schedule'}
               </button>
             )}
-            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input bg-white/10 border-white/20 text-white text-xs py-1 px-2 rounded-xl" style={{ width: '120px' }} />
-            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input bg-white/10 border-white/20 text-white text-xs py-1 px-2 rounded-xl" style={{ width: '120px' }} />
+            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input bg-white/10 border border-white/30 hover:border-white/50 text-white text-xs py-1 px-2 rounded-xl transition-colors shadow-sm" style={{ width: '120px' }} />
+            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input bg-white/10 border-white/30 hover:border-white/50 text-white text-xs py-1 px-2 rounded-xl transition-colors shadow-sm" style={{ width: '120px' }} />
             <div className="flex gap-2 w-full sm:w-auto">
               <select
                 value={filterClassId}
                 onChange={e => setFilterClassId(e.target.value)}
-                className="input bg-white/10 border-white/20 text-white text-xs flex-1 sm:w-40"
+                className="input bg-white/10 border border-white/30 hover:border-white/50 text-white text-xs flex-1 sm:w-40 transition-colors shadow-sm"
               >
                 <option value="" className="text-primary">All Classes</option>
                 {classes.map(c => (
@@ -816,7 +816,7 @@ export const Exams = () => {
               <select
                 value={filterExamType}
                 onChange={e => setFilterExamType(e.target.value)}
-                className="input bg-white/10 border-white/20 text-white text-xs flex-1 sm:w-48"
+                className="input bg-white/10 border border-white/30 hover:border-white/50 text-white text-xs flex-1 sm:w-48 transition-colors shadow-sm"
               >
                 {examTypes.map(et => (
                   <option key={et.id} value={et.name} className="text-primary">{et.name}</option>
@@ -831,8 +831,8 @@ export const Exams = () => {
             {cycleExams.map((e, idx) => {
               const { weekday, dayNum, month } = getWeekdayAndDay(e.rawDate || e.date);
               return (
-                <div key={e.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex gap-4 hover:bg-white/10 transition-all">
-                  <div className="flex flex-col items-center justify-center bg-white/10 rounded-lg px-3 py-2 border border-white/20 w-16 h-16 shrink-0">
+                <div key={e.id} className="bg-white/10 border border-white/20 rounded-xl p-4 flex gap-4 hover:bg-white/15 transition-all shadow-md shadow-black/10 hover:shadow-lg hover:translate-y-[-2px]">
+                  <div className="flex flex-col items-center justify-center bg-white/20 rounded-lg px-3 py-2 border border-white/30 w-16 h-16 shrink-0 shadow-inner">
                     <span className="text-xxs uppercase tracking-wider text-white/70 font-bold">{weekday.slice(0, 3)}</span>
                     <span className="text-xl font-bold leading-none my-0.5">{dayNum}</span>
                     <span className="text-xxs uppercase text-white/70 font-semibold">{month}</span>
