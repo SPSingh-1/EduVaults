@@ -12,9 +12,7 @@ using System.IO;
 // Load environment variables from .env file if it exists at API root or workspace root
 var pathsToTry = new[] {
     Path.Combine(Directory.GetCurrentDirectory(), ".env"),
-    Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".env"),
-    Path.Combine(AppContext.BaseDirectory, ".env"),
-    Path.Combine(Directory.GetCurrentDirectory(), "src", "EduVault.Api", ".env")
+    Path.Combine(AppContext.BaseDirectory, ".env")
 };
 foreach (var path in pathsToTry)
 {

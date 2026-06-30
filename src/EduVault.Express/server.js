@@ -9,7 +9,6 @@ const jwt = require('jsonwebtoken');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 require('dotenv').config();
 
 const connectDB = require('./config/db');
