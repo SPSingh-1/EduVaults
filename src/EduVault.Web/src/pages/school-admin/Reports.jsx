@@ -274,20 +274,52 @@ const Reports = () => {
 
   return (
     <div>
-      <Topbar
-        title="Academic Reports & Release"
-        subtitle="Dashboard › Academics › Student Reports"
-      />
+      <div className="no-print">
+        <Topbar
+          title="Academic Reports & Release"
+          subtitle="Dashboard › Academics › Student Reports"
+        />
+      </div>
 
       {/* Print styles */}
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
-          body { background-color: white !important; color: black !important; }
-          .main-content, .main-content *, #root, #root *, body * { visibility: hidden; }
-          .printable-card-modal, .printable-card-modal * { visibility: visible; }
-          .printable-card-modal { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 24px; background-color: white !important; box-shadow: none !important; border: none !important; }
-          .no-print { display: none !important; }
-          .print-modal-backdrop { background: transparent !important; position: absolute !important; inset: 0 !important; z-index: 9999 !important; display: block !important; padding: 0 !important; overflow: visible !important; }
+          body, html {
+            background-color: white !important;
+            color: black !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .sidebar, 
+          .no-print, 
+          .no-print * {
+            display: none !important;
+          }
+          .main-content {
+            margin: 0 !important;
+            padding: 0 !important;
+            min-height: auto !important;
+          }
+          .space-y-4 {
+            display: none !important;
+          }
+          .print-modal-backdrop {
+            position: relative !important;
+            background: transparent !important;
+            padding: 0 !important;
+            display: block !important;
+            z-index: auto !important;
+            inset: auto !important;
+            overflow: visible !important;
+          }
+          .printable-card-modal {
+            border: none !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            background-color: white !important;
+          }
         }
       `}} />
 
