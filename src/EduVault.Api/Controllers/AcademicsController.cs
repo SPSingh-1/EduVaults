@@ -58,9 +58,13 @@ namespace EduVault.Api.Controllers
             var classes = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
             var teachers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "teacher");
 
+            var classIds = classes.Select(c => c.Id).ToList();
+            var enrollments = await _unitOfWork.Enrollments.FindAsync(e => classIds.Contains(e.ClassId) && e.Status == "ACTIVE");
+            var enrollmentCounts = enrollments.GroupBy(e => e.ClassId).ToDictionary(g => g.Key, g => g.Count());
+
             var result = classes.Select(c => {
                 var teacher = teachers.FirstOrDefault(t => t.Id == c.ClassTeacherId);
-                var enrolledCount = _unitOfWork.Enrollments.FindAsync(e => e.ClassId == c.Id && e.Status == "ACTIVE").Result.Count();
+                var enrolledCount = enrollmentCounts.ContainsKey(c.Id) ? enrollmentCounts[c.Id] : 0;
                 return new {
                     c.Id,
                     c.Grade,
@@ -230,11 +234,15 @@ namespace EduVault.Api.Controllers
         {
             var schoolId = GetSchoolId();
             var studentUsers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student");
-            var enrollments = await _unitOfWork.Enrollments.GetAllAsync();
+            var studentIds = studentUsers.Select(u => u.Id).ToList();
+
             var classes = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
-            var studentsData = await _unitOfWork.Students.GetAllAsync();
-            var exams = await _unitOfWork.Exams.GetAllAsync();
-            var examResults = await _unitOfWork.ExamResults.GetAllAsync();
+            var classIds = classes.Select(c => c.Id).ToList();
+
+            var enrollments = await _unitOfWork.Enrollments.FindAsync(e => classIds.Contains(e.ClassId));
+            var studentsData = await _unitOfWork.Students.FindAsync(s => studentIds.Contains(s.UserId));
+            var exams = await _unitOfWork.Exams.FindAsync(e => classIds.Contains(e.ClassId));
+            var examResults = await _unitOfWork.ExamResults.FindAsync(r => studentIds.Contains(r.StudentId));
 
             var result = studentUsers.Select(u => {
                 var studentInfo = studentsData.FirstOrDefault(s => s.UserId == u.Id);

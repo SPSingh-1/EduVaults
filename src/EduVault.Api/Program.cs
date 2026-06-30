@@ -7,6 +7,39 @@ using EduVault.Infrastructure.Data;
 using EduVault.Infrastructure.Repositories;
 using EduVault.Api.Services;
 
+using System.IO;
+
+// Load environment variables from .env file if it exists at API root or workspace root
+var pathsToTry = new[] {
+    Path.Combine(Directory.GetCurrentDirectory(), ".env"),
+    Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".env"),
+    Path.Combine(AppContext.BaseDirectory, ".env"),
+    Path.Combine(Directory.GetCurrentDirectory(), "src", "EduVault.Api", ".env")
+};
+foreach (var path in pathsToTry)
+{
+    if (File.Exists(path))
+    {
+        foreach (var line in File.ReadAllLines(path))
+        {
+            var trimmedLine = line.Trim();
+            if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#")) continue;
+            
+            var parts = trimmedLine.Split('=', 2);
+            if (parts.Length == 2)
+            {
+                var envKey = parts[0].Trim();
+                var envVal = parts[1].Trim();
+                if (envVal.StartsWith("\"") && envVal.EndsWith("\"")) envVal = envVal.Substring(1, envVal.Length - 2);
+                else if (envVal.StartsWith("'") && envVal.EndsWith("'")) envVal = envVal.Substring(1, envVal.Length - 2);
+                
+                Environment.SetEnvironmentVariable(envKey, envVal);
+            }
+        }
+        break; // Only load from the first one found
+    }
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -118,10 +151,13 @@ using (var scope = app.Services.CreateScope())
         // ─── Seed Super Admin (required for platform operation) ────────────────
         if (!context.Users.Any(u => u.Role == "superadmin"))
         {
+            var seedEmail = Environment.GetEnvironmentVariable("SUPERADMIN_EMAIL") ?? "superadmin@eduvault.com";
+            var seedPassword = Environment.GetEnvironmentVariable("SUPERADMIN_PASSWORD") ?? "Admin123!";
+
             var superAdmin = new EduVault.Core.Entities.User
             {
-                Email = "superadmin@eduvault.com",
-                PasswordHash = authService.HashPassword("Admin123!"),
+                Email = seedEmail,
+                PasswordHash = authService.HashPassword(seedPassword),
                 Role = "superadmin",
                 FirstName = "EduVault",
                 LastName = "SuperAdmin",
@@ -129,7 +165,7 @@ using (var scope = app.Services.CreateScope())
             };
             context.Users.Add(superAdmin);
             context.SaveChanges();
-            Console.WriteLine("Seeded Super Admin: superadmin@eduvault.com / Admin123!");
+            Console.WriteLine($"Seeded Super Admin: {seedEmail} / [HIDDEN]");
         }
 
         // Apply database migrations programmatically via EF Core
