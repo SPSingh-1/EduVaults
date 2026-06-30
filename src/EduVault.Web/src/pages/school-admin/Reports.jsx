@@ -25,6 +25,10 @@ const getBadgeStyle = (examType) => {
 };
 
 const Reports = () => {
+  const savedUser = localStorage.getItem('eduvault_user');
+  const loggedInUser = savedUser ? JSON.parse(savedUser) : null;
+  const schoolName = loggedInUser?.schoolName || "EduVault Advanced Academy";
+
   const [classesList, setClassesList] = useState([]);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [students, setStudents] = useState([]);
@@ -283,6 +287,7 @@ const Reports = () => {
           .printable-card-modal, .printable-card-modal * { visibility: visible; }
           .printable-card-modal { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 24px; background-color: white !important; box-shadow: none !important; border: none !important; }
           .no-print { display: none !important; }
+          .print-modal-backdrop { background: transparent !important; position: absolute !important; inset: 0 !important; z-index: 9999 !important; display: block !important; padding: 0 !important; overflow: visible !important; }
         }
       `}} />
 
@@ -505,7 +510,7 @@ const Reports = () => {
 
       {/* Individual Report Card Modal */}
       {selectedStudent && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 no-print overflow-y-auto">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 print-modal-backdrop overflow-y-auto">
           <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden printable-card-modal">
             {/* Modal Header */}
             <div className="bg-primary p-5 text-white flex justify-between items-center no-print">
@@ -537,7 +542,7 @@ const Reports = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <h1 className="font-display font-extrabold text-2xl text-primary tracking-tight">
-                      EDUVAULT ADVANCED ACADEMY
+                      {schoolName.toUpperCase()}
                     </h1>
                     <p className="text-xs text-gray-400 font-light mt-0.5">
                       Academic Progress Report Card · Official Record
