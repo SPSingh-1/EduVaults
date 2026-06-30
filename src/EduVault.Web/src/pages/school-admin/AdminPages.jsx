@@ -783,11 +783,11 @@ export const Exams = () => {
       } />
 
       {/* Visual Timeline Section */}
-      <div className="card mb-6 bg-gradient-to-r from-slate-900 to-indigo-950 text-white border-0 shadow-xl p-6">
+      <div className="card mb-6 bg-primary text-white border-0 shadow-xl p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-4">
           <div>
             <h3 className="font-display font-bold text-lg text-white">🗓 Chronological Exam Timeline</h3>
-            <p className="text-blue-200 text-xs">Viewing schedule for {selectedClassName || 'Selected Class'} ({filterExamType})</p>
+            <p className="text-white/80 text-xs">Viewing schedule for {selectedClassName || 'Selected Class'} ({filterExamType})</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:w-auto">
             {filterClassId && (
@@ -795,7 +795,7 @@ export const Exams = () => {
                 type="button"
                 onClick={handleSendSchedule}
                 disabled={sendingSchedule || cycleExams.length === 0}
-                className="btn-primary text-xs py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed border-0 font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm shrink-0"
+                className="btn-primary text-xs py-1.5 px-3 bg-white/20 hover:bg-white/30 text-white disabled:opacity-50 disabled:cursor-not-allowed border-0 font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm shrink-0"
               >
                 {sendingSchedule ? 'Sending...' : '📢 Send Schedule'}
               </button>
@@ -832,18 +832,18 @@ export const Exams = () => {
               const { weekday, dayNum, month } = getWeekdayAndDay(e.rawDate || e.date);
               return (
                 <div key={e.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex gap-4 hover:bg-white/10 transition-all">
-                  <div className="flex flex-col items-center justify-center bg-indigo-500/20 rounded-lg px-3 py-2 border border-indigo-500/30 w-16 h-16 shrink-0">
-                    <span className="text-xxs uppercase tracking-wider text-indigo-300 font-bold">{weekday.slice(0, 3)}</span>
+                  <div className="flex flex-col items-center justify-center bg-white/10 rounded-lg px-3 py-2 border border-white/20 w-16 h-16 shrink-0">
+                    <span className="text-xxs uppercase tracking-wider text-white/70 font-bold">{weekday.slice(0, 3)}</span>
                     <span className="text-xl font-bold leading-none my-0.5">{dayNum}</span>
-                    <span className="text-xxs uppercase text-indigo-300 font-semibold">{month}</span>
+                    <span className="text-xxs uppercase text-white/70 font-semibold">{month}</span>
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <div className="text-xxs text-accent font-bold uppercase tracking-wider mb-0.5">Exam #{idx + 1}</div>
+                    <div className="text-xxs text-white/90 font-bold uppercase tracking-wider mb-0.5">Exam #{idx + 1}</div>
                     <div className="font-bold text-sm truncate" title={e.subject}>{e.subject}</div>
-                    <div className="text-xxs text-blue-200 truncate mt-1">⏱️ Time: {e.time || 'N/A'}</div>
-                    <div className="text-xxs text-blue-200 truncate">👨‍🏫 Proctor: {e.proctor}</div>
+                    <div className="text-xxs text-white/80 truncate mt-1">⏱️ Time: {e.time || 'N/A'}</div>
+                    <div className="text-xxs text-white/80 truncate">👨‍🏫 Proctor: {e.proctor}</div>
                     {e.subjectCode && e.subjectCode.toUpperCase() !== e.subject.toUpperCase().replace(/\s+/g, '') && (
-                      <div className="text-[10px] text-gray-400 mt-0.5 font-mono">{e.subjectCode}</div>
+                      <div className="text-[10px] text-white/60 mt-0.5 font-mono">{e.subjectCode}</div>
                     )}
                   </div>
                 </div>
@@ -851,7 +851,7 @@ export const Exams = () => {
             })}
           </div>
         ) : (
-          <div className="text-center py-8 text-blue-200 text-sm italic">
+          <div className="text-center py-8 text-white/70 text-sm italic">
             No exams scheduled for {selectedClassName || 'this class'} during the {filterExamType} cycle.
           </div>
         )}
