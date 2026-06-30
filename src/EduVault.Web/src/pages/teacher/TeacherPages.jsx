@@ -612,12 +612,39 @@ export const TeacherClasses = () => {
   );
 };
 
+const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
+  const [focused, setFocused] = useState(false);
+  const formatDisplay = (val) => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return val;
+  };
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      {label && <span className="text-xs font-semibold whitespace-nowrap">{label}</span>}
+      <input
+        type={focused ? 'date' : 'text'}
+        value={focused ? value : formatDisplay(value)}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="dd/mm/yyyy"
+        className={className}
+        style={style}
+      />
+    </div>
+  );
+};
+
 // --- Dedicated Teacher Taught Students ---
 export const TeacherStudents = () => {
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [activeTab, setActiveTab] = useState('roster'); // 'roster', 'contacts'
 
   const [showViewModal, setShowViewModal] = useState(false);
@@ -678,6 +705,18 @@ export const TeacherStudents = () => {
       nameStr.toLowerCase().includes(search.toLowerCase()) ||
       fatherStr.toLowerCase().includes(search.toLowerCase());
     const matchesClass = !selectedClass || s.classId === selectedClass;
+    
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(s.createdAt) < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(s.createdAt) > to) return false;
+    }
+    
     return matchesSearch && matchesClass;
   });
 
@@ -711,7 +750,7 @@ export const TeacherStudents = () => {
       </div>
 
       <div className="card">
-        <div className="flex items-center gap-4 mb-5">
+        <div className="flex flex-col xl:flex-row xl:items-center gap-3 mb-5">
           <div className="flex-1 relative">
             <input 
               placeholder={activeTab === 'roster' ? "Search students by name..." : "Search parents by student or guardian name..."} 
@@ -721,6 +760,12 @@ export const TeacherStudents = () => {
             />
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
           </div>
+          
+          <div className="flex items-center gap-2 flex-wrap">
+            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl text-primary" style={{ width: '130px' }} />
+            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl text-primary" style={{ width: '130px' }} />
+          </div>
+
           <select className="input w-48 text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
             <option value="">All My Classes</option>
             {classes.map(c => (
@@ -1278,6 +1323,7 @@ export const MarksEntry = () => {
   const [showMarksPopup, setShowMarksPopup] = useState(false);
   const [popupForm, setPopupForm] = useState({ subjectId: '', theoryMarks: '', practicalMarks: '', remarks: '' });
   const [globalSubjects, setGlobalSubjects] = useState([]);
+  const [studentClassSubjects, setStudentClassSubjects] = useState([]);
 
   const fetchRosterData = async () => {
     try {
@@ -1334,6 +1380,32 @@ export const MarksEntry = () => {
   useEffect(() => {
     loadStudentGrades();
   }, [selectedStudentId, selectedExamType]);
+
+  useEffect(() => {
+    const fetchStudentClassSubjects = async () => {
+      if (!selectedStudentId || students.length === 0) {
+        setStudentClassSubjects([]);
+        return;
+      }
+      const student = students.find(s => s.id === selectedStudentId);
+      if (!student || !student.classId) {
+        setStudentClassSubjects([]);
+        return;
+      }
+      try {
+        const res = await apiClient.get(`/academics/class-subjects/${student.classId}`);
+        const mapped = res.data.map(cs => ({
+          id: cs.subjectId,
+          name: cs.subjectName,
+          code: cs.subjectCode
+        }));
+        setStudentClassSubjects(mapped);
+      } catch (err) {
+        console.error('Error fetching student class subjects:', err);
+      }
+    };
+    fetchStudentClassSubjects();
+  }, [selectedStudentId, students]);
 
   const updateSubjectField = (subjId, field, val) => {
     setSubjectsList(prev => prev.map(s => s.subjectId === subjId ? { ...s, [field]: val } : s));
@@ -1407,7 +1479,7 @@ export const MarksEntry = () => {
           remarks: popupForm.remarks || ''
         } : s);
       } else {
-        const gSub = globalSubjects.find(s => s.id === popupForm.subjectId);
+        const gSub = studentClassSubjects.find(s => s.id === popupForm.subjectId) || globalSubjects.find(s => s.id === popupForm.subjectId);
         return [...prev, {
           subjectId: popupForm.subjectId,
           subjectName: gSub?.name || 'Unknown',
@@ -1425,7 +1497,13 @@ export const MarksEntry = () => {
 
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const classForSelectedStudent = selectedStudent ? teacherClasses.find(c => c.id === selectedStudent.classId) : null;
-  const isApproved = classForSelectedStudent?.areMarksPublished === true || classForSelectedStudent?.AreMarksPublished === true;
+  const publishedExamTypes = classForSelectedStudent?.publishedExamTypes || classForSelectedStudent?.PublishedExamTypes || '';
+  const isApproved = selectedExamType 
+    ? publishedExamTypes
+        .split(',')
+        .map(t => t.trim().toLowerCase())
+        .includes(selectedExamType.toLowerCase())
+    : false;
 
   if (!isClassTeacher) {
     return (
@@ -1601,7 +1679,7 @@ export const MarksEntry = () => {
                   className="input text-sm"
                 >
                   <option value="">Choose Subject</option>
-                  {globalSubjects.map(s => (
+                  {studentClassSubjects.map(s => (
                     <option key={s.id} value={s.id}>
                       {s.name} {s.code ? `(${s.code.toUpperCase()})` : ''}
                     </option>
@@ -2521,6 +2599,7 @@ export const TeacherNotices = () => {
   const [type, setType] = useState('GENERAL');
   const [loading, setLoading] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState('all'); // 'all', 'schooladmin', 'teacher'
+  const [sendWhatsApp, setSendWhatsApp] = useState(false);
 
   const filteredNotices = noticesList.filter(n => {
     // Exclude system alerts (superadmin notices) for teachers
@@ -2581,9 +2660,16 @@ export const TeacherNotices = () => {
         body,
         type
       });
+      if (sendWhatsApp) {
+        await apiClient.post('/academics/whatsapp/send-broadcast', {
+          title,
+          body
+        });
+      }
       setShowNew(false);
       setTitle('');
       setBody('');
+      setSendWhatsApp(false);
       fetchNotices();
     } catch (err) {
       console.error('Error publishing notice:', err);
@@ -2663,6 +2749,10 @@ export const TeacherNotices = () => {
             </div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Title</label><input required placeholder="Enter title..." value={title} onChange={e => setTitle(e.target.value)} className="input" /></div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Message Body</label><textarea required placeholder="Type announcement here..." value={body} onChange={e => setBody(e.target.value)} className="input h-28 resize-none" /></div>
+            <div className="flex items-center gap-2 py-1.5">
+              <input type="checkbox" id="whatsAppQuick" checked={sendWhatsApp} onChange={e => setSendWhatsApp(e.target.checked)} className="rounded text-primary focus:ring-primary h-4 w-4 cursor-pointer" />
+              <label htmlFor="whatsAppQuick" className="text-xs font-semibold text-slate-600 cursor-pointer select-none">Send WhatsApp to Parents</label>
+            </div>
             <button type="submit" disabled={loading} className="w-full bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-all">
               {loading ? 'Publishing...' : 'Send Now'}
             </button>
@@ -2702,6 +2792,10 @@ export const TeacherNotices = () => {
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Message Body</label>
                   <textarea required placeholder="Type announcement here..." value={body} onChange={e => setBody(e.target.value)} className="input h-28 resize-none" />
+                </div>
+                <div className="flex items-center gap-2 py-1">
+                  <input type="checkbox" id="whatsAppModal" checked={sendWhatsApp} onChange={e => setSendWhatsApp(e.target.checked)} className="rounded text-primary focus:ring-primary h-4 w-4 cursor-pointer" />
+                  <label htmlFor="whatsAppModal" className="text-xs font-semibold text-slate-600 cursor-pointer select-none">Send WhatsApp to Parents</label>
                 </div>
               </div>
             </div>

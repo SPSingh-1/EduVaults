@@ -10,6 +10,7 @@ using EduVault.Core.Entities;
 using EduVault.Core.Interfaces;
 using EduVault.Core.DTOs;
 using EduVault.Infrastructure.Data;
+using EduVault.Api.Services;
 
 namespace EduVault.Api.Controllers
 {
@@ -21,12 +22,14 @@ namespace EduVault.Api.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAuthService _authService;
         private readonly EduVaultDbContext _context;
+        private readonly WhatsAppService _whatsAppService;
 
-        public AcademicsController(IUnitOfWork unitOfWork, IAuthService authService, EduVaultDbContext context)
+        public AcademicsController(IUnitOfWork unitOfWork, IAuthService authService, EduVaultDbContext context, WhatsAppService whatsAppService)
         {
             _unitOfWork = unitOfWork;
             _authService = authService;
             _context = context;
+            _whatsAppService = whatsAppService;
         }
 
         private Guid GetSchoolId()
@@ -43,6 +46,8 @@ namespace EduVault.Api.Controllers
             if (string.IsNullOrEmpty(userIdStr)) throw new UnauthorizedAccessException("User ID missing in token");
             return Guid.Parse(userIdStr);
         }
+
+
 
         // --- Classes & Sections ---
 
@@ -68,7 +73,8 @@ namespace EduVault.Api.Controllers
                     Teacher = teacher != null ? $"{teacher.FirstName} {teacher.LastName}" : null,
                     Email = teacher?.Email,
                     TeacherId = c.ClassTeacherId,
-                    AreMarksPublished = c.AreMarksPublished
+                    AreMarksPublished = c.AreMarksPublished,
+                    PublishedExamTypes = c.PublishedExamTypes ?? string.Empty
                 };
             });
 
@@ -142,18 +148,53 @@ namespace EduVault.Api.Controllers
             return Ok(new { success = true });
         }
 
+        public class TogglePublicationRequest
+        {
+            public bool Publish { get; set; }
+            public string ExamType { get; set; } = string.Empty;
+        }
+
+        public class DenyMarksRequest
+        {
+            public string Reason { get; set; } = string.Empty;
+            public string ExamType { get; set; } = string.Empty;
+        }
+
         [HttpPost("classes/{id}/toggle-marks-publication")]
         [Authorize(Roles = "schooladmin")]
-        public async Task<IActionResult> ToggleMarksPublication(Guid id, [FromBody] bool publish)
+        public async Task<IActionResult> ToggleMarksPublication(Guid id, [FromBody] TogglePublicationRequest request)
         {
             var classObj = await _unitOfWork.Classes.GetByIdAsync(id);
             if (classObj == null) return NotFound(new { error = "Class not found" });
 
-            classObj.AreMarksPublished = publish;
+            // Update PublishedExamTypes list
+            var types = classObj.PublishedExamTypes?.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToList() ?? new List<string>();
+            if (request.Publish)
+            {
+                if (!types.Contains(request.ExamType, StringComparer.OrdinalIgnoreCase))
+                    types.Add(request.ExamType);
+            }
+            else
+            {
+                types.RemoveAll(t => t.Equals(request.ExamType, StringComparison.OrdinalIgnoreCase));
+            }
+            classObj.PublishedExamTypes = string.Join(",", types);
+            // Keep backward flag for compatibility
+            classObj.AreMarksPublished = classObj.PublishedExamTypes.Length > 0;
             _unitOfWork.Classes.Update(classObj);
             await _unitOfWork.CompleteAsync();
 
-            return Ok(new { success = true, areMarksPublished = publish });
+            if (request.Publish)
+            {
+                var schoolId = GetSchoolId();
+                var classEnrollments = await _unitOfWork.Enrollments.FindAsync(e => e.ClassId == id && e.Status == "ACTIVE");
+                foreach (var enroll in classEnrollments)
+                {
+                    await CheckAndAutoPromoteStudent(enroll.StudentId, schoolId);
+                }
+            }
+ 
+            return Ok(new { success = true, areMarksPublished = classObj.AreMarksPublished, publishedExamTypes = classObj.PublishedExamTypes });
         }
 
         [HttpPost("classes/{id}/deny-marks")]
@@ -163,14 +204,22 @@ namespace EduVault.Api.Controllers
             var classObj = await _unitOfWork.Classes.GetByIdAsync(id);
             if (classObj == null) return NotFound(new { error = "Class not found" });
 
-            classObj.AreMarksPublished = false;
+            // Remove specific exam type from PublishedExamTypes
+            var types = classObj.PublishedExamTypes?.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToList() ?? new List<string>();
+            if (!string.IsNullOrWhiteSpace(request.ExamType))
+            {
+                types.RemoveAll(t => t.Equals(request.ExamType, StringComparison.OrdinalIgnoreCase));
+            }
+            classObj.PublishedExamTypes = string.Join(",", types);
+            classObj.AreMarksPublished = classObj.PublishedExamTypes.Length > 0;
             _unitOfWork.Classes.Update(classObj);
             await _unitOfWork.CompleteAsync();
 
-            return Ok(new { 
-                success = true, 
+            return Ok(new {
+                success = true,
                 classTeacherId = classObj.ClassTeacherId?.ToString(),
-                className = $"Class {classObj.Grade} - {classObj.Section}"
+                className = $"Class {classObj.Grade} - {classObj.Section}",
+                publishedExamTypes = classObj.PublishedExamTypes
             });
         }
 
@@ -184,11 +233,48 @@ namespace EduVault.Api.Controllers
             var enrollments = await _unitOfWork.Enrollments.GetAllAsync();
             var classes = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
             var studentsData = await _unitOfWork.Students.GetAllAsync();
+            var exams = await _unitOfWork.Exams.GetAllAsync();
+            var examResults = await _unitOfWork.ExamResults.GetAllAsync();
 
             var result = studentUsers.Select(u => {
                 var studentInfo = studentsData.FirstOrDefault(s => s.UserId == u.Id);
                 var enrollment = enrollments.FirstOrDefault(e => e.StudentId == u.Id);
                 var classObj = enrollment != null ? classes.FirstOrDefault(c => c.Id == enrollment.ClassId) : null;
+
+                var studentResults = examResults.Where(r => r.StudentId == u.Id).ToList();
+                var finalExamIds = exams.Where(e => e.ExamType == "Final Examination" || e.ExamType == "Semester Examination").Select(e => e.Id).ToList();
+                var finalResults = studentResults.Where(r => finalExamIds.Contains(r.ExamId)).ToList();
+                
+                decimal gpa = 0;
+                string finalResult = "No Exam Records";
+                if (finalResults.Any())
+                {
+                    decimal totalPoints = 0;
+                    int count = 0;
+                    bool hasFail = false;
+                    foreach (var r in finalResults)
+                    {
+                        if (r.MarksObtained.HasValue)
+                        {
+                            totalPoints += r.Grade switch
+                            {
+                                "A+" => 4.0m,
+                                "A" => 3.7m,
+                                "B+" => 3.3m,
+                                "B" => 3.0m,
+                                "C" => 2.0m,
+                                _ => 1.0m
+                            };
+                            count++;
+                            if (r.MarksObtained.Value < 40)
+                            {
+                                hasFail = true;
+                            }
+                        }
+                    }
+                    gpa = count > 0 ? Math.Round(totalPoints / count, 2) : 0;
+                    finalResult = hasFail ? "Fail" : (count > 0 ? "Pass" : "No Exam Records");
+                }
 
                 return new {
                     u.Id,
@@ -200,7 +286,10 @@ namespace EduVault.Api.Controllers
                     ClassId = classObj?.Id,
                     Father = studentInfo?.GuardianName ?? string.Empty,
                     GuardianPhone = studentInfo?.GuardianPhone ?? string.Empty,
-                    Status = enrollment?.Status ?? "ACTIVE"
+                    Status = enrollment?.Status ?? "ACTIVE",
+                    CreatedAt = u.CreatedAt,
+                    Gpa = gpa,
+                    FinalResult = finalResult
                 };
             });
 
@@ -411,6 +500,129 @@ namespace EduVault.Api.Controllers
             return Ok(new { success = true });
         }
 
+        [HttpPost("students/{id}/promote")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> PromoteStudent(Guid id, [FromBody] PromoteStudentRequest request)
+        {
+            var schoolId = GetSchoolId();
+            var user = await _unitOfWork.Users.GetByIdAsync(id);
+            if (user == null || user.SchoolId != schoolId || user.Role != "student")
+            {
+                return NotFound(new { error = "Student not found" });
+            }
+
+            var nextClassObj = await _unitOfWork.Classes.GetByIdAsync(request.NextClassId);
+            if (nextClassObj == null || nextClassObj.SchoolId != schoolId)
+            {
+                return BadRequest(new { error = "Target class not found" });
+            }
+
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == id)).FirstOrDefault();
+            if (enrollment == null)
+            {
+                enrollment = new Enrollment
+                {
+                    StudentId = id,
+                    ClassId = request.NextClassId,
+                    AcademicYear = $"{DateTime.UtcNow.Year}-{((DateTime.UtcNow.Year + 1) % 100):D2}",
+                    Status = "ACTIVE",
+                    EnrollDate = DateTime.UtcNow
+                };
+                await _unitOfWork.Enrollments.AddAsync(enrollment);
+            }
+            else
+            {
+                enrollment.ClassId = request.NextClassId;
+                enrollment.EnrollDate = DateTime.UtcNow;
+                _unitOfWork.Enrollments.Update(enrollment);
+            }
+
+            // Consolidate unpaid fees from the previous class
+            var unpaidInvoices = await _unitOfWork.Invoices.FindAsync(i => i.StudentId == id && i.Status != "Paid" && i.Status != "Cancelled");
+            decimal unpaidSum = unpaidInvoices.Sum(i => i.Amount);
+            foreach (var inv in unpaidInvoices)
+            {
+                _unitOfWork.Invoices.Remove(inv);
+            }
+
+            if (unpaidSum > 0)
+            {
+                var prevClassFeeStruct = new FeeStructure
+                {
+                    SchoolId = schoolId,
+                    Name = "Previous Class Outstanding Dues",
+                    Amount = unpaidSum,
+                    Frequency = "One-Time",
+                    Grade = "All Grades",
+                    StudentId = id
+                };
+                await _unitOfWork.FeeStructures.AddAsync(prevClassFeeStruct);
+                await _unitOfWork.CompleteAsync();
+
+                var prevClassInvoice = new StudentInvoice
+                {
+                    StudentId = id,
+                    FeeStructureId = prevClassFeeStruct.Id,
+                    Amount = unpaidSum,
+                    IssueDate = DateTime.UtcNow,
+                    DueDate = DateTime.UtcNow.AddDays(15),
+                    Status = "Pending"
+                };
+                await _unitOfWork.Invoices.AddAsync(prevClassInvoice);
+            }
+
+            // Apply new class fee structures
+            var feeStructures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId && !fs.StudentId.HasValue);
+            foreach (var fs in feeStructures)
+            {
+                var cleanGradeStr = fs.Grade?.Replace("Class ", "").Trim() ?? string.Empty;
+                string gradePart = cleanGradeStr;
+                string sectionPart = "";
+                
+                if (cleanGradeStr.Contains("-"))
+                {
+                    var parts = cleanGradeStr.Split('-', 2);
+                    gradePart = parts[0].Trim();
+                    sectionPart = parts[1].Trim();
+                }
+                else if (cleanGradeStr.Contains(" "))
+                {
+                    var parts = cleanGradeStr.Split(' ', 2);
+                    gradePart = parts[0].Trim();
+                    sectionPart = parts[1].Trim();
+                }
+
+                if (sectionPart.StartsWith("Section ", StringComparison.OrdinalIgnoreCase))
+                {
+                    sectionPart = sectionPart.Substring(8).Trim();
+                }
+
+                bool matchesGrade = gradePart.Equals(nextClassObj.Grade, StringComparison.OrdinalIgnoreCase) || fs.Grade.Equals("All Grades", StringComparison.OrdinalIgnoreCase);
+                bool matchesSection = string.IsNullOrEmpty(sectionPart) || nextClassObj.Section.Equals(sectionPart, StringComparison.OrdinalIgnoreCase) || nextClassObj.Section.Equals($"Section {sectionPart}", StringComparison.OrdinalIgnoreCase);
+
+                if (matchesGrade && matchesSection)
+                {
+                    decimal installmentAmount = Math.Round(fs.Amount / fs.Installments, 2);
+                    for (int step = 1; step <= fs.Installments; step++)
+                    {
+                        var invoice = new StudentInvoice
+                        {
+                            StudentId = id,
+                            FeeStructureId = fs.Id,
+                            Amount = installmentAmount,
+                            IssueDate = DateTime.UtcNow,
+                            DueDate = DateTime.UtcNow.AddDays(30 * step),
+                            Status = "Pending"
+                        };
+                        await _unitOfWork.Invoices.AddAsync(invoice);
+                    }
+                }
+            }
+
+            await _unitOfWork.CompleteAsync();
+            return Ok(new { success = true });
+        }
+
         [HttpDelete("students/{id}")]
         [Authorize(Roles = "schooladmin")]
         public async Task<IActionResult> DeleteStudent(Guid id)
@@ -471,7 +683,8 @@ namespace EduVault.Api.Controllers
                     Specialization = teacherInfo?.Specialization ?? string.Empty,
                     Joined = u.CreatedAt.ToString("MMM yyyy"),
                     Classes = string.Join(", ", assignedClasses),
-                    Status = u.IsActive ? "Active" : "On Leave"
+                    Status = u.IsActive ? "Active" : "On Leave",
+                    CreatedAt = u.CreatedAt
                 };
             });
 
@@ -509,8 +722,8 @@ namespace EduVault.Api.Controllers
                 UserId = user.Id,
                 EmployeeId = employeeIdCode,
                 Department = request.Department,
-                OfficeLocation = request.OfficeLocation,
-                Qualifications = request.Qualifications,
+                OfficeLocation = request.OfficeLocation ?? string.Empty,
+                Qualifications = request.Qualifications ?? string.Empty,
                 Specialization = request.Specialization
             };
             await _unitOfWork.Teachers.AddAsync(teacher);
@@ -1651,8 +1864,10 @@ namespace EduVault.Api.Controllers
         public async Task<IActionResult> GetMyAttendance()
         {
             var studentId = GetUserId();
+            var enrollment = await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == studentId && e.Status == "ACTIVE");
+            var currentEnrollment = enrollment.FirstOrDefault();
             var attendanceList = await _context.Attendances
-                .Where(a => a.StudentId == studentId)
+                .Where(a => a.StudentId == studentId && (currentEnrollment == null || a.Date >= currentEnrollment.EnrollDate))
                 .OrderBy(a => a.Date)
                 .Select(a => new {
                     a.Id,
@@ -1883,7 +2098,8 @@ namespace EduVault.Api.Controllers
                         c.Capacity,
                         Enrolled = enrolledCount,
                         IsClassTeacher = c.ClassTeacherId == userId,
-                        AreMarksPublished = c.AreMarksPublished
+                        AreMarksPublished = c.AreMarksPublished,
+                        PublishedExamTypes = c.PublishedExamTypes ?? string.Empty
                     };
                 });
 
@@ -1989,6 +2205,376 @@ namespace EduVault.Api.Controllers
             }
             return Ok(new { success = true });
         }
+        // --- Report Approvals ---
+
+        [HttpGet("report-approvals")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> GetReportApprovals([FromQuery] Guid classId, [FromQuery] string examType)
+        {
+            var schoolId = GetSchoolId();
+            var approvals = await _context.ReportApprovals
+                .Where(ra => ra.SchoolId == schoolId && ra.ClassId == classId && ra.ExamType == examType)
+                .ToListAsync();
+
+            // Get exams of this class for this exam type
+            var exams = await _unitOfWork.Exams.FindAsync(e => e.ClassId == classId && e.ExamType == examType);
+            var examIds = exams.Select(e => e.Id).ToList();
+
+            // Get all students enrolled in this class
+            var enrollments = await _unitOfWork.Enrollments.FindAsync(e => e.ClassId == classId && e.Status == "ACTIVE");
+            var studentIds = enrollments.Select(e => e.StudentId).ToList();
+
+            // Get results for these exams for all students in class
+            var results = examIds.Any() 
+                ? await _unitOfWork.ExamResults.FindAsync(er => examIds.Contains(er.ExamId) && studentIds.Contains(er.StudentId))
+                : new List<ExamResult>();
+            var studentIdsWithResults = results.Select(er => er.StudentId).Distinct().ToList();
+
+            var responseList = studentIds.Select(sid => {
+                var app = approvals.FirstOrDefault(a => a.StudentId == sid);
+                var hasMarks = studentIdsWithResults.Contains(sid);
+                return new {
+                    StudentId = sid,
+                    IsApproved = app != null ? app.IsApproved : false,
+                    ApprovedAt = app?.ApprovedAt,
+                    ApprovedBy = app?.ApprovedBy,
+                    RevokedReason = app?.RevokedReason ?? string.Empty,
+                    ExamType = examType,
+                    HasMarks = hasMarks
+                };
+            }).ToList();
+
+            return Ok(responseList);
+        }
+
+        [HttpPost("report-approvals/approve")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> ApproveReport([FromBody] ReportApprovalRequest req)
+        {
+            var schoolId = GetSchoolId();
+            var adminId = GetUserId();
+
+            // Validate class belongs to school
+            var cls = await _unitOfWork.Classes.GetByIdAsync(req.ClassId);
+            if (cls == null || cls.SchoolId != schoolId)
+                return NotFound(new { error = "Class not found" });
+
+            // Verify student has marks for this exam type
+            var exams = await _unitOfWork.Exams.FindAsync(e => e.ClassId == req.ClassId && e.ExamType == req.ExamType);
+            var examIds = exams.Select(e => e.Id).ToList();
+            
+            var hasResults = examIds.Any() && (await _unitOfWork.ExamResults.FindAsync(
+                er => er.StudentId == req.StudentId && examIds.Contains(er.ExamId))).Any();
+
+            if (!hasResults)
+            {
+                return BadRequest(new { error = "Cannot approve: Student has no marks entered for this exam cycle." });
+            }
+
+            // Upsert approval record
+            var existing = await _context.ReportApprovals
+                .FirstOrDefaultAsync(ra => ra.ClassId == req.ClassId && ra.StudentId == req.StudentId && ra.ExamType == req.ExamType);
+
+            if (existing == null)
+            {
+                existing = new ReportApproval
+                {
+                    SchoolId = schoolId,
+                    ClassId = req.ClassId,
+                    StudentId = req.StudentId,
+                    ExamType = req.ExamType
+                };
+                await _context.ReportApprovals.AddAsync(existing);
+            }
+
+            existing.IsApproved = true;
+            existing.ApprovedAt = DateTime.UtcNow;
+            existing.ApprovedBy = adminId;
+            existing.RevokedReason = string.Empty;
+
+            await _context.SaveChangesAsync();
+
+            // Return teacher ID for frontend notification
+            return Ok(new {
+                success = true,
+                classTeacherId = cls.ClassTeacherId,
+                className = $"Class {cls.Grade} - {cls.Section}"
+            });
+        }
+
+        [HttpPost("report-approvals/revoke")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> RevokeReport([FromBody] ReportRevokeRequest req)
+        {
+            var schoolId = GetSchoolId();
+
+            var cls = await _unitOfWork.Classes.GetByIdAsync(req.ClassId);
+            if (cls == null || cls.SchoolId != schoolId)
+                return NotFound(new { error = "Class not found" });
+
+            var existing = await _context.ReportApprovals
+                .FirstOrDefaultAsync(ra => ra.ClassId == req.ClassId && ra.StudentId == req.StudentId && ra.ExamType == req.ExamType);
+
+            if (existing == null)
+            {
+                existing = new ReportApproval
+                {
+                    SchoolId = schoolId,
+                    ClassId = req.ClassId,
+                    StudentId = req.StudentId,
+                    ExamType = req.ExamType
+                };
+                await _context.ReportApprovals.AddAsync(existing);
+            }
+
+            existing.IsApproved = false;
+            existing.ApprovedAt = null;
+            existing.ApprovedBy = null;
+            existing.RevokedReason = req.Reason ?? string.Empty;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new {
+                success = true,
+                classTeacherId = cls.ClassTeacherId,
+                className = $"Class {cls.Grade} - {cls.Section}"
+            });
+        }
+
+        [HttpPost("report-approvals/bulk-approve")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> BulkApproveReports([FromBody] BulkApproveRequest req)
+        {
+            var schoolId = GetSchoolId();
+            var adminId = GetUserId();
+
+            var cls = await _unitOfWork.Classes.GetByIdAsync(req.ClassId);
+            if (cls == null || cls.SchoolId != schoolId)
+                return NotFound(new { error = "Class not found" });
+
+            // Get all active students in this class
+            var enrollments = await _unitOfWork.Enrollments.FindAsync(
+                e => e.ClassId == req.ClassId && e.Status == "ACTIVE");
+            var studentIds = enrollments.Select(e => e.StudentId).ToList();
+
+            // Get exams of this class for this exam type
+            var exams = await _unitOfWork.Exams.FindAsync(e => e.ClassId == req.ClassId && e.ExamType == req.ExamType);
+            var examIds = exams.Select(e => e.Id).ToList();
+
+            // Find all students in this class who have results for these exams
+            var results = examIds.Any()
+                ? await _unitOfWork.ExamResults.FindAsync(er => studentIds.Contains(er.StudentId) && examIds.Contains(er.ExamId))
+                : new List<ExamResult>();
+            var studentIdsWithResults = results.Select(er => er.StudentId).Distinct().ToList();
+
+            if (!studentIdsWithResults.Any())
+            {
+                return BadRequest(new { error = "No students have marks entered for this exam cycle in this class." });
+            }
+
+            // Fetch existing approvals
+            var existingApprovals = await _context.ReportApprovals
+                .Where(ra => ra.ClassId == req.ClassId && ra.ExamType == req.ExamType)
+                .ToListAsync();
+
+            foreach (var studentId in studentIdsWithResults)
+            {
+                var record = existingApprovals.FirstOrDefault(ra => ra.StudentId == studentId);
+                if (record == null)
+                {
+                    record = new ReportApproval
+                    {
+                        SchoolId = schoolId,
+                        ClassId = req.ClassId,
+                        StudentId = studentId,
+                        ExamType = req.ExamType
+                    };
+                    await _context.ReportApprovals.AddAsync(record);
+                    existingApprovals.Add(record);
+                }
+                record.IsApproved = true;
+                record.ApprovedAt = DateTime.UtcNow;
+                record.ApprovedBy = adminId;
+                record.RevokedReason = string.Empty;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new {
+                success = true,
+                approvedCount = studentIdsWithResults.Count,
+                classTeacherId = cls.ClassTeacherId,
+                className = $"Class {cls.Grade} - {cls.Section}"
+            });
+        }
+
+        private async Task CheckAndAutoPromoteStudent(Guid studentId, Guid schoolId)
+        {
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == studentId && e.Status == "ACTIVE")).FirstOrDefault();
+            if (enrollment == null) return;
+
+            var currentClass = await _unitOfWork.Classes.GetByIdAsync(enrollment.ClassId);
+            if (currentClass == null || currentClass.SchoolId != schoolId) return;
+
+            // Find all exams scheduled for this class with type "Final Examination" or "Semester Examination"
+            var exams = await _unitOfWork.Exams.FindAsync(e => e.ClassId == currentClass.Id && (e.ExamType == "Final Examination" || e.ExamType == "Semester Examination"));
+            if (!exams.Any()) return;
+
+            var examIds = exams.Select(e => e.Id).ToList();
+            var results = await _unitOfWork.ExamResults.FindAsync(r => r.StudentId == studentId && examIds.Contains(r.ExamId));
+
+            // Must have taken all scheduled exams
+            if (results.Count() < exams.Count()) return;
+
+            bool hasFail = false;
+            foreach (var r in results)
+            {
+                if (!r.MarksObtained.HasValue || r.MarksObtained.Value < 40)
+                {
+                    hasFail = true;
+                    break;
+                }
+            }
+
+            if (hasFail) return;
+
+            // All exams passed! Promote.
+            var nextGrade = currentClass.Grade + 1;
+            var classesInSchool = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
+            var nextClassObj = classesInSchool.FirstOrDefault(c => c.Grade == nextGrade && c.Section.Equals(currentClass.Section, StringComparison.OrdinalIgnoreCase))
+                               ?? classesInSchool.FirstOrDefault(c => c.Grade == nextGrade);
+
+            if (nextClassObj == null) return; // Next grade is not set up yet
+
+            enrollment.ClassId = nextClassObj.Id;
+            enrollment.EnrollDate = DateTime.UtcNow;
+            enrollment.AcademicYear = $"{DateTime.UtcNow.Year}-{((DateTime.UtcNow.Year + 1) % 100):D2}";
+            _unitOfWork.Enrollments.Update(enrollment);
+
+            // Consolidate unpaid fees from the previous class
+            var unpaidInvoices = await _unitOfWork.Invoices.FindAsync(i => i.StudentId == studentId && i.Status != "Paid" && i.Status != "Cancelled");
+            decimal unpaidSum = unpaidInvoices.Sum(i => i.Amount);
+            foreach (var inv in unpaidInvoices)
+            {
+                _unitOfWork.Invoices.Remove(inv);
+            }
+
+            if (unpaidSum > 0)
+            {
+                var prevClassFeeStruct = new FeeStructure
+                {
+                    SchoolId = schoolId,
+                    Name = "Previous Class Outstanding Dues",
+                    Amount = unpaidSum,
+                    Frequency = "One-Time",
+                    Grade = "All Grades",
+                    StudentId = studentId
+                };
+                await _unitOfWork.FeeStructures.AddAsync(prevClassFeeStruct);
+                await _unitOfWork.CompleteAsync();
+
+                var prevClassInvoice = new StudentInvoice
+                {
+                    StudentId = studentId,
+                    FeeStructureId = prevClassFeeStruct.Id,
+                    Amount = unpaidSum,
+                    IssueDate = DateTime.UtcNow,
+                    DueDate = DateTime.UtcNow.AddDays(15),
+                    Status = "Pending"
+                };
+                await _unitOfWork.Invoices.AddAsync(prevClassInvoice);
+            }
+
+            // Apply new class fee structures
+            var feeStructures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId && !fs.StudentId.HasValue);
+            foreach (var fs in feeStructures)
+            {
+                var cleanGradeStr = fs.Grade?.Replace("Class ", "").Trim() ?? string.Empty;
+                string gradePart = cleanGradeStr;
+                string sectionPart = "";
+                
+                if (cleanGradeStr.Contains("-"))
+                {
+                    var parts = cleanGradeStr.Split('-', 2);
+                    gradePart = parts[0].Trim();
+                    sectionPart = parts[1].Trim();
+                }
+                else if (cleanGradeStr.Contains(" "))
+                {
+                    var parts = cleanGradeStr.Split(' ', 2);
+                    gradePart = parts[0].Trim();
+                    sectionPart = parts[1].Trim();
+                }
+
+                if (sectionPart.StartsWith("Section ", StringComparison.OrdinalIgnoreCase))
+                {
+                    sectionPart = sectionPart.Substring(8).Trim();
+                }
+
+                bool matchesGrade = gradePart.Equals(nextClassObj.Grade, StringComparison.OrdinalIgnoreCase) || fs.Grade.Equals("All Grades", StringComparison.OrdinalIgnoreCase);
+                bool matchesSection = string.IsNullOrEmpty(sectionPart) || nextClassObj.Section.Equals(sectionPart, StringComparison.OrdinalIgnoreCase) || nextClassObj.Section.Equals($"Section {sectionPart}", StringComparison.OrdinalIgnoreCase);
+
+                if (matchesGrade && matchesSection)
+                {
+                    decimal installmentAmount = Math.Round(fs.Amount / fs.Installments, 2);
+                    for (int step = 1; step <= fs.Installments; step++)
+                    {
+                        var invoice = new StudentInvoice
+                        {
+                            StudentId = studentId,
+                            FeeStructureId = fs.Id,
+                            Amount = installmentAmount,
+                            IssueDate = DateTime.UtcNow,
+                            DueDate = DateTime.UtcNow.AddDays(30 * step),
+                            Status = "Pending"
+                        };
+                        await _unitOfWork.Invoices.AddAsync(invoice);
+                    }
+                }
+            }
+
+            await _unitOfWork.CompleteAsync();
+        }
+
+        [HttpPost("whatsapp/send-broadcast")]
+        [Authorize(Roles = "schooladmin,teacher")]
+        public async Task<IActionResult> SendWhatsAppBroadcast([FromBody] WhatsAppBroadcastRequest request)
+        {
+            var schoolId = GetSchoolId();
+            if (string.IsNullOrWhiteSpace(request.Body))
+            {
+                return BadRequest(new { error = "Message body cannot be empty" });
+            }
+
+            var classes = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
+            var classIds = classes.Select(c => c.Id).ToList();
+
+            var enrollments = await _unitOfWork.Enrollments.FindAsync(e => classIds.Contains(e.ClassId) && e.Status == "ACTIVE");
+            var studentIds = enrollments.Select(e => e.StudentId).Distinct().ToList();
+
+            int sentCount = 0;
+            foreach (var studentId in studentIds)
+            {
+                var student = await _unitOfWork.Students.GetByIdAsync(studentId);
+                if (student != null && !string.IsNullOrEmpty(student.GuardianPhone))
+                {
+                    var msg = $"*Announcement*: {request.Title}\n\n{request.Body}";
+                    var success = await _whatsAppService.SendMessageAsync(student.GuardianPhone, msg, schoolId);
+                    if (success)
+                    {
+                        sentCount++;
+                    }
+                }
+            }
+
+            return Ok(new { success = true, sentCount });
+        }
+    }
+
+    public class WhatsAppBroadcastRequest
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Body { get; set; } = string.Empty;
     }
 
     public class SubmitAttendanceRequest
@@ -2015,5 +2601,31 @@ namespace EduVault.Api.Controllers
         public Guid ClassId { get; set; }
         public Guid SubjectId { get; set; }
         public Guid? TeacherId { get; set; }
+    }
+
+    public class PromoteStudentRequest
+    {
+        public Guid NextClassId { get; set; }
+    }
+
+    public class ReportApprovalRequest
+    {
+        public Guid ClassId { get; set; }
+        public Guid StudentId { get; set; }
+        public string ExamType { get; set; } = string.Empty;
+    }
+
+    public class ReportRevokeRequest
+    {
+        public Guid ClassId { get; set; }
+        public Guid StudentId { get; set; }
+        public string ExamType { get; set; } = string.Empty;
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    public class BulkApproveRequest
+    {
+        public Guid ClassId { get; set; }
+        public string ExamType { get; set; } = string.Empty;
     }
 }

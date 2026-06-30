@@ -39,6 +39,7 @@ namespace EduVault.Infrastructure.Data
         public DbSet<ExamType> ExamTypes { get; set; }
         public DbSet<SchoolPlanConfiguration> SchoolPlanConfigurations { get; set; }
         public DbSet<UpgradeRequest> UpgradeRequests { get; set; }
+        public DbSet<ReportApproval> ReportApprovals { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -303,6 +304,11 @@ namespace EduVault.Infrastructure.Data
                 .WithMany()
                 .HasForeignKey(ti => ti.TeacherId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // Configure ReportApproval
+            modelBuilder.Entity<ReportApproval>()
+                .HasIndex(ra => new { ra.ClassId, ra.StudentId, ra.ExamType })
+                .IsUnique();
         }
     }
 }

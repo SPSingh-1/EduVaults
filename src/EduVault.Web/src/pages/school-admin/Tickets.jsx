@@ -14,8 +14,35 @@ const priorityColor = {
   LOW: 'text-gray-600 bg-gray-100'
 };
 
+const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
+  const [focused, setFocused] = useState(false);
+  const formatDisplay = (val) => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return val;
+  };
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
+      <input
+        type={focused ? 'date' : 'text'}
+        value={focused ? value : formatDisplay(value)}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="dd/mm/yyyy"
+        className={className || "text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary"}
+        style={style || { width: '130px' }}
+      />
+    </div>
+  );
+};
+
 const Tickets = () => {
   const [tickets, setTickets] = useState([]);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [categories, setCategories] = useState([]);
   const [stats, setStats] = useState({
     openTickets: '00',
@@ -82,10 +109,24 @@ const Tickets = () => {
     }
   };
 
-  const openCount = tickets.filter(t => t.status.toUpperCase() === 'OPEN' || t.status.toUpperCase() === 'IN PROGRESS').length;
-  const resolvedCount = tickets.filter(t => t.status.toUpperCase() === 'RESOLVED').length;
-  const criticalCount = tickets.filter(t => t.priority.toUpperCase() === 'HIGH' && t.status.toUpperCase() !== 'RESOLVED').length;
-  const totalCount = tickets.length;
+  const filteredTickets = tickets.filter(t => {
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(t.createdAt) < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(t.createdAt) > to) return false;
+    }
+    return true;
+  });
+
+  const openCount = filteredTickets.filter(t => t.status.toUpperCase() === 'OPEN' || t.status.toUpperCase() === 'IN PROGRESS').length;
+  const resolvedCount = filteredTickets.filter(t => t.status.toUpperCase() === 'RESOLVED').length;
+  const criticalCount = filteredTickets.filter(t => t.priority.toUpperCase() === 'HIGH' && t.status.toUpperCase() !== 'RESOLVED').length;
+  const totalCount = filteredTickets.length;
 
   if (loading) {
     return (
@@ -125,11 +166,15 @@ const Tickets = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content Area */}
         <div className="card lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <h3 className="font-display font-semibold text-primary">Your Support Tickets</h3>
-            <button onClick={() => setShowModal(true)} className="btn-primary text-xs flex items-center gap-1.5">
-              + Generate Ticket
-            </button>
+            <div className="flex items-center gap-3 flex-wrap">
+              <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary" style={{ width: '130px' }} />
+              <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary" style={{ width: '130px' }} />
+              <button onClick={() => setShowModal(true)} className="btn-primary text-xs flex items-center gap-1.5">
+                + Generate Ticket
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -145,7 +190,7 @@ const Tickets = () => {
                 </tr>
               </thead>
               <tbody>
-                {tickets.map((t) => (
+                {filteredTickets.map((t) => (
                   <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                     <td className="table-td">
                       <div className="font-semibold text-primary text-xs">#{t.ticketNumber}</div>
@@ -166,7 +211,7 @@ const Tickets = () => {
                       </span>
                     </td>
                     <td className="table-td text-xs text-gray-400">
-                      {new Date(t.createdAt).toLocaleDateString()}
+                      {new Date(t.createdAt).toLocaleDateString('en-GB')}
                     </td>
                   </tr>
                 ))}

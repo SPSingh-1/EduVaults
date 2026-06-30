@@ -3,6 +3,31 @@ import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
 import { DollarSign, Users, CreditCard } from 'lucide-react';
 
+const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
+  const [focused, setFocused] = useState(false);
+  const formatDisplay = (val) => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return val;
+  };
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
+      <input
+        type={focused ? 'date' : 'text'}
+        value={focused ? value : formatDisplay(value)}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="dd/mm/yyyy"
+        className={className || "input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl"}
+        style={style || { width: '130px' }}
+      />
+    </div>
+  );
+};
+
 const Subscriptions = () => {
   const [data, setData] = useState({
     totalMrr: 0,
@@ -11,6 +36,12 @@ const Subscriptions = () => {
   });
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Date filter states
+  const [renewDateFrom, setRenewDateFrom] = useState('');
+  const [renewDateTo, setRenewDateTo] = useState('');
+  const [requestDateFrom, setRequestDateFrom] = useState('');
+  const [requestDateTo, setRequestDateTo] = useState('');
   
   // Tab state
   const [activeSubTab, setActiveSubTab] = useState('global'); // global, custom, requests
@@ -561,7 +592,13 @@ const Subscriptions = () => {
 
           {/* Renewals History Table */}
           <div className="card">
-            <h3 className="font-display font-semibold text-primary mb-4">Recent Subscription Renewals</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <h3 className="font-display font-semibold text-primary">Recent Subscription Renewals</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <DateFilterInput label="From:" value={renewDateFrom} onChange={setRenewDateFrom} className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl" style={{ width: '130px' }} />
+                <DateFilterInput label="To:" value={renewDateTo} onChange={setRenewDateTo} className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl" style={{ width: '130px' }} />
+              </div>
+            </div>
             <div className="overflow-x-auto scrollbar-none">
               <table className="w-full">
                 <thead>
@@ -575,7 +612,19 @@ const Subscriptions = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.renewals.map(r => (
+                  {data.renewals.filter(r => {
+                    if (renewDateFrom) {
+                      const from = new Date(renewDateFrom);
+                      from.setHours(0, 0, 0, 0);
+                      if (new Date(r.renewDate) < from) return false;
+                    }
+                    if (renewDateTo) {
+                      const to = new Date(renewDateTo);
+                      to.setHours(23, 59, 59, 999);
+                      if (new Date(r.renewDate) > to) return false;
+                    }
+                    return true;
+                  }).map(r => (
                     <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="table-td font-semibold text-primary">{r.institutionName}</td>
                       <td className="table-td"><span className="badge badge-gray">{r.planType}</span></td>
@@ -845,29 +894,44 @@ const Subscriptions = () => {
       )}
 
       {activeSubTab === 'requests' && (() => {
-        const standardRequests = upgradeRequests.filter(r => 
-          r.requestedPlanType !== 'Custom' && 
-          (!filterUpgradeRequestsSchool || r.schoolId === filterUpgradeRequestsSchool)
-        );
+        const standardRequests = upgradeRequests.filter(r => {
+          if (r.requestedPlanType === 'Custom') return false;
+          if (filterUpgradeRequestsSchool && r.schoolId !== filterUpgradeRequestsSchool) return false;
+          if (requestDateFrom) {
+            const from = new Date(requestDateFrom);
+            from.setHours(0, 0, 0, 0);
+            if (new Date(r.createdAt) < from) return false;
+          }
+          if (requestDateTo) {
+            const to = new Date(requestDateTo);
+            to.setHours(23, 59, 59, 999);
+            if (new Date(r.createdAt) > to) return false;
+          }
+          return true;
+        });
         return (
           <div className="card animate-in fade-in duration-200">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 border-b border-gray-100 pb-4">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-6 border-b border-gray-100 pb-4">
               <div>
                 <h3 className="font-display font-semibold text-primary mb-1">School Upgrade Requests</h3>
                 <p className="text-gray-400 text-xs">Review requests from school admins wishing to change their platform subscription service tiers.</p>
               </div>
-              <div className="w-full sm:w-64">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Filter by School</label>
-                <select
-                  value={filterUpgradeRequestsSchool}
-                  onChange={e => setFilterUpgradeRequestsSchool(e.target.value)}
-                  className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl"
-                >
-                  <option value="">All Schools</option>
-                  {schools.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.schoolCode})</option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-3 flex-wrap">
+                <DateFilterInput label="From:" value={requestDateFrom} onChange={setRequestDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '135px' }} />
+                <DateFilterInput label="To:" value={requestDateTo} onChange={setRequestDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '135px' }} />
+                <div className="w-full sm:w-64">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Filter by School</label>
+                  <select
+                    value={filterUpgradeRequestsSchool}
+                    onChange={e => setFilterUpgradeRequestsSchool(e.target.value)}
+                    className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl"
+                  >
+                    <option value="">All Schools</option>
+                    {schools.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.schoolCode})</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
             
@@ -923,29 +987,50 @@ const Subscriptions = () => {
       })()}
 
       {activeSubTab === 'custom-requests' && (() => {
-        const customRequests = upgradeRequests.filter(r => 
-          r.requestedPlanType === 'Custom' && 
-          (!filterCustomRequestsSchool || r.schoolId === filterCustomRequestsSchool)
-        );
+        const customRequests = upgradeRequests.filter(r => {
+          if (r.requestedPlanType !== 'Custom') return false;
+          if (filterCustomRequestsSchool && r.schoolId !== filterCustomRequestsSchool) return false;
+          if (requestDateFrom) {
+            const from = new Date(requestDateFrom);
+            from.setHours(0, 0, 0, 0);
+            if (new Date(r.createdAt) < from) return false;
+          }
+          if (requestDateTo) {
+            const to = new Date(requestDateTo);
+            to.setHours(23, 59, 59, 999);
+            if (new Date(r.createdAt) > to) return false;
+          }
+          return true;
+        });
         return (
           <div className="card animate-in fade-in duration-200">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 border-b border-gray-100 pb-4">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-6 border-b border-gray-100 pb-4">
               <div>
                 <h3 className="font-display font-semibold text-primary mb-1">Custom Update Notifications & Requests</h3>
                 <p className="text-gray-400 text-xs">Review specific customization requirements requested by clients already on a custom plan.</p>
               </div>
-              <div className="w-full sm:w-64">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Filter by School</label>
-                <select
-                  value={filterCustomRequestsSchool}
-                  onChange={e => setFilterCustomRequestsSchool(e.target.value)}
-                  className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl"
-                >
-                  <option value="">All Schools</option>
-                  {schools.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.schoolCode})</option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-500 font-medium">From:</span>
+                  <input type="date" value={requestDateFrom} onChange={e => setRequestDateFrom(e.target.value)} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '135px' }} />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-500 font-medium">To:</span>
+                  <input type="date" value={requestDateTo} onChange={e => setRequestDateTo(e.target.value)} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '135px' }} />
+                </div>
+                <div className="w-full sm:w-64">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Filter by School</label>
+                  <select
+                    value={filterCustomRequestsSchool}
+                    onChange={e => setFilterCustomRequestsSchool(e.target.value)}
+                    className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl"
+                  >
+                    <option value="">All Schools</option>
+                    {schools.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.schoolCode})</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
             

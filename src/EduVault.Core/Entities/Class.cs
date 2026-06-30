@@ -14,6 +14,16 @@ namespace EduVault.Core.Entities
         public int Capacity { get; set; } = 30;
         public Guid? ClassTeacherId { get; set; }
         public bool AreMarksPublished { get; set; } = false;
+        // Comma-separated list of exam types that are locked/published for this class
+        public string PublishedExamTypes { get; set; } = string.Empty;
+
+        // Helper to determine if a given exam type is locked
+        public bool IsExamTypeLocked(string examType)
+        {
+            return PublishedExamTypes
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Any(e => e.Trim().Equals(examType, StringComparison.OrdinalIgnoreCase));
+        }
 
         // Navigation properties
         public virtual School? School { get; set; }

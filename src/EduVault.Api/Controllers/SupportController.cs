@@ -55,7 +55,7 @@ namespace EduVault.Api.Controllers
                     .ToList()
                 : new System.Collections.Generic.List<SystemEvent>();
 
-            object schools = null;
+            object? schools = null;
             if (isSuperAdmin)
             {
                 schools = (await _unitOfWork.Schools.GetAllAsync())

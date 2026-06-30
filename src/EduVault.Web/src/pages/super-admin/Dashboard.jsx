@@ -170,7 +170,7 @@ const SuperAdminDashboard = () => {
                   <div className="min-w-0">
                     <div className="text-xs font-semibold text-primary truncate">{a.name}</div>
                     <div className="text-[10px] text-gray-400 mt-0.5 font-light">Joined the platform ({a.status})</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5 font-medium">{new Date(a.createdAt).toLocaleDateString()}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5 font-medium">{new Date(a.createdAt).toLocaleDateString('en-GB')}</div>
                   </div>
                 </div>
               ))}

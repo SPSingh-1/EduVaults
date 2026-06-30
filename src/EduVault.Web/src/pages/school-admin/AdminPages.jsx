@@ -4,6 +4,31 @@ import { apiClient, expressClient } from '../../api/apiClient';
 import { io } from 'socket.io-client';
 import { useNotifications } from '../../contexts/NotificationContext';
 
+const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
+  const [focused, setFocused] = useState(false);
+  const formatDisplay = (val) => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return val;
+  };
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      {label && <span className="text-xs font-semibold whitespace-nowrap">{label}</span>}
+      <input
+        type={focused ? 'date' : 'text'}
+        value={focused ? value : formatDisplay(value)}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="dd/mm/yyyy"
+        className={className}
+        style={style}
+      />
+    </div>
+  );
+};
+
 // --- Classes Page ---
 export const Classes = () => {
   const [classesList, setClassesList] = useState([]);
@@ -265,15 +290,25 @@ export const Notices = () => {
   const [type, setType] = useState('GENERAL');
   const [loading, setLoading] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState('all'); // 'all', 'school', 'system'
+  const [sendWhatsApp, setSendWhatsApp] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const filteredNotices = noticesList.filter(n => {
-    if (activeFilterTab === 'school') {
-      return n.senderRole !== 'superadmin';
+    if (activeFilterTab === 'school' && n.senderRole === 'superadmin') return false;
+    if (activeFilterTab === 'system' && n.senderRole !== 'superadmin') return false;
+    
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(n.createdAt) < from) return false;
     }
-    if (activeFilterTab === 'system') {
-      return n.senderRole === 'superadmin';
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(n.createdAt) > to) return false;
     }
-    return true; // 'all'
+    return true;
   });
 
   const fetchNotices = async () => {
@@ -321,9 +356,16 @@ export const Notices = () => {
         body,
         type
       });
+      if (sendWhatsApp) {
+        await apiClient.post('/academics/whatsapp/send-broadcast', {
+          title,
+          body
+        });
+      }
       setShowNew(false);
       setTitle('');
       setBody('');
+      setSendWhatsApp(false);
       fetchNotices();
     } catch (err) {
       console.error('Error publishing notice:', err);
@@ -360,6 +402,12 @@ export const Notices = () => {
                 <span>{tab.label}</span>
               </button>
             ))}
+          </div>
+
+          <div className="flex items-center gap-2 mb-4 flex-wrap bg-gray-50 p-2 border border-gray-100 rounded-xl">
+            <span className="text-xs font-semibold text-gray-500">Filter by Date:</span>
+            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '130px' }} />
+            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '130px' }} />
           </div>
 
           {filteredNotices.map((n, i) => (
@@ -446,6 +494,10 @@ export const Notices = () => {
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Message Body</label>
                   <textarea required placeholder="Type announcement here..." value={body} onChange={e => setBody(e.target.value)} className="input h-28 resize-none" />
                 </div>
+                <div className="flex items-center gap-2 py-1">
+                  <input type="checkbox" id="whatsAppModalAdmin" checked={sendWhatsApp} onChange={e => setSendWhatsApp(e.target.checked)} className="rounded text-primary focus:ring-primary h-4 w-4 cursor-pointer" />
+                  <label htmlFor="whatsAppModalAdmin" className="text-xs font-semibold text-slate-600 cursor-pointer select-none">Send WhatsApp to Parents</label>
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
@@ -470,10 +522,14 @@ export const Exams = () => {
   const [examTypes, setExamTypes] = useState([]);
   const [showNew, setShowNew] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [modalSubjects, setModalSubjects] = useState([]);
+  const [loadingModalSubjects, setLoadingModalSubjects] = useState(false);
 
   // Filter States
   const [filterClassId, setFilterClassId] = useState('');
   const [filterExamType, setFilterExamType] = useState('Semester Examination');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const [modalError, setModalError] = useState('');
   const [editMode, setEditMode] = useState(false);
@@ -583,6 +639,40 @@ export const Exams = () => {
     fetchExamsData();
   }, []);
 
+  useEffect(() => {
+    const fetchModalSubjects = async () => {
+      if (!form.classId) {
+        setModalSubjects([]);
+        return;
+      }
+      setLoadingModalSubjects(true);
+      try {
+        const res = await apiClient.get(`/academics/class-subjects/${form.classId}`);
+        const mapped = res.data.map(cs => ({
+          id: cs.subjectId,
+          name: cs.subjectName,
+          code: cs.subjectCode
+        }));
+        setModalSubjects(mapped);
+
+        // Auto-select first mapped subject if current subjectId is not in the list
+        setForm(f => {
+          const hasSubject = mapped.some(s => s.id === f.subjectId);
+          return {
+            ...f,
+            subjectId: hasSubject ? f.subjectId : (mapped[0]?.id || '')
+          };
+        });
+      } catch (err) {
+        console.error('Error fetching subjects for class:', err);
+      } finally {
+        setLoadingModalSubjects(false);
+      }
+    };
+
+    fetchModalSubjects();
+  }, [form.classId]);
+
   const handleScheduleExam = async (e) => {
     e.preventDefault();
     if (!form.classId || !form.proctorId || !form.subjectId || !form.date || !form.time) return;
@@ -656,6 +746,18 @@ export const Exams = () => {
     .filter(e => {
       const classMatch = !filterClassId || (selectedClassObj && e.grade === `Grade ${selectedClassObj.grade}` && e.section === selectedClassObj.section);
       const typeMatch = !filterExamType || e.examType === filterExamType;
+      
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        from.setHours(0, 0, 0, 0);
+        if (new Date(e.rawDate || e.date) < from) return false;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo);
+        to.setHours(23, 59, 59, 999);
+        if (new Date(e.rawDate || e.date) > to) return false;
+      }
+      
       return classMatch && typeMatch;
     })
     .sort((a, b) => new Date(a.rawDate || a.date) - new Date(b.rawDate || b.date));
@@ -698,6 +800,8 @@ export const Exams = () => {
                 {sendingSchedule ? 'Sending...' : '📢 Send Schedule'}
               </button>
             )}
+            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input bg-white/10 border-white/20 text-white text-xs py-1 px-2 rounded-xl" style={{ width: '120px' }} />
+            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input bg-white/10 border-white/20 text-white text-xs py-1 px-2 rounded-xl" style={{ width: '120px' }} />
             <div className="flex gap-2 w-full sm:w-auto">
               <select
                 value={filterClassId}
@@ -825,8 +929,8 @@ export const Exams = () => {
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Select Subject *</label>
                   <select required value={form.subjectId} onChange={e => setForm(f => ({ ...f, subjectId: e.target.value }))} className="input">
-                    <option value="">Choose Subject</option>
-                    {subjects.map(s => (
+                    <option value="">{loadingModalSubjects ? 'Loading subjects...' : 'Choose Subject'}</option>
+                    {modalSubjects.map(s => (
                       <option key={s.id} value={s.id}>
                         {s.name} {s.code && s.code.toUpperCase() !== s.name.toUpperCase().replace(/\s+/g, '') ? `(${s.code})` : ''}
                       </option>
@@ -876,6 +980,8 @@ export const Exams = () => {
 // --- Admission Page ---
 export const Admission = () => {
   const [admissions, setAdmissions] = useState([]);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     const fetchAdmissions = async () => {
@@ -889,10 +995,28 @@ export const Admission = () => {
     fetchAdmissions();
   }, []);
 
+  const filteredAdmissions = admissions.filter(a => {
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(a.createdAt) < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(a.createdAt) > to) return false;
+    }
+    return true;
+  });
+
   return (
     <div>
       <Topbar title="Admission Registry" subtitle="Manage incoming application cycles." />
       <div className="card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 mb-4 bg-gray-50 p-2.5 border border-gray-100 rounded-xl">
+          <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '135px' }} />
+          <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '135px' }} />
+        </div>
         <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
           <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
             <table className="w-full" style={{ minWidth: '600px', borderCollapse: 'collapse' }}>
@@ -902,7 +1026,7 @@ export const Admission = () => {
                 </tr>
               </thead>
               <tbody>
-                {admissions.map((a, i) => (
+                {filteredAdmissions.map((a, i) => (
                   <tr key={a.id || i} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="table-td text-xs font-mono text-gray-500">#{a.studentId}</td>
                     <td className="table-td font-semibold text-primary">{a.name}</td>
@@ -910,7 +1034,7 @@ export const Admission = () => {
                     <td className="table-td"><span className="badge-success">{a.status}</span></td>
                   </tr>
                 ))}
-                {admissions.length === 0 && (
+                {filteredAdmissions.length === 0 && (
                   <tr>
                     <td colSpan="4" className="text-center py-6 text-gray-400 text-sm">No student admissions registered yet.</td>
                   </tr>

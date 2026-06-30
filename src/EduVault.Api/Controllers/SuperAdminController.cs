@@ -584,6 +584,75 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.CompleteAsync();
             return Ok(config);
         }
+
+        [HttpGet("schools/{id}/credentials")]
+        public async Task<IActionResult> GetSchoolCredentials(Guid id)
+        {
+            var school = await _unitOfWork.Schools.GetByIdAsync(id);
+            if (school == null)
+            {
+                return NotFound(new { error = "School not found" });
+            }
+
+            return Ok(new
+            {
+                school.RazorpayKeyId,
+                school.RazorpayKeySecret,
+                school.TwilioAccountSid,
+                school.TwilioAuthToken,
+                school.TwilioWhatsAppFromNumber
+            });
+        }
+
+        [HttpPost("schools/{id}/credentials/razorpay")]
+        public async Task<IActionResult> UpdateRazorpayCredentials(Guid id, [FromBody] UpdateRazorpayRequest request)
+        {
+            var school = await _unitOfWork.Schools.GetByIdAsync(id);
+            if (school == null)
+            {
+                return NotFound(new { error = "School not found" });
+            }
+
+            school.RazorpayKeyId = request.KeyId;
+            school.RazorpayKeySecret = request.KeySecret;
+
+            _unitOfWork.Schools.Update(school);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true });
+        }
+
+        [HttpPost("schools/{id}/credentials/twilio")]
+        public async Task<IActionResult> UpdateTwilioCredentials(Guid id, [FromBody] UpdateTwilioRequest request)
+        {
+            var school = await _unitOfWork.Schools.GetByIdAsync(id);
+            if (school == null)
+            {
+                return NotFound(new { error = "School not found" });
+            }
+
+            school.TwilioAccountSid = request.AccountSid;
+            school.TwilioAuthToken = request.AuthToken;
+            school.TwilioWhatsAppFromNumber = request.WhatsAppFromNumber;
+
+            _unitOfWork.Schools.Update(school);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true });
+        }
+    }
+
+    public class UpdateRazorpayRequest
+    {
+        public string? KeyId { get; set; }
+        public string? KeySecret { get; set; }
+    }
+
+    public class UpdateTwilioRequest
+    {
+        public string? AccountSid { get; set; }
+        public string? AuthToken { get; set; }
+        public string? WhatsAppFromNumber { get; set; }
     }
 
     public class SaveCustomPlanRequest

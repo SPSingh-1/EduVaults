@@ -4,10 +4,37 @@ import { apiClient } from '../../api/apiClient';
 
 const sc = { ACTIVE: 'badge-success', WITHDRAWN: 'badge-gray', SUSPENDED: 'badge-danger' };
 
+const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
+  const [focused, setFocused] = useState(false);
+  const formatDisplay = (val) => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return val;
+  };
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
+      <input
+        type={focused ? 'date' : 'text'}
+        value={focused ? value : formatDisplay(value)}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="dd/mm/yyyy"
+        className={className || "input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl"}
+        style={style || { width: '130px' }}
+      />
+    </div>
+  );
+};
+
 const Students = () => {
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Dropdown filter states
   const [selectedClass, setSelectedClass] = useState('');
@@ -18,6 +45,11 @@ const Students = () => {
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewStudentData, setViewStudentData] = useState(null);
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [promotingStudent, setPromotingStudent] = useState(null);
+  const [promoteNextClassId, setPromoteNextClassId] = useState('');
+  const [promoteError, setPromoteError] = useState('');
+  const [promoting, setPromoting] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -175,6 +207,50 @@ const Students = () => {
     }
   };
 
+  const handlePromoteClick = (student) => {
+    setPromotingStudent(student);
+    setPromoteError('');
+    
+    const currentGradeStr = student.class.replace('Class ', '').trim();
+    const currentGradeNum = parseInt(currentGradeStr, 10);
+    if (!isNaN(currentGradeNum)) {
+      const nextGradeNum = currentGradeNum + 1;
+      const targetSection = student.section || 'Section A';
+      
+      const match = classSections.find(
+        c => String(c.grade) === String(nextGradeNum) && c.section === targetSection
+      );
+      
+      if (match) {
+        setPromoteNextClassId(match.id);
+      } else {
+        const fallback = classSections.find(c => String(c.grade) === String(nextGradeNum));
+        setPromoteNextClassId(fallback ? fallback.id : '');
+      }
+    } else {
+      setPromoteNextClassId('');
+    }
+    
+    setShowPromoteModal(true);
+  };
+
+  const handlePromoteSubmit = async () => {
+    if (!promoteNextClassId || !promotingStudent) return;
+    setPromoting(true);
+    setPromoteError('');
+    try {
+      await apiClient.post(`/academics/students/${promotingStudent.id}/promote`, {
+        nextClassId: promoteNextClassId
+      });
+      setShowPromoteModal(false);
+      fetchData();
+    } catch (err) {
+      setPromoteError(err.response?.data?.error || 'Failed to promote student.');
+    } finally {
+      setPromoting(false);
+    }
+  };
+
   // Helper to normalize class names for comparison (e.g. "Class 1" or "1" => "1")
   const normalizeClass = (cls) => {
     if (!cls) return '';
@@ -191,6 +267,18 @@ const Students = () => {
     const matchesSection = !selectedSection || s.section === selectedSection;
     const statusStr = s.status || '';
     const matchesStatus = !selectedStatus || statusStr.toUpperCase() === selectedStatus.toUpperCase();
+    
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(s.createdAt) < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(s.createdAt) > to) return false;
+    }
+    
     return matchesName && matchesClass && matchesSection && matchesStatus;
   });
 
@@ -204,13 +292,18 @@ const Students = () => {
       } />
       <div className="card">
         <p className="text-xs text-gray-400 mb-4">Manage and organize all student records across all classes.</p>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-5">
+        <div className="flex flex-col xl:flex-row xl:items-center gap-3 mb-5">
           <div className="flex-1 relative">
             <input placeholder="Search students by name..." value={search} onChange={e => setSearch(e.target.value)} className="input pl-9 text-sm" />
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '130px' }} />
+            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '130px' }} />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 shrink-0 w-full xl:w-auto">
             {/* Class Filter Dropdown */}
             <select className="input w-full text-xs sm:text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
               <option value="">Class All</option>
@@ -279,20 +372,20 @@ const Students = () => {
                     <td className="table-td text-sm">{s.father}</td>
                     <td className="table-td"><span className={sc[s.status] || 'badge-success'}>{s.status}</span></td>
                     <td className="table-td">
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => handleView(s.id)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="View Profile">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => handleView(s.id)} className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105" title="View Profile">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
                         </button>
-                        <button onClick={() => handleEdit(s.id)} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Edit Profile">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <button onClick={() => handleEdit(s.id)} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105" title="Edit Profile">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
-                        <button onClick={() => handleDelete(s.id)} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105 active:scale-95" title="Delete Profile">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <button onClick={() => handleDelete(s.id)} className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105" title="Delete Profile">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
@@ -487,6 +580,69 @@ const Students = () => {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Promote Student Modal */}
+      {showPromoteModal && promotingStudent && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+              <div>
+                <h3 className="font-display font-bold text-lg">Promote Student</h3>
+                <p className="text-blue-200 text-xs">Advance student to the next academic grade level</p>
+              </div>
+              <button onClick={() => setShowPromoteModal(false)} className="text-white hover:text-blue-200 text-lg">✖</button>
+            </div>
+            <div className="p-6 space-y-4">
+              {promoteError && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{promoteError}</div>}
+              <div>
+                <div className="text-xs text-gray-400 font-bold uppercase mb-1">Student Details</div>
+                <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                  <div className="font-semibold text-primary">{promotingStudent.name}</div>
+                  <div className="text-xs text-gray-500 font-mono mt-0.5">ID: {promotingStudent.studentId}</div>
+                  <div className="text-xs text-gray-500 mt-1">Current Class: <span className="font-semibold text-primary">{promotingStudent.class} - {promotingStudent.section}</span></div>
+                  <div className="text-xs mt-2 flex items-center gap-1.5">
+                    <span>Exam Status:</span>
+                    {promotingStudent.finalResult === "Pass" ? (
+                      <span className="badge badge-success text-[10px] py-0.5 px-2 font-bold">✅ Pass (GPA: {promotingStudent.gpa})</span>
+                    ) : promotingStudent.finalResult === "Fail" ? (
+                      <span className="badge badge-danger text-[10px] py-0.5 px-2 font-bold">⚠️ Fail (GPA: {promotingStudent.gpa})</span>
+                    ) : (
+                      <span className="badge badge-gray text-[10px] py-0.5 px-2 font-bold">No Exam Records</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Target Promotion Class *</label>
+                <select
+                  value={promoteNextClassId}
+                  onChange={e => setPromoteNextClassId(e.target.value)}
+                  className="input w-full text-xs"
+                  required
+                >
+                  <option value="">Select Target Class</option>
+                  {classSections.map(c => (
+                    <option key={c.id} value={c.id}>
+                      Class {c.grade} - {c.section} {c.teacher ? `(Teacher: ${c.teacher})` : '(No Teacher)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
+              <button onClick={() => setShowPromoteModal(false)} className="btn-outline text-xs">Cancel</button>
+              <button
+                onClick={handlePromoteSubmit}
+                disabled={promoting || !promoteNextClassId}
+                className="btn-primary text-xs"
+              >
+                {promoting ? 'Promoting...' : 'Promote Student'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

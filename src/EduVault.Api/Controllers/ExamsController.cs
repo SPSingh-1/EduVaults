@@ -16,10 +16,12 @@ namespace EduVault.Api.Controllers
     public class ExamsController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly EduVault.Infrastructure.Data.EduVaultDbContext _context;
 
-        public ExamsController(IUnitOfWork unitOfWork)
+        public ExamsController(IUnitOfWork unitOfWork, EduVault.Infrastructure.Data.EduVaultDbContext context)
         {
             _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         private Guid GetSchoolId()
@@ -266,6 +268,13 @@ namespace EduVault.Api.Controllers
             }
 
             await _unitOfWork.CompleteAsync();
+
+            var schoolId = GetSchoolId();
+            foreach (var resultDto in request.Results)
+            {
+                await CheckAndAutoPromoteStudent(resultDto.StudentId, schoolId);
+            }
+
             return Ok(new { success = true });
         }
 
@@ -283,6 +292,13 @@ namespace EduVault.Api.Controllers
             }
 
             await _unitOfWork.CompleteAsync();
+
+            var schoolId = GetSchoolId();
+            foreach (var result in results)
+            {
+                await CheckAndAutoPromoteStudent(result.StudentId, schoolId);
+            }
+
             return Ok(new { success = true });
         }
 
@@ -329,12 +345,25 @@ namespace EduVault.Api.Controllers
             if (enrollment != null)
             {
                 var classObj = await _unitOfWork.Classes.GetByIdAsync(enrollment.ClassId);
-                if (classObj != null && !classObj.AreMarksPublished && role == "student")
+                if (classObj != null && role == "student")
                 {
-                    return Ok(new {
-                        areMarksPublished = false,
-                        message = "Report cards for your class section have not been officially published by the administration yet."
-                    });
+                    if (!classObj.IsExamTypeLocked(targetExamType))
+                    {
+                        return Ok(new {
+                            areMarksPublished = false,
+                            message = "Report cards for your class section have not been officially published by the administration yet."
+                        });
+                    }
+
+                    var approval = _context.ReportApprovals
+                        .FirstOrDefault(ra => ra.ClassId == enrollment.ClassId && ra.StudentId == targetStudentId && ra.ExamType == targetExamType);
+                    if (approval == null || !approval.IsApproved)
+                    {
+                        return Ok(new {
+                            areMarksPublished = false,
+                            message = "Your report card has not been approved by the administration yet."
+                        });
+                    }
                 }
             }
 
@@ -342,8 +371,10 @@ namespace EduVault.Api.Controllers
             var exams = await _unitOfWork.Exams.GetAllAsync();
             var subjects = await _unitOfWork.Subjects.FindAsync(s => s.SchoolId == schoolId);
 
-            // Filter exams to match targetExamType
-            var filteredExams = exams.Where(e => e.ExamType.Equals(targetExamType, StringComparison.OrdinalIgnoreCase)).ToList();
+            // Filter exams to match targetExamType and student's current active class
+            var filteredExams = exams.Where(e => 
+                (enrollment == null || e.ClassId == enrollment.ClassId) && 
+                e.ExamType.Equals(targetExamType, StringComparison.OrdinalIgnoreCase)).ToList();
             var filteredExamIds = filteredExams.Select(e => e.Id).ToList();
 
             // Filter results to only match those exams
@@ -514,10 +545,10 @@ namespace EduVault.Api.Controllers
                 return StatusCode(403, new { error = "Access Denied: Only the assigned Class Teacher can enter marks." });
             }
 
-            // Check if class marks are already published
-            if (classObj.AreMarksPublished)
+            // Check if class marks for the requested exam type are already published
+            if (classObj.IsExamTypeLocked(request.ExamType))
             {
-                return BadRequest(new { error = "Access Denied: Reports are already approved/published by administration and cannot be modified." });
+                return BadRequest(new { error = $"Access Denied: '{request.ExamType}' reports are already approved/published by administration and cannot be modified." });
             }
 
             foreach (var subMark in request.Subjects)
@@ -572,6 +603,9 @@ namespace EduVault.Api.Controllers
             }
 
             await _unitOfWork.CompleteAsync();
+
+            await CheckAndAutoPromoteStudent(studentId, schoolId);
+
             return Ok(new { success = true });
         }
 
@@ -596,6 +630,232 @@ namespace EduVault.Api.Controllers
                 "C" => 2.0m,
                 _ => 1.0m,
             };
+        }
+
+        private async Task CheckAndAutoPromoteStudent(Guid studentId, Guid schoolId)
+        {
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == studentId && e.Status == "ACTIVE")).FirstOrDefault();
+            if (enrollment == null) return;
+
+            var currentClass = await _unitOfWork.Classes.GetByIdAsync(enrollment.ClassId);
+            if (currentClass == null || currentClass.SchoolId != schoolId) return;
+
+            // Find all exams scheduled for this class with type "Final Examination" or "Semester Examination"
+            var exams = await _unitOfWork.Exams.FindAsync(e => e.ClassId == currentClass.Id && (e.ExamType == "Final Examination" || e.ExamType == "Semester Examination"));
+            if (!exams.Any()) return;
+
+            var examIds = exams.Select(e => e.Id).ToList();
+            var results = await _unitOfWork.ExamResults.FindAsync(r => r.StudentId == studentId && examIds.Contains(r.ExamId));
+
+            // Must have taken all scheduled exams
+            if (results.Count() < exams.Count()) return;
+
+            bool hasFail = false;
+            foreach (var r in results)
+            {
+                if (!r.MarksObtained.HasValue || r.MarksObtained.Value < 40)
+                {
+                    hasFail = true;
+                    break;
+                }
+            }
+
+            if (hasFail) return;
+
+            // All exams passed! Promote.
+            var nextGrade = currentClass.Grade + 1;
+            var classesInSchool = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
+            var nextClassObj = classesInSchool.FirstOrDefault(c => c.Grade == nextGrade && c.Section.Equals(currentClass.Section, StringComparison.OrdinalIgnoreCase))
+                               ?? classesInSchool.FirstOrDefault(c => c.Grade == nextGrade);
+
+            if (nextClassObj == null) return; // Next grade is not set up yet
+
+            enrollment.ClassId = nextClassObj.Id;
+            enrollment.EnrollDate = DateTime.UtcNow;
+            enrollment.AcademicYear = $"{DateTime.UtcNow.Year}-{((DateTime.UtcNow.Year + 1) % 100):D2}";
+            _unitOfWork.Enrollments.Update(enrollment);
+
+            // Consolidate unpaid fees from the previous class
+            var unpaidInvoices = await _unitOfWork.Invoices.FindAsync(i => i.StudentId == studentId && i.Status != "Paid" && i.Status != "Cancelled");
+            decimal unpaidSum = unpaidInvoices.Sum(i => i.Amount);
+            foreach (var inv in unpaidInvoices)
+            {
+                _unitOfWork.Invoices.Remove(inv);
+            }
+
+            if (unpaidSum > 0)
+            {
+                var prevClassFeeStruct = new FeeStructure
+                {
+                    SchoolId = schoolId,
+                    Name = "Previous Class Outstanding Dues",
+                    Amount = unpaidSum,
+                    Frequency = "One-Time",
+                    Grade = "All Grades",
+                    StudentId = studentId
+                };
+                await _unitOfWork.FeeStructures.AddAsync(prevClassFeeStruct);
+                await _unitOfWork.CompleteAsync();
+
+                var prevClassInvoice = new StudentInvoice
+                {
+                    StudentId = studentId,
+                    FeeStructureId = prevClassFeeStruct.Id,
+                    Amount = unpaidSum,
+                    IssueDate = DateTime.UtcNow,
+                    DueDate = DateTime.UtcNow.AddDays(15),
+                    Status = "Pending"
+                };
+                await _unitOfWork.Invoices.AddAsync(prevClassInvoice);
+            }
+
+            // Apply new class fee structures
+            var feeStructures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId && !fs.StudentId.HasValue);
+            foreach (var fs in feeStructures)
+            {
+                var cleanGradeStr = fs.Grade?.Replace("Class ", "").Trim() ?? string.Empty;
+                string gradePart = cleanGradeStr;
+                string sectionPart = "";
+                
+                if (cleanGradeStr.Contains("-"))
+                {
+                    var parts = cleanGradeStr.Split('-', 2);
+                    gradePart = parts[0].Trim();
+                    sectionPart = parts[1].Trim();
+                }
+                else if (cleanGradeStr.Contains(" "))
+                {
+                    var parts = cleanGradeStr.Split(' ', 2);
+                    gradePart = parts[0].Trim();
+                    sectionPart = parts[1].Trim();
+                }
+
+                if (sectionPart.StartsWith("Section ", StringComparison.OrdinalIgnoreCase))
+                {
+                    sectionPart = sectionPart.Substring(8).Trim();
+                }
+
+                bool matchesGrade = gradePart.Equals(nextClassObj.Grade, StringComparison.OrdinalIgnoreCase) || fs.Grade.Equals("All Grades", StringComparison.OrdinalIgnoreCase);
+                bool matchesSection = string.IsNullOrEmpty(sectionPart) || nextClassObj.Section.Equals(sectionPart, StringComparison.OrdinalIgnoreCase) || nextClassObj.Section.Equals($"Section {sectionPart}", StringComparison.OrdinalIgnoreCase);
+
+                if (matchesGrade && matchesSection)
+                {
+                    decimal installmentAmount = Math.Round(fs.Amount / fs.Installments, 2);
+                    for (int step = 1; step <= fs.Installments; step++)
+                    {
+                        var invoice = new StudentInvoice
+                        {
+                            StudentId = studentId,
+                            FeeStructureId = fs.Id,
+                            Amount = installmentAmount,
+                            IssueDate = DateTime.UtcNow,
+                            DueDate = DateTime.UtcNow.AddDays(30 * step),
+                            Status = "Pending"
+                        };
+                        await _unitOfWork.Invoices.AddAsync(invoice);
+                    }
+                }
+            }
+
+            await _unitOfWork.CompleteAsync();
+        }
+
+        [HttpGet("student/academic-history")]
+        [Authorize(Roles = "student,schooladmin")]
+        public async Task<IActionResult> GetStudentAcademicHistory([FromQuery] Guid? studentId)
+        {
+            var userId = GetUserId();
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            Guid targetStudentId = role == "schooladmin" && studentId.HasValue ? studentId.Value : userId;
+            var schoolId = GetSchoolId();
+
+            var currentEnrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == targetStudentId && e.Status == "ACTIVE")).FirstOrDefault();
+            Guid? currentClassId = currentEnrollment?.ClassId;
+
+            var examResults = await _unitOfWork.ExamResults.FindAsync(er => er.StudentId == targetStudentId);
+            if (!examResults.Any())
+            {
+                return Ok(new List<object>());
+            }
+
+            var exams = await _unitOfWork.Exams.GetAllAsync();
+            var classes = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
+            var subjects = await _unitOfWork.Subjects.FindAsync(s => s.SchoolId == schoolId);
+
+            var pastResults = examResults
+                .Select(r => new { Result = r, Exam = exams.FirstOrDefault(e => e.Id == r.ExamId) })
+                .Where(x => x.Exam != null && (currentClassId == null || x.Exam.ClassId != currentClassId))
+                .ToList();
+
+            if (!pastResults.Any())
+            {
+                return Ok(new List<object>());
+            }
+
+            var historyGrouped = pastResults
+                .GroupBy(x => x.Exam.ClassId)
+                .Select(g => {
+                    var classObj = classes.FirstOrDefault(c => c.Id == g.Key);
+                    var className = classObj != null ? $"Class {classObj.Grade} - {classObj.Section}" : "Unknown Class";
+
+                    var finalExamIds = exams.Where(e => e.ClassId == g.Key && (e.ExamType == "Final Examination" || e.ExamType == "Semester Examination")).Select(e => e.Id).ToList();
+                    var finalResultsForClass = g.Where(x => finalExamIds.Contains(x.Result.ExamId)).ToList();
+
+                    decimal gpa = 0;
+                    string finalResult = "No Exam Records";
+                    if (finalResultsForClass.Any())
+                    {
+                        decimal totalPoints = 0;
+                        int count = 0;
+                        bool hasFail = false;
+                        foreach (var x in finalResultsForClass)
+                        {
+                            if (x.Result.MarksObtained.HasValue)
+                            {
+                                totalPoints += x.Result.Grade switch
+                                {
+                                    "A+" => 4.0m,
+                                    "A" => 3.7m,
+                                    "B+" => 3.3m,
+                                    "B" => 3.0m,
+                                    "C" => 2.0m,
+                                    _ => 1.0m
+                                };
+                                count++;
+                                if (x.Result.MarksObtained.Value < 40)
+                                {
+                                    hasFail = true;
+                                }
+                            }
+                        }
+                        gpa = count > 0 ? Math.Round(totalPoints / count, 2) : 0;
+                        finalResult = hasFail ? "Fail" : (count > 0 ? "Pass" : "No Exam Records");
+                    }
+
+                    var subjectDetails = g.Select(x => {
+                        var subject = subjects.FirstOrDefault(s => s.Id == x.Exam.SubjectId);
+                        return new {
+                            SubjectName = subject?.Name ?? "Unknown Subject",
+                            ExamType = x.Exam.ExamType,
+                            InternalMarks = x.Result.PracticalMarks ?? 0,
+                            TheoryMarks = x.Result.TheoryMarks ?? 0,
+                            TotalMarks = x.Result.MarksObtained ?? 0,
+                            Grade = x.Result.Grade,
+                            Status = (x.Result.MarksObtained ?? 0) >= 40 ? "Pass" : "Fail"
+                        };
+                    }).ToList();
+
+                    return new {
+                        ClassId = g.Key,
+                        ClassName = className,
+                        Gpa = gpa,
+                        FinalResult = finalResult,
+                        Subjects = subjectDetails
+                    };
+                })
+                .ToList();
+
+            return Ok(historyGrouped);
         }
     }
 

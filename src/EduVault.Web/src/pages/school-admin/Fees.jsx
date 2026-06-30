@@ -33,11 +33,38 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
+  const [focused, setFocused] = useState(false);
+  const formatDisplay = (val) => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return val;
+  };
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
+      <input
+        type={focused ? 'date' : 'text'}
+        value={focused ? value : formatDisplay(value)}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="dd/mm/yyyy"
+        className={className || "input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl"}
+        style={style || { width: '135px' }}
+      />
+    </div>
+  );
+};
+
 const Fees = () => {
   const [invoices, setInvoices] = useState([]);
   const [structures, setStructures] = useState([]);
   const [studentLedger, setStudentLedger] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [activeTab, setActiveTab] = useState('invoices');
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -163,10 +190,53 @@ const Fees = () => {
     }
   };
 
+  // Filtered lists for rendering and statistics based on date ranges
+  const filteredInvoices = invoices.filter(t => {
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(t.date) < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(t.date) > to) return false;
+    }
+    return true;
+  });
+
+  const filteredLedger = studentLedger.filter(sl => {
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(sl.createdAt) < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(sl.createdAt) > to) return false;
+    }
+    return true;
+  });
+
+  const filteredTransactions = transactions.filter(t => {
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(t.date) < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(t.date) > to) return false;
+    }
+    return true;
+  });
+
   // Calculations
-  const totalRevenue = invoices.reduce((sum, i) => sum + i.amount, 0);
-  const collectedFees = invoices.filter(i => i.status === 'Paid').reduce((sum, i) => sum + i.amount, 0);
-  const pendingDues = invoices.filter(i => i.status !== 'Paid').reduce((sum, i) => sum + i.amount, 0);
+  const totalRevenue = filteredInvoices.reduce((sum, i) => sum + i.amount, 0);
+  const collectedFees = filteredInvoices.filter(i => i.status === 'Paid').reduce((sum, i) => sum + i.amount, 0);
+  const pendingDues = filteredInvoices.filter(i => i.status !== 'Paid').reduce((sum, i) => sum + i.amount, 0);
   const lateFees = Math.round(collectedFees * 0.02); // Simulated late fees at 2% of collected
 
   // Dynamic grouping of invoices by month for the chart
@@ -183,7 +253,7 @@ const Fees = () => {
       });
     }
 
-    invoices.forEach(inv => {
+    filteredInvoices.forEach(inv => {
       const date = new Date(inv.date);
       const mName = months[date.getMonth()];
       const match = last6.find(x => x.month === mName);
@@ -353,6 +423,17 @@ const Fees = () => {
           ))}
         </div>
 
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 p-3 bg-gray-50 border border-gray-100 rounded-xl">
+          <span className="text-xs font-semibold text-gray-500">📅 Filter Active Tab by Date Range:</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl" style={{ width: '135px' }} />
+            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl" style={{ width: '135px' }} />
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
+            )}
+          </div>
+        </div>
+
         {activeTab === 'invoices' && (
           <div>
             <h3 className="font-display font-semibold text-primary mb-4">Invoiced School Fees</h3>
@@ -370,7 +451,7 @@ const Fees = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {invoices.map((t, idx) => (
+                    {filteredInvoices.map((t, idx) => (
                       <tr key={t.id || idx} className="border-b border-gray-50 hover:bg-gray-50">
                         <td className="table-td">
                           <div className="flex items-center gap-2">
@@ -393,7 +474,7 @@ const Fees = () => {
                         </td>
                       </tr>
                     ))}
-                    {invoices.length === 0 && (
+                    {filteredInvoices.length === 0 && (
                       <tr>
                         <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No billing invoices recorded yet.</td>
                       </tr>
@@ -422,7 +503,7 @@ const Fees = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {studentLedger.map((sl, idx) => (
+                    {filteredLedger.map((sl, idx) => (
                       <tr key={sl.studentId || idx} className="border-b border-gray-50 hover:bg-gray-50">
                         <td className="table-td">
                           <div className="flex items-center gap-2">
@@ -449,7 +530,7 @@ const Fees = () => {
                         </td>
                       </tr>
                     ))}
-                    {studentLedger.length === 0 && (
+                    {filteredLedger.length === 0 && (
                       <tr>
                         <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No student ledger data available.</td>
                       </tr>
@@ -479,7 +560,7 @@ const Fees = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.map((tx, idx) => (
+                    {filteredTransactions.map((tx, idx) => (
                       <tr key={tx.id || idx} className="border-b border-gray-50 hover:bg-gray-50">
                         <td className="table-td font-mono text-xs text-primary font-bold">{tx.referenceNumber}</td>
                         <td className="table-td text-sm font-semibold">{tx.studentName}</td>
@@ -494,7 +575,7 @@ const Fees = () => {
                         </td>
                       </tr>
                     ))}
-                    {transactions.length === 0 && (
+                    {filteredTransactions.length === 0 && (
                       <tr>
                         <td colSpan="7" className="text-center py-6 text-gray-400 text-sm">No payment transactions recorded yet.</td>
                       </tr>

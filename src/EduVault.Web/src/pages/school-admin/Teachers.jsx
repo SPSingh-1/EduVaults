@@ -4,6 +4,31 @@ import { apiClient, expressClient } from '../../api/apiClient';
 
 const sc = { Active: 'badge-success', 'On Leave': 'badge-warning' };
 
+const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
+  const [focused, setFocused] = useState(false);
+  const formatDisplay = (val) => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return val;
+  };
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
+      <input
+        type={focused ? 'date' : 'text'}
+        value={focused ? value : formatDisplay(value)}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="dd/mm/yyyy"
+        className={className || "input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl"}
+        style={style || { width: '130px' }}
+      />
+    </div>
+  );
+};
+
 const Teachers = () => {
   const user = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
   const schoolName = user?.schoolName || 'Central High';
@@ -25,6 +50,8 @@ const Teachers = () => {
   // Dropdown filter states
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Modals state
   const [showModal, setShowModal] = useState(false);
@@ -255,7 +282,7 @@ const Teachers = () => {
   const uniqueDepartments = [...new Set(teachers.map(t => t.department))].filter(Boolean).sort();
   const uniqueStatuses = [...new Set(teachers.map(t => t.status))].filter(Boolean).sort();
 
-  // Filter teachers based on search query, department, and status
+  // Filter teachers based on search query, department, status, and date range
   const filtered = teachers.filter(t => {
     const nameStr = t.name || '';
     const emailStr = t.email || '';
@@ -266,6 +293,18 @@ const Teachers = () => {
       empIdStr.toLowerCase().includes(search.toLowerCase());
     const matchesDept = !selectedDepartment || t.department === selectedDepartment;
     const matchesStatus = !selectedStatus || t.status === selectedStatus;
+    
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(t.createdAt) < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(t.createdAt) > to) return false;
+    }
+    
     return matchesSearch && matchesDept && matchesStatus;
   });
 
@@ -313,19 +352,23 @@ const Teachers = () => {
               ))}
             </div>
 
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 mb-4">
+            <div className="flex flex-col xl:flex-row xl:items-center gap-3 mb-4">
               <div className="flex-1 relative">
                 <input placeholder="Search teachers by name, email, or employee ID..." value={search} onChange={e => setSearch(e.target.value)} className="input pl-9 text-sm" />
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
               </div>
-              <div style={{ display: 'flex', gap: '8px', width: '100%' }} className="md:w-auto">
-                <select className="input" style={{ flex: 1, minWidth: 0, width: '50%' }} value={selectedDepartment} onChange={e => setSelectedDepartment(e.target.value)}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl" style={{ width: '130px' }} />
+                <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl" style={{ width: '130px' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }} className="w-full xl:w-auto">
+                <select className="input text-xs" style={{ flex: 1, minWidth: 100 }} value={selectedDepartment} onChange={e => setSelectedDepartment(e.target.value)}>
                   <option value="">All Departments</option>
                   {uniqueDepartments.map((dept, idx) => (
                     <option key={idx} value={dept}>{dept}</option>
                   ))}
                 </select>
-                <select className="input" style={{ flex: 1, minWidth: 0, width: '50%' }} value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)}>
+                <select className="input text-xs" style={{ flex: 1, minWidth: 100 }} value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)}>
                   <option value="">All Statuses</option>
                   {uniqueStatuses.map((stat, idx) => (
                     <option key={idx} value={stat}>{stat}</option>

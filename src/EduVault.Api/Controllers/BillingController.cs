@@ -470,17 +470,27 @@ namespace EduVault.Api.Controllers
 
             if (invoice.Status == "Paid") return BadRequest(new { error = "Invoice is already paid" });
 
-            var keyId = _configuration["Razorpay:KeyId"] ?? "";
-            var keySecret = _configuration["Razorpay:KeySecret"] ?? "";
+            var user = await _unitOfWork.Users.GetByIdAsync(invoice.StudentId);
+            var school = user != null ? await _unitOfWork.Schools.GetByIdAsync(user.SchoolId) : null;
 
-            if (string.IsNullOrEmpty(keyId) || string.IsNullOrEmpty(keySecret) || keySecret == "yourKeySecretHere")
+            bool hasSchoolKeys = school != null && !string.IsNullOrWhiteSpace(school.RazorpayKeyId) && !string.IsNullOrWhiteSpace(school.RazorpayKeySecret);
+
+            if (!hasSchoolKeys)
             {
-                // Return a mock order ID if credentials are not configured to allow testing
+                return BadRequest(new { error = "PAYMENT_NOT_CONFIGURED" });
+            }
+
+            var keyId = school.RazorpayKeyId;
+            var keySecret = school.RazorpayKeySecret;
+
+            if (keyId.Contains("mock") || keySecret.Contains("mock"))
+            {
+                // Return a mock order ID if credentials are set to mock values to allow testing
                 return Ok(new {
                     orderId = $"order_mock_{Guid.NewGuid().ToString().Substring(0, 8)}",
                     amount = (int)Math.Round(invoice.Amount * 100),
                     currency = "INR",
-                    keyId = "rzp_test_mockKeyId",
+                    keyId = keyId,
                     invoiceId = invoice.Id,
                     isMock = true
                 });
@@ -538,7 +548,16 @@ namespace EduVault.Api.Controllers
 
             if (invoice.Status == "Paid") return BadRequest(new { error = "Invoice is already paid" });
 
-            var keySecret = _configuration["Razorpay:KeySecret"] ?? "";
+            var user = await _unitOfWork.Users.GetByIdAsync(invoice.StudentId);
+            var school = user != null ? await _unitOfWork.Schools.GetByIdAsync(user.SchoolId) : null;
+            
+            bool hasSchoolKeys = school != null && !string.IsNullOrWhiteSpace(school.RazorpayKeySecret);
+            if (!hasSchoolKeys)
+            {
+                return BadRequest(new { error = "PAYMENT_NOT_CONFIGURED" });
+            }
+
+            var keySecret = school.RazorpayKeySecret;
 
             // If it's a mock checkout or keys are not set, allow instant success
             bool isVerified = false;
@@ -615,7 +634,8 @@ namespace EduVault.Api.Controllers
                     TotalBilled = totalBilled,
                     TotalPaid = totalPaid,
                     RemainingDue = remainingDue,
-                    Status = status
+                    Status = status,
+                    CreatedAt = student.CreatedAt
                 };
             }).OrderBy(l => l.StudentName).ToList();
 

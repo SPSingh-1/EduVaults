@@ -20,9 +20,55 @@ const generateSetupMockPaymentId = () => {
   return `sub_pay_mock_${Math.random().toString(36).substring(7)}`;
 };
 
+const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
+  const [focused, setFocused] = useState(false);
+  const formatDisplay = (val) => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return val;
+  };
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
+      <input
+        type={focused ? 'date' : 'text'}
+        value={focused ? value : formatDisplay(value)}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="dd/mm/yyyy"
+        className={className || "input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl"}
+        style={style || { width: '130px' }}
+      />
+    </div>
+  );
+};
+
 const Setup = () => {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState('infrastructure'); // 'infrastructure', 'timetable', 'substitutions', 'fees'
+
+  // Student Promotion Setup State
+  const [promoStudents, setPromoStudents] = useState([]);
+  const [promoClasses, setPromoClasses] = useState([]);
+  const [promoClassSections, setPromoClassSections] = useState([]);
+  const [loadingPromo, setLoadingPromo] = useState(false);
+  const [promoSearch, setPromoSearch] = useState('');
+  const [promoDateFrom, setPromoDateFrom] = useState('');
+  const [promoDateTo, setPromoDateTo] = useState('');
+  const [promoSelectedClass, setPromoSelectedClass] = useState('');
+  const [promoSelectedSection, setPromoSelectedSection] = useState('');
+  const [promoSelectedStatus, setPromoSelectedStatus] = useState('');
+
+  // Modals state for student promotion setup
+  const [showPromoViewModal, setShowPromoViewModal] = useState(false);
+  const [promoViewStudentData, setPromoViewStudentData] = useState(null);
+  const [showPromoPromoteModal, setShowPromoPromoteModal] = useState(false);
+  const [promoPromotingStudent, setPromoPromotingStudent] = useState(null);
+  const [promoPromoteNextClassId, setPromoPromoteNextClassId] = useState('');
+  const [promoPromoteError, setPromoPromoteError] = useState('');
+  const [promoPromoting, setPromoPromoting] = useState(false);
 
   // Tab 4: Fee Rules State
   const [feeRules, setFeeRules] = useState([]);
@@ -478,6 +524,94 @@ const Setup = () => {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const fetchPromotionSetupData = async () => {
+    setLoadingPromo(true);
+    try {
+      const studRes = await apiClient.get('/academics/students');
+      setPromoStudents(studRes.data);
+
+      const classRes = await apiClient.get('/academics/enrollment-classes');
+      setPromoClasses(classRes.data);
+
+      const secRes = await apiClient.get('/academics/classes');
+      setPromoClassSections(secRes.data);
+    } catch (err) {
+      console.error('Error fetching promotion setup data:', err);
+    } finally {
+      setLoadingPromo(false);
+    }
+  };
+
+  const handlePromoViewClick = async (id) => {
+    try {
+      const res = await apiClient.get(`/academics/students/${id}`);
+      setPromoViewStudentData(res.data);
+      setShowPromoViewModal(true);
+    } catch (err) {
+      console.error("Error fetching student profile:", err);
+    }
+  };
+
+  const handlePromoPromoteClick = (student) => {
+    setPromoPromotingStudent(student);
+    setPromoPromoteError('');
+    
+    const currentGradeStr = student.class.replace('Class ', '').trim();
+    const currentGradeNum = parseInt(currentGradeStr, 10);
+    if (!isNaN(currentGradeNum)) {
+      const nextGradeNum = currentGradeNum + 1;
+      const targetSection = student.section || 'Section A';
+      
+      const match = promoClassSections.find(
+        c => String(c.grade) === String(nextGradeNum) && c.section === targetSection
+      );
+      
+      if (match) {
+        setPromoPromoteNextClassId(match.id);
+      } else {
+        const fallback = promoClassSections.find(c => String(c.grade) === String(nextGradeNum));
+        setPromoPromoteNextClassId(fallback ? fallback.id : '');
+      }
+    } else {
+      setPromoPromoteNextClassId('');
+    }
+    
+    setShowPromoPromoteModal(true);
+  };
+
+  const handlePromoPromoteSubmit = async () => {
+    if (!promoPromoteNextClassId || !promoPromotingStudent) return;
+    setPromoPromoting(true);
+    setPromoPromoteError('');
+    try {
+      await apiClient.post(`/academics/students/${promoPromotingStudent.id}/promote`, {
+        nextClassId: promoPromoteNextClassId
+      });
+      setShowPromoPromoteModal(false);
+      fetchPromotionSetupData();
+    } catch (err) {
+      setPromoPromoteError(err.response?.data?.error || 'Failed to promote student.');
+    } finally {
+      setPromoPromoting(false);
+    }
+  };
+
+  const handlePromoDeleteClick = async (id) => {
+    if (window.confirm('Are you sure you want to delete this student profile?')) {
+      try {
+        await apiClient.delete(`/academics/students/${id}`);
+        fetchPromotionSetupData();
+      } catch (err) {
+        console.error('Error deleting student profile:', err);
+      }
+    }
+  };
+
+  const normalizePromoClass = (cls) => {
+    if (!cls) return '';
+    return cls.toString().toLowerCase().replace(/\s+/g, '').replace(/^class/, '');
   };
 
   const handleSaveClassSubject = async (e) => {
@@ -948,6 +1082,7 @@ const Setup = () => {
           { id: 'substitutions', label: 'Substitution & Cover Alerts', icon: '👩‍🏫', badge: activeAlerts.length, action: fetchActiveAlerts },
           { id: 'fees', label: 'Fee Rules Setup', icon: '💰', action: fetchFeeSetupData },
           { id: 'class-subjects', label: 'Class Subjects Mapping', icon: '📚', action: fetchClassSubjectsData },
+          { id: 'promotion-setup', label: 'Student Promotion Setup', icon: '🚀', action: fetchPromotionSetupData },
           { id: 'billing', label: 'Billing & Subscription', icon: '💳', action: fetchSubscriptionInfo }
         ].map(tab => {
           const isActive = activeTab === tab.id;
@@ -2085,6 +2220,156 @@ const Setup = () => {
           </div>
         )}
 
+        {activeTab === 'promotion-setup' && (() => {
+          const promoUniqueSections = [...new Set(promoClassSections.map(c => c.section))].filter(Boolean).sort();
+          const filteredPromo = promoStudents.filter(s => {
+            const nameStr = s.name || '';
+            const matchesName = !promoSearch || nameStr.toLowerCase().includes(promoSearch.toLowerCase());
+            const matchesClass = !promoSelectedClass || normalizePromoClass(s.class) === normalizePromoClass(promoSelectedClass);
+            const matchesSection = !promoSelectedSection || s.section === promoSelectedSection;
+            const statusStr = s.status || '';
+            const matchesStatus = !promoSelectedStatus || statusStr.toUpperCase() === promoSelectedStatus.toUpperCase();
+
+            if (promoDateFrom) {
+              const from = new Date(promoDateFrom);
+              from.setHours(0, 0, 0, 0);
+              if (new Date(s.createdAt) < from) return false;
+            }
+            if (promoDateTo) {
+              const to = new Date(promoDateTo);
+              to.setHours(23, 59, 59, 999);
+              if (new Date(s.createdAt) > to) return false;
+            }
+
+            return matchesName && matchesClass && matchesSection && matchesStatus;
+          });
+
+          const sc = { ACTIVE: 'badge-success', WITHDRAWN: 'badge-gray', SUSPENDED: 'badge-danger' };
+
+          return (
+            <div className="card">
+              <h3 className="font-display font-bold text-primary text-lg mb-1 flex items-center gap-2">
+                🚀 Student Promotion Setup Directory
+              </h3>
+              <p className="text-xs text-gray-400 mb-4">Manage, filter, and manually advance student records across all grade levels.</p>
+
+              <div className="flex flex-col xl:flex-row xl:items-center gap-3 mb-5">
+                <div className="flex-1 relative">
+                  <input placeholder="Search students by name..." value={promoSearch} onChange={e => setPromoSearch(e.target.value)} className="input pl-9 text-sm" />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <DateFilterInput label="From:" value={promoDateFrom} onChange={setPromoDateFrom} />
+                  <DateFilterInput label="To:" value={promoDateTo} onChange={setPromoDateTo} />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 shrink-0 w-full xl:w-auto">
+                  <select className="input w-full text-xs sm:text-sm" value={promoSelectedClass} onChange={e => setPromoSelectedClass(e.target.value)}>
+                    <option value="">Class All</option>
+                    {promoClasses.map(c => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+
+                  <select className="input w-full text-xs sm:text-sm" value={promoSelectedSection} onChange={e => setPromoSelectedSection(e.target.value)}>
+                    <option value="">Section All</option>
+                    {promoUniqueSections.map((sec, idx) => (
+                      <option key={idx} value={sec}>{sec}</option>
+                    ))}
+                  </select>
+
+                  <select className="input w-full text-xs sm:text-sm" value={promoSelectedStatus} onChange={e => setPromoSelectedStatus(e.target.value)}>
+                    <option value="">Status: All</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="WITHDRAWN">Withdrawn</option>
+                    <option value="SUSPENDED">Suspended</option>
+                  </select>
+                </div>
+              </div>
+
+              {loadingPromo ? (
+                <div className="text-center py-8 text-gray-400 text-sm italic">Loading student setup list...</div>
+              ) : (
+                <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
+                  <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
+                    <table className="w-full" style={{ minWidth: '780px', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="table-th">Student Name</th>
+                          <th className="table-th">Student ID</th>
+                          <th className="table-th">Class</th>
+                          <th className="table-th">Section</th>
+                          <th className="table-th">Father's Name</th>
+                          <th className="table-th">Exam Status / GPA</th>
+                          <th className="table-th">Status</th>
+                          <th className="table-th">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredPromo.map(s => (
+                          <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
+                            <td className="table-td">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                                  {s.name ? s.name[0] : '?'}
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-primary text-sm">{s.name}</div>
+                                  <div className="text-xs text-gray-400">{s.email}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="table-td text-xs font-mono text-gray-500">{s.studentId}</td>
+                            <td className="table-td text-sm">{s.class}</td>
+                            <td className="table-td text-sm">{s.section}</td>
+                            <td className="table-td text-sm">{s.father}</td>
+                            <td className="table-td text-xs">
+                              {s.finalResult === "Pass" ? (
+                                <span className="text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded border border-green-200/50">✅ Pass (GPA: {s.gpa})</span>
+                              ) : s.finalResult === "Fail" ? (
+                                <span className="text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-200/50">❌ Fail (GPA: {s.gpa})</span>
+                              ) : (
+                                <span className="text-gray-400 font-medium bg-gray-50 px-2 py-0.5 rounded">—</span>
+                              )}
+                            </td>
+                            <td className="table-td"><span className={sc[s.status] || 'badge-success'}>{s.status}</span></td>
+                            <td className="table-td">
+                              <div className="flex items-center gap-1.5">
+                                <button onClick={() => handlePromoViewClick(s.id)} className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105" title="View Profile">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                </button>
+                                <button onClick={() => handlePromoPromoteClick(s)} className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105" title="Promote Student">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 11l3-3m0 0l3 3m-3-3v8m0-13a9 9 0 110 18 9 9 0 010-18z" />
+                                  </svg>
+                                </button>
+                                <button onClick={() => handlePromoDeleteClick(s.id)} className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105" title="Delete Profile">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {filteredPromo.length === 0 && (
+                          <tr>
+                            <td colSpan="8" className="text-center py-6 text-gray-400 text-sm">No students found matching current filters.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {activeTab === 'billing' && (
           <div className="space-y-6">
             {/* Top overview card of school's active subscription status */}
@@ -2486,6 +2771,138 @@ const Setup = () => {
               </div>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Promotion setup: View Details Modal */}
+      {showPromoViewModal && promoViewStudentData && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in duration-200">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+              <div>
+                <h3 className="font-display font-bold text-lg">Student Profile Details</h3>
+                <p className="text-blue-200 text-xs">Profile overview for {promoViewStudentData.firstName} {promoViewStudentData.lastName}</p>
+              </div>
+              <button onClick={() => setShowPromoViewModal(false)} className="text-white hover:text-blue-200 text-lg">✖</button>
+            </div>
+            <div className="p-6 space-y-5 text-sm max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Student ID</div>
+                  <div className="font-mono font-semibold text-primary">{promoViewStudentData.studentId}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Status</div>
+                  <div>
+                    <span className="badge badge-success text-xs">
+                      {promoViewStudentData.status}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Email Address</div>
+                  <div className="text-primary font-medium">{promoViewStudentData.email}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Blood Group</div>
+                  <div className="text-primary font-medium">{promoViewStudentData.bloodGroup || 'Not Specified'}</div>
+                </div>
+              </div>
+
+              <hr className="border-gray-100" />
+
+              <div>
+                <h4 className="font-semibold text-primary text-xs uppercase mb-3 tracking-wide">👪 Guardian Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-gray-400 font-semibold mb-0.5">Guardian Name</div>
+                    <div className="text-primary font-medium">{promoViewStudentData.guardianName}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400 font-semibold mb-0.5">Relationship</div>
+                    <div className="text-primary font-medium">{promoViewStudentData.guardianRelationship}</div>
+                  </div>
+                  <div className="col-span-2">
+                    <div className="text-xs text-gray-400 font-semibold mb-0.5">Contact Number</div>
+                    <div className="text-primary font-medium">{promoViewStudentData.guardianPhone}</div>
+                  </div>
+                </div>
+              </div>
+
+              <hr className="border-gray-100" />
+
+              <div>
+                <div className="text-xs text-gray-400 font-semibold uppercase mb-1">Residential Address</div>
+                <div className="text-primary font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">{promoViewStudentData.address || 'No address registered.'}</div>
+              </div>
+            </div>
+            <div className="flex justify-end p-6 border-t border-gray-100 bg-gray-50">
+              <button onClick={() => setShowPromoViewModal(false)} className="btn-primary text-xs py-2">Close Profile</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Promotion setup: Promote Student Modal */}
+      {showPromoPromoteModal && promoPromotingStudent && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 shadow-2xl animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+              <div>
+                <h3 className="font-display font-bold text-lg">Promote Student</h3>
+                <p className="text-blue-200 text-xs">Advance student to the next academic grade level</p>
+              </div>
+              <button onClick={() => setShowPromoPromoteModal(false)} className="text-white hover:text-blue-200 text-lg">✖</button>
+            </div>
+            <div className="p-6 space-y-4">
+              {promoPromoteError && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{promoPromoteError}</div>}
+              <div>
+                <div className="text-xs text-gray-400 font-bold uppercase mb-1">Student Details</div>
+                <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                  <div className="font-semibold text-primary">{promoPromotingStudent.name}</div>
+                  <div className="text-xs text-gray-500 font-mono mt-0.5">ID: {promoPromotingStudent.studentId}</div>
+                  <div className="text-xs text-gray-500 mt-1">Current Class: <span className="font-semibold text-primary">{promoPromotingStudent.class} - {promoPromotingStudent.section}</span></div>
+                  <div className="text-xs mt-2 flex items-center gap-1.5">
+                    <span>Exam Status:</span>
+                    {promoPromotingStudent.finalResult === "Pass" ? (
+                      <span className="badge badge-success text-[10px] py-0.5 px-2 font-bold">✅ Pass (GPA: {promoPromotingStudent.gpa})</span>
+                    ) : promoPromotingStudent.finalResult === "Fail" ? (
+                      <span className="badge badge-danger text-[10px] py-0.5 px-2 font-bold">⚠️ Fail (GPA: {promoPromotingStudent.gpa})</span>
+                    ) : (
+                      <span className="badge badge-gray text-[10px] py-0.5 px-2 font-bold">No Exam Records</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Target Promotion Class *</label>
+                <select
+                  value={promoPromoteNextClassId}
+                  onChange={e => setPromoPromoteNextClassId(e.target.value)}
+                  className="input w-full text-xs"
+                  required
+                >
+                  <option value="">Select Target Class</option>
+                  {promoClassSections.map(c => (
+                    <option key={c.id} value={c.id}>
+                      Class {c.grade} - {c.section} {c.teacher ? `(Teacher: ${c.teacher})` : '(No Teacher)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
+              <button onClick={() => setShowPromoPromoteModal(false)} className="btn-outline text-xs">Cancel</button>
+              <button
+                onClick={handlePromoPromoteSubmit}
+                disabled={promoPromoting || !promoPromoteNextClassId}
+                className="btn-primary text-xs"
+              >
+                {promoPromoting ? 'Promoting...' : 'Promote Student'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

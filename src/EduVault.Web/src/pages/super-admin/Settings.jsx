@@ -25,6 +25,17 @@ const Settings = () => {
   const [schoolEmailDomain, setSchoolEmailDomain] = useState('');
   const [schoolThemeColor, setSchoolThemeColor] = useState('#1a2744');
 
+  // Modals state
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+
+  // Credentials state
+  const [razorpayKeyId, setRazorpayKeyId] = useState('');
+  const [razorpayKeySecret, setRazorpayKeySecret] = useState('');
+  const [twilioAccountSid, setTwilioAccountSid] = useState('');
+  const [twilioAuthToken, setTwilioAuthToken] = useState('');
+  const [twilioWhatsAppFromNumber, setTwilioWhatsAppFromNumber] = useState('');
+
   // Logs state
   const [logs, setLogs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -135,6 +146,21 @@ const Settings = () => {
     fetchData();
   }, []);
 
+  const fetchSchoolCredentials = async (schoolId) => {
+    try {
+      const res = await apiClient.get(`/super/schools/${schoolId}/credentials`);
+      if (res.data) {
+        setRazorpayKeyId(res.data.razorpayKeyId || '');
+        setRazorpayKeySecret(res.data.razorpayKeySecret || '');
+        setTwilioAccountSid(res.data.twilioAccountSid || '');
+        setTwilioAuthToken(res.data.twilioAuthToken || '');
+        setTwilioWhatsAppFromNumber(res.data.twilioWhatsAppFromNumber || '');
+      }
+    } catch (err) {
+      console.error('Error fetching credentials:', err);
+    }
+  };
+
   const handleScopeChange = (scopeId) => {
     setSelectedScope(scopeId);
     setSaveSuccess(false);
@@ -152,7 +178,37 @@ const Settings = () => {
         setSchoolLogoUrl(school.logoUrl || '/logo.jpeg');
         setSchoolEmailDomain(school.emailDomain || school.adminEmail || '');
         setSchoolThemeColor(school.themeColor || '#1a2744');
+        fetchSchoolCredentials(scopeId);
       }
+    }
+  };
+
+  const handleSavePaymentCreds = async (e) => {
+    e.preventDefault();
+    try {
+      await apiClient.post(`/super/schools/${selectedScope}/credentials/razorpay`, {
+        keyId: razorpayKeyId,
+        keySecret: razorpayKeySecret
+      });
+      alert('Razorpay credentials updated successfully for this school!');
+      setShowPaymentModal(false);
+    } catch (err) {
+      alert('Failed to update Razorpay credentials: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleSaveWhatsAppCreds = async (e) => {
+    e.preventDefault();
+    try {
+      await apiClient.post(`/super/schools/${selectedScope}/credentials/twilio`, {
+        accountSid: twilioAccountSid,
+        authToken: twilioAuthToken,
+        whatsAppFromNumber: twilioWhatsAppFromNumber
+      });
+      alert('Twilio WhatsApp credentials updated successfully for this school!');
+      setShowWhatsAppModal(false);
+    } catch (err) {
+      alert('Failed to update WhatsApp credentials: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -437,6 +493,23 @@ const Settings = () => {
                   </div>
                 </div>
               </div>
+
+              <div className="border-t border-gray-100 pt-5 mt-5 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentModal(true)}
+                  className="btn-outline font-bold text-xs flex items-center gap-1.5 border-blue-200 text-blue-600 hover:bg-blue-50 py-2.5 px-4"
+                >
+                  💳 Payment Mode Integration
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowWhatsAppModal(true)}
+                  className="btn-outline font-bold text-xs flex items-center gap-1.5 border-emerald-200 text-emerald-600 hover:bg-emerald-50 py-2.5 px-4"
+                >
+                  💬 WhatsApp Integration
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -588,6 +661,102 @@ const Settings = () => {
           <button onClick={handleSave} className="btn-primary text-xs py-1.5">Save Changes</button>
         </div>
       </div>
+
+      {/* Payment Credentials Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <form onSubmit={handleSavePaymentCreds} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-6 text-left">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-display font-bold text-primary text-xl">💳 Payment Integration</h3>
+                <button type="button" onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
+              </div>
+              <p className="text-xs text-gray-400 mb-4">Configure custom Razorpay payment keys for {schoolName}</p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Razorpay Key ID</label>
+                  <input 
+                    required 
+                    placeholder="rzp_test_..." 
+                    value={razorpayKeyId} 
+                    onChange={e => setRazorpayKeyId(e.target.value)} 
+                    className="input" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Razorpay Key Secret</label>
+                  <input 
+                    required 
+                    type="password" 
+                    placeholder="••••••••••••" 
+                    value={razorpayKeySecret} 
+                    onChange={e => setRazorpayKeySecret(e.target.value)} 
+                    className="input" 
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
+              <button type="button" onClick={() => setShowPaymentModal(false)} className="btn-outline">Cancel</button>
+              <button type="submit" className="btn-primary">Save Keys</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* WhatsApp Credentials Modal */}
+      {showWhatsAppModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <form onSubmit={handleSaveWhatsAppCreds} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-6 text-left">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-display font-bold text-primary text-xl">💬 WhatsApp Integration</h3>
+                <button type="button" onClick={() => setShowWhatsAppModal(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
+              </div>
+              <p className="text-xs text-gray-400 mb-4">Configure custom Twilio WhatsApp credentials for {schoolName}</p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Twilio Account SID</label>
+                  <input 
+                    required 
+                    placeholder="AC..." 
+                    value={twilioAccountSid} 
+                    onChange={e => setTwilioAccountSid(e.target.value)} 
+                    className="input" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Twilio Auth Token</label>
+                  <input 
+                    required 
+                    type="password" 
+                    placeholder="••••••••••••" 
+                    value={twilioAuthToken} 
+                    onChange={e => setTwilioAuthToken(e.target.value)} 
+                    className="input" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">WhatsApp From Number</label>
+                  <input 
+                    required 
+                    placeholder="whatsapp:+14155238886" 
+                    value={twilioWhatsAppFromNumber} 
+                    onChange={e => setTwilioWhatsAppFromNumber(e.target.value)} 
+                    className="input" 
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
+              <button type="button" onClick={() => setShowWhatsAppModal(false)} className="btn-outline">Cancel</button>
+              <button type="submit" className="btn-primary">Save Settings</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

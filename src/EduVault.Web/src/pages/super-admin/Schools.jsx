@@ -4,9 +4,36 @@ import { apiClient } from '../../api/apiClient';
 
 const statusColor = { Active: 'badge-success', Pending: 'badge-warning', Suspended: 'badge-danger' };
 
+const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
+  const [focused, setFocused] = useState(false);
+  const formatDisplay = (val) => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return val;
+  };
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
+      <input
+        type={focused ? 'date' : 'text'}
+        value={focused ? value : formatDisplay(value)}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="dd/mm/yyyy"
+        className={className || "input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl"}
+        style={style || { width: '135px' }}
+      />
+    </div>
+  );
+};
+
 const Schools = () => {
   const [schools, setSchools] = useState([]);
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
     schoolName: '',
@@ -81,7 +108,22 @@ const Schools = () => {
     }
   };
 
-  const filtered = schools.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = schools.filter(s => {
+    const matchesName = s.name.toLowerCase().includes(search.toLowerCase());
+    if (!matchesName) return false;
+    
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(s.createdAt) < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(s.createdAt) > to) return false;
+    }
+    return true;
+  });
 
   // Calculate quick stats
   const totalSchools = schools.length;
@@ -95,14 +137,18 @@ const Schools = () => {
       } />
       {added && <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4 text-sm text-green-700 flex items-center gap-2">✅ School registered successfully!</div>}
       <div className="card">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 mb-5">
+        <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-3 mb-5">
           <div className="flex-1 relative">
             <input placeholder="Search schools by name..." value={search} onChange={e => setSearch(e.target.value)} className="input pl-9" />
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
           </div>
-          <div style={{ display: 'flex', gap: '8px', width: '100%' }} className="md:w-auto">
-            <select className="input" style={{ flex: 1, minWidth: 0, width: '50%' }}><option>All Types</option><option>Private</option><option>Public</option></select>
-            <select className="input" style={{ flex: 1, minWidth: 0, width: '50%' }}><option>All Status</option><option>Active</option><option>Pending</option><option>Suspended</option></select>
+          <div className="flex items-center gap-2 flex-wrap">
+            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '135px' }} />
+            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '135px' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }} className="w-full xl:w-auto">
+            <select className="input text-xs" style={{ flex: 1, minWidth: 100 }}><option>All Types</option><option>Private</option><option>Public</option></select>
+            <select className="input text-xs" style={{ flex: 1, minWidth: 100 }}><option>All Status</option><option>Active</option><option>Pending</option><option>Suspended</option></select>
           </div>
         </div>
         <div 
@@ -158,7 +204,7 @@ const Schools = () => {
                     <td className="table-td"><span className="badge badge-gray font-mono">{s.schoolCode}</span></td>
                     <td className="table-td font-medium">{s.studentsCount}</td>
                     <td className="table-td"><span className={statusColor[s.status] || 'badge-gray'}>{s.status}</span></td>
-                    <td className="table-td text-gray-500">{new Date(s.createdAt).toLocaleDateString()}</td>
+                    <td className="table-td text-gray-500">{new Date(s.createdAt).toLocaleDateString('en-GB')}</td>
                     <td className="table-td">
                       <div className="flex gap-2">
                         <button onClick={() => toggleStatus(s.id, s.status)} className="text-blue-600 hover:underline text-xs font-medium">

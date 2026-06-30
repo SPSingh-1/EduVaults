@@ -14,8 +14,35 @@ const priorityColor = {
   LOW: 'text-gray-600 bg-gray-100'
 };
 
+const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
+  const [focused, setFocused] = useState(false);
+  const formatDisplay = (val) => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return val;
+  };
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
+      <input
+        type={focused ? 'date' : 'text'}
+        value={focused ? value : formatDisplay(value)}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="dd/mm/yyyy"
+        className={className || "text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary"}
+        style={style || { width: '130px' }}
+      />
+    </div>
+  );
+};
+
 const Support = () => {
   const [tickets, setTickets] = useState([]);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [categories, setCategories] = useState([]);
   const [events, setEvents] = useState([]);
   const [stats, setStats] = useState({
@@ -108,9 +135,21 @@ const Support = () => {
 
   const uniqueSchools = [...new Set(tickets.map((t) => t.schoolName).filter(Boolean))].sort();
 
-  const filteredTickets = selectedSchool
-    ? tickets.filter((t) => t.schoolName === selectedSchool)
-    : tickets;
+  const filteredTickets = tickets.filter((t) => {
+    if (selectedSchool && t.schoolName !== selectedSchool) return false;
+    
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(t.createdAt) < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(t.createdAt) > to) return false;
+    }
+    return true;
+  });
 
   const openCount = filteredTickets.filter(t => t.status.toUpperCase() === 'OPEN' || t.status.toUpperCase() === 'IN PROGRESS').length;
   const resolvedCount = filteredTickets.filter(t => t.status.toUpperCase() === 'RESOLVED').length;
@@ -157,20 +196,24 @@ const Support = () => {
         <div className="card lg:col-span-2">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <h3 className="font-display font-semibold text-primary">Active Support Tickets</h3>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 font-medium">Filter by School:</span>
-              <select
-                value={selectedSchool}
-                onChange={(e) => setSelectedSchool(e.target.value)}
-                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white outline-none text-primary font-medium focus:border-primary min-w-[160px]"
-              >
-                <option value="">All Schools</option>
-                {uniqueSchools.map((school) => (
-                  <option key={school} value={school}>
-                    {school}
-                  </option>
-                ))}
-              </select>
+            <div className="flex items-center gap-3 flex-wrap">
+              <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary" style={{ width: '130px' }} />
+              <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary" style={{ width: '130px' }} />
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 font-medium">Filter by School:</span>
+                <select
+                  value={selectedSchool}
+                  onChange={(e) => setSelectedSchool(e.target.value)}
+                  className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white outline-none text-primary font-medium focus:border-primary min-w-[160px]"
+                >
+                  <option value="">All Schools</option>
+                  {uniqueSchools.map((school) => (
+                    <option key={school} value={school}>
+                      {school}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
