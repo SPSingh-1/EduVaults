@@ -46,6 +46,12 @@ namespace EduVault.Api.Services
                     }
                 }
 
+                if (provider == "none")
+                {
+                    Console.WriteLine($"[WHATSAPP INFO] WhatsApp integration is disabled (provider is 'none') for school: {schoolId}");
+                    return false;
+                }
+
                 // Clean the phone number (remove "whatsapp:" prefix and ensure international code)
                 var rawPhone = toPhoneNumber.Trim();
                 if (rawPhone.StartsWith("whatsapp:"))

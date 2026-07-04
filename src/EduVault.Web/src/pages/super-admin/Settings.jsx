@@ -143,6 +143,19 @@ const Settings = () => {
         setBackupFrequency(d.backupFrequency || 'Daily');
         setBackupTime(d.backupTime || '02:00 AM');
         setBackupTarget(d.backupTarget || 'Amazon S3: production-vault-01');
+
+        // Global payment settings configurations
+        setPaymentProvider(d.paymentProvider || 'razorpay');
+        setRazorpayKeyId(d.razorpayKeyId || '');
+        setRazorpayKeySecret(d.razorpayKeySecret || '');
+        setStripePublishableKey(d.stripePublishableKey || '');
+        setStripeSecretKey(d.stripeSecretKey || '');
+        setPayPalClientId(d.payPalClientId || '');
+        setPayPalClientSecret(d.payPalClientSecret || '');
+        setPhonePeMerchantId(d.phonePeMerchantId || '');
+        setPhonePeSaltKey(d.phonePeSaltKey || '');
+        setPhonePeSaltIndex(d.phonePeSaltIndex || '');
+        setCashlessInstructions(d.cashlessInstructions || '');
       }
 
       // 2. Get schools list
@@ -204,6 +217,19 @@ const Settings = () => {
         setOrgName(globalSettings.orgName || 'SuperAdmin Global');
         setLogoUrl(globalSettings.logoUrl || '/logo.jpeg');
         setPrimaryColor(globalSettings.primaryColor || '#1a2744');
+        
+        // Load global settings payment credentials
+        setPaymentProvider(globalSettings.paymentProvider || 'razorpay');
+        setRazorpayKeyId(globalSettings.razorpayKeyId || '');
+        setRazorpayKeySecret(globalSettings.razorpayKeySecret || '');
+        setStripePublishableKey(globalSettings.stripePublishableKey || '');
+        setStripeSecretKey(globalSettings.stripeSecretKey || '');
+        setPayPalClientId(globalSettings.payPalClientId || '');
+        setPayPalClientSecret(globalSettings.payPalClientSecret || '');
+        setPhonePeMerchantId(globalSettings.phonePeMerchantId || '');
+        setPhonePeSaltKey(globalSettings.phonePeSaltKey || '');
+        setPhonePeSaltIndex(globalSettings.phonePeSaltIndex || '');
+        setCashlessInstructions(globalSettings.cashlessInstructions || '');
       }
     } else {
       const school = schools.find(s => s.id === scopeId);
@@ -220,20 +246,48 @@ const Settings = () => {
   const handleSavePaymentCreds = async (e) => {
     e.preventDefault();
     try {
-      await apiClient.post(`/super/schools/${selectedScope}/credentials/payment`, {
-        paymentProvider,
-        razorpayKeyId,
-        razorpayKeySecret,
-        stripePublishableKey,
-        stripeSecretKey,
-        payPalClientId,
-        payPalClientSecret,
-        phonePeMerchantId,
-        phonePeSaltKey,
-        phonePeSaltIndex,
-        cashlessInstructions
-      });
-      alert('Payment credentials updated successfully for this school!');
+      if (selectedScope === 'global') {
+        const payload = {
+          ...globalSettings,
+          orgName,
+          logoUrl,
+          primaryColor,
+          maintenanceMode,
+          maintenanceMessage,
+          backupFrequency,
+          backupTime,
+          backupTarget,
+          paymentProvider,
+          razorpayKeyId,
+          razorpayKeySecret,
+          stripePublishableKey,
+          stripeSecretKey,
+          payPalClientId,
+          payPalClientSecret,
+          phonePeMerchantId,
+          phonePeSaltKey,
+          phonePeSaltIndex,
+          cashlessInstructions
+        };
+        const res = await apiClient.post('/super/settings', payload);
+        setGlobalSettings(res.data);
+        alert('Platform global payment credentials updated successfully!');
+      } else {
+        await apiClient.post(`/super/schools/${selectedScope}/credentials/payment`, {
+          paymentProvider,
+          razorpayKeyId,
+          razorpayKeySecret,
+          stripePublishableKey,
+          stripeSecretKey,
+          payPalClientId,
+          payPalClientSecret,
+          phonePeMerchantId,
+          phonePeSaltKey,
+          phonePeSaltIndex,
+          cashlessInstructions
+        });
+        alert('Payment credentials updated successfully for this school!');
+      }
       setShowPaymentModal(false);
     } catch (err) {
       alert('Failed to update payment credentials: ' + (err.response?.data?.error || err.message));
@@ -285,7 +339,18 @@ const Settings = () => {
           maintenanceMessage,
           backupFrequency,
           backupTime,
-          backupTarget
+          backupTarget,
+          paymentProvider,
+          razorpayKeyId,
+          razorpayKeySecret,
+          stripePublishableKey,
+          stripeSecretKey,
+          payPalClientId,
+          payPalClientSecret,
+          phonePeMerchantId,
+          phonePeSaltKey,
+          phonePeSaltIndex,
+          cashlessInstructions
         };
         const res = await apiClient.post('/super/settings', payload);
         setGlobalSettings(res.data);
@@ -490,6 +555,16 @@ const Settings = () => {
                     ))}
                   </div>
                 </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-5 mt-5 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentModal(true)}
+                  className="btn-outline font-bold text-xs flex items-center gap-1.5 border-blue-200 text-blue-600 hover:bg-blue-50 py-2.5 px-4"
+                >
+                  💳 Platform Payment Integration
+                </button>
               </div>
             </div>
           </div>
@@ -731,16 +806,36 @@ const Settings = () => {
                 <h3 className="font-display font-bold text-primary text-xl">💳 Payment Integration</h3>
                 <button type="button" onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
               </div>
-              <p className="text-xs text-gray-400 mb-4">Configure custom payment gateway credentials for {schoolName}</p>
+              <p className="text-xs text-gray-400 mb-4">
+                {selectedScope === 'global'
+                  ? "Configure platform owner's payment gateway credentials. These credentials will be used for all school subscription payments."
+                  : `Configure custom payment gateway credentials for ${schoolName}`}
+              </p>
               
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5 font-bold">Select Active Payment Provider</label>
                   <select 
                     value={paymentProvider} 
-                    onChange={e => setPaymentProvider(e.target.value)} 
+                    onChange={e => {
+                      const val = e.target.value;
+                      setPaymentProvider(val);
+                      if (val === 'none') {
+                        setRazorpayKeyId('');
+                        setRazorpayKeySecret('');
+                        setStripePublishableKey('');
+                        setStripeSecretKey('');
+                        setPayPalClientId('');
+                        setPayPalClientSecret('');
+                        setPhonePeMerchantId('');
+                        setPhonePeSaltKey('');
+                        setPhonePeSaltIndex('');
+                        setCashlessInstructions('');
+                      }
+                    }} 
                     className="input select text-xs bg-slate-50 border border-slate-200"
                   >
+                    <option value="none">None (Disable Payment Integration)</option>
                     <option value="razorpay">Razorpay Checkout</option>
                     <option value="stripe">Stripe Payments</option>
                     <option value="paypal">PayPal Gateway</option>
@@ -903,9 +998,25 @@ const Settings = () => {
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5 font-bold">Select WhatsApp Provider</label>
                   <select 
                     value={whatsAppProvider} 
-                    onChange={e => setWhatsAppProvider(e.target.value)} 
+                    onChange={e => {
+                      const val = e.target.value;
+                      setWhatsAppProvider(val);
+                      if (val === 'none') {
+                        setTwilioAccountSid('');
+                        setTwilioAuthToken('');
+                        setTwilioWhatsAppFromNumber('');
+                        setMetaAccessToken('');
+                        setMetaPhoneNumberId('');
+                        setMetaWhatsAppFromNumber('');
+                        setCustomProviderUrl('');
+                        setCustomProviderApiKey('');
+                        setCustomProviderFromNumber('');
+                        setTestPhoneNumber('');
+                      }
+                    }} 
                     className="input select text-xs bg-slate-50 border border-slate-200"
                   >
+                    <option value="none">None (Disable WhatsApp Integration)</option>
                     <option value="twilio">Twilio API (Classic)</option>
                     <option value="meta">Meta Official Cloud API</option>
                     <option value="custom">Custom HTTP API Gateway</option>

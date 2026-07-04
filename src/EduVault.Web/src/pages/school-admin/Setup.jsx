@@ -218,32 +218,117 @@ const Setup = () => {
   const handlePaySetupSubscription = async (isRenewal = false) => {
     setPayingSub(true);
     try {
-      const scriptLoaded = await loadSubScript('https://checkout.razorpay.com/v1/checkout.js');
-      if (!scriptLoaded) {
-        alert('Failed to load Razorpay SDK. Please check your internet connection.');
-        setPayingSub(false);
-        return;
-      }
-
       const orderRes = await apiClient.post(`/billing/create-subscription-order?isRenewal=${isRenewal}`);
-      const { orderId, amount, currency, keyId, isMock } = orderRes.data;
+      const { 
+        orderId, 
+        amount, 
+        currency, 
+        keyId, 
+        isMock, 
+        paymentProvider, 
+        publishableKey, 
+        clientId, 
+        merchantId, 
+        instructions 
+      } = orderRes.data;
 
+      const provider = paymentProvider ? paymentProvider.toLowerCase() : 'razorpay';
       const userProfile = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
 
-      const options = {
-        key: keyId,
-        amount: amount,
-        currency: currency,
-        name: isRenewal ? "EduVault Subscription Renewal" : "EduVault Subscription",
-        description: `${subInfo?.planType || 'Standard'} Plan Platform Fees`,
-        order_id: isMock ? undefined : orderId,
-        handler: async function (response) {
+      if (provider === 'razorpay') {
+        const scriptLoaded = await loadSubScript('https://checkout.razorpay.com/v1/checkout.js');
+        if (!scriptLoaded) {
+          alert('Failed to load Razorpay SDK. Please check your internet connection.');
+          setPayingSub(false);
+          return;
+        }
+
+        const options = {
+          key: keyId,
+          amount: amount,
+          currency: currency,
+          name: isRenewal ? "EduVault Subscription Renewal" : "EduVault Subscription",
+          description: `${subInfo?.planType || 'Standard'} Plan Platform Fees`,
+          order_id: isMock ? undefined : orderId,
+          handler: async function (response) {
+            setPayingSub(true);
+            try {
+              await apiClient.post(`/billing/verify-subscription-payment?isRenewal=${isRenewal}`, {
+                razorpayOrderId: response.razorpay_order_id || orderId,
+                razorpayPaymentId: response.razorpay_payment_id || '',
+                razorpaySignature: response.razorpay_signature || 'mock_signature',
+                paymentProvider: 'razorpay'
+              });
+              alert(isRenewal ? 'Platform subscription renewal successful!' : 'Platform subscription payment successful! All features unlocked.');
+              fetchSubscriptionInfo();
+            } catch (err) {
+              alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
+            } finally {
+              setPayingSub(false);
+            }
+          },
+          prefill: {
+            name: userProfile.firstName || 'School Admin',
+            email: userProfile.email || '',
+          },
+          theme: {
+            color: "#1a2744"
+          }
+        };
+
+        if (isMock) {
+          if (window.confirm("Razorpay credentials not configured. Proceed with simulated subscription payment?")) {
+            await options.handler({
+              razorpay_order_id: orderId,
+              razorpay_payment_id: generateSetupMockPaymentId(),
+              razorpay_signature: 'mock_signature'
+            });
+          } else {
+            setPayingSub(false);
+          }
+        } else {
+          const rzp = new window.Razorpay(options);
+          rzp.on('payment.failed', function (response) {
+            alert("Payment failed: " + response.error.description);
+          });
+          rzp.open();
+        }
+      }
+      else if (provider === 'cashless') {
+        const confirmMsg = `🏦 Platform Cashless / Bank Transfer Instructions:\n\n${instructions || 'Please transfer the platform fees to the admin account.'}\n\nAmount: Rs. ${amount}\n\nHave you completed the bank transfer? Click OK to submit subscription verification.`;
+        if (window.confirm(confirmMsg)) {
           setPayingSub(true);
           try {
+            const txRef = `cashless_sub_${Math.random().toString(36).substring(7)}`;
             await apiClient.post(`/billing/verify-subscription-payment?isRenewal=${isRenewal}`, {
-              razorpayOrderId: response.razorpay_order_id || orderId,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature || 'mock_signature'
+              razorpayOrderId: orderId,
+              paymentProvider: 'cashless',
+              transactionReference: txRef
+            });
+            alert(isRenewal ? 'Platform subscription renewal submitted!' : 'Platform subscription payment submitted! The admin will verify it shortly.');
+            fetchSubscriptionInfo();
+          } catch (err) {
+            alert('Failed to submit cashless transaction: ' + (err.response?.data?.error || err.message));
+          } finally {
+            setPayingSub(false);
+          }
+        } else {
+          setPayingSub(false);
+        }
+      }
+      else {
+        // Stripe, PayPal, PhonePe simulations
+        const providerName = provider === 'stripe' ? 'Stripe' : provider === 'paypal' ? 'PayPal' : provider === 'phonepe' ? 'PhonePe' : provider;
+        const confirmMsg = `💳 Active Platform Gateway: ${providerName}\n\nAmount: Rs. ${amount}\n\nWould you like to proceed with the simulated checkout?`;
+        
+        if (window.confirm(confirmMsg)) {
+          setPayingSub(true);
+          try {
+            const txRef = `${provider}_sub_${Math.random().toString(36).substring(7)}`;
+            await apiClient.post(`/billing/verify-subscription-payment?isRenewal=${isRenewal}`, {
+              razorpayOrderId: orderId,
+              paymentProvider: provider,
+              transactionReference: txRef
             });
             alert(isRenewal ? 'Platform subscription renewal successful!' : 'Platform subscription payment successful! All features unlocked.');
             fetchSubscriptionInfo();
@@ -252,32 +337,9 @@ const Setup = () => {
           } finally {
             setPayingSub(false);
           }
-        },
-        prefill: {
-          name: userProfile.firstName || 'School Admin',
-          email: userProfile.email || '',
-        },
-        theme: {
-          color: "#1a2744"
-        }
-      };
-
-      if (isMock) {
-        if (window.confirm("Razorpay credentials not configured. Proceed with simulated subscription payment?")) {
-          await options.handler({
-            razorpay_order_id: orderId,
-            razorpay_payment_id: generateSetupMockPaymentId(),
-            razorpay_signature: 'mock_signature'
-          });
         } else {
           setPayingSub(false);
         }
-      } else {
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (response) {
-          alert("Payment failed: " + response.error.description);
-        });
-        rzp.open();
       }
     } catch (err) {
       alert(err.response?.data?.error || 'Order creation failed.');

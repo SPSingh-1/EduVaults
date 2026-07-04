@@ -63,52 +63,137 @@ const SchoolAdminDashboard = () => {
   const handlePaySubscription = async () => {
     setPaying(true);
     try {
-      const loadScript = (src) => {
-        return new Promise((resolve) => {
-          if (document.querySelector(`script[src="${src}"]`)) {
-            resolve(true);
-            return;
-          }
-          const script = document.createElement('script');
-          script.src = src;
-          script.onload = () => resolve(true);
-          script.onerror = () => resolve(false);
-          document.body.appendChild(script);
-        });
-      };
-
-      const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
-      if (!scriptLoaded) {
-        alert('Failed to load Razorpay SDK. Please check your internet connection.');
-        setPaying(false);
-        return;
-      }
-
       // 1. Create order
       const orderRes = await apiClient.post('/billing/create-subscription-order');
-      const { orderId, amount, currency, keyId, isMock } = orderRes.data;
+      const { 
+        orderId, 
+        amount, 
+        currency, 
+        keyId, 
+        isMock, 
+        paymentProvider, 
+        publishableKey, 
+        clientId, 
+        merchantId, 
+        instructions 
+      } = orderRes.data;
 
+      const provider = paymentProvider ? paymentProvider.toLowerCase() : 'razorpay';
       const userProfile = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
 
-      // 2. Options
-      const options = {
-        key: keyId,
-        amount: amount,
-        currency: currency,
-        name: "EduVault Subscription",
-        description: `${stats?.subscriptionPlanType || 'Standard'} Plan Platform Fees`,
-        order_id: isMock ? undefined : orderId,
-        handler: async function (response) {
+      if (provider === 'razorpay') {
+        const loadScript = (src) => {
+          return new Promise((resolve) => {
+            if (document.querySelector(`script[src="${src}"]`)) {
+              resolve(true);
+              return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+          });
+        };
+
+        const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+        if (!scriptLoaded) {
+          alert('Failed to load Razorpay SDK. Please check your internet connection.');
+          setPaying(false);
+          return;
+        }
+
+        const options = {
+          key: keyId,
+          amount: amount,
+          currency: currency,
+          name: "EduVault Subscription",
+          description: `${stats?.subscriptionPlanType || 'Standard'} Plan Platform Fees`,
+          order_id: isMock ? undefined : orderId,
+          handler: async function (response) {
+            setPaying(true);
+            try {
+              await apiClient.post('/billing/verify-subscription-payment', {
+                razorpayOrderId: response.razorpay_order_id || orderId,
+                razorpayPaymentId: response.razorpay_payment_id || '',
+                razorpaySignature: response.razorpay_signature || 'mock_signature',
+                paymentProvider: 'razorpay'
+              });
+              alert('Platform subscription payment successful! All features unlocked.');
+              // Refetch stats to update the dashboard banner
+              const res = await apiClient.get('/academics/stats');
+              setStats(res.data);
+            } catch (err) {
+              alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
+            } finally {
+              setPaying(false);
+            }
+          },
+          prefill: {
+            name: userProfile.firstName || 'School Admin',
+            email: userProfile.email || '',
+          },
+          theme: {
+            color: "#1a2744"
+          }
+        };
+
+        if (isMock) {
+          if (window.confirm("Razorpay credentials not configured. Proceed with simulated subscription payment?")) {
+            await options.handler({
+              razorpay_order_id: orderId,
+              razorpay_payment_id: generateMockPaymentId(),
+              razorpay_signature: 'mock_signature'
+            });
+          } else {
+            setPaying(false);
+          }
+        } else {
+          const rzp = new window.Razorpay(options);
+          rzp.on('payment.failed', function (response){
+            alert("Payment failed: " + response.error.description);
+          });
+          rzp.open();
+        }
+      }
+      else if (provider === 'cashless') {
+        const confirmMsg = `🏦 Platform Cashless / Bank Transfer Instructions:\n\n${instructions || 'Please transfer the platform fees to the admin account.'}\n\nAmount: Rs. ${amount}\n\nHave you completed the bank transfer? Click OK to submit subscription verification.`;
+        if (window.confirm(confirmMsg)) {
           setPaying(true);
           try {
-            // 3. Verify signature
+            const txRef = `cashless_sub_${Math.random().toString(36).substring(7)}`;
             await apiClient.post('/billing/verify-subscription-payment', {
-              razorpayOrderId: response.razorpay_order_id || orderId,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature || 'mock_signature'
+              razorpayOrderId: orderId,
+              paymentProvider: 'cashless',
+              transactionReference: txRef
+            });
+            alert('Platform subscription payment submitted! The admin will verify it shortly.');
+            const res = await apiClient.get('/academics/stats');
+            setStats(res.data);
+          } catch (err) {
+            alert('Failed to submit cashless transaction: ' + (err.response?.data?.error || err.message));
+          } finally {
+            setPaying(false);
+          }
+        } else {
+          setPaying(false);
+        }
+      }
+      else {
+        // Stripe, PayPal, PhonePe simulations
+        const providerName = provider === 'stripe' ? 'Stripe' : provider === 'paypal' ? 'PayPal' : provider === 'phonepe' ? 'PhonePe' : provider;
+        const confirmMsg = `💳 Active Platform Gateway: ${providerName}\n\nAmount: Rs. ${amount}\n\nWould you like to proceed with the simulated checkout?`;
+        
+        if (window.confirm(confirmMsg)) {
+          setPaying(true);
+          try {
+            const txRef = `${provider}_sub_${Math.random().toString(36).substring(7)}`;
+            await apiClient.post('/billing/verify-subscription-payment', {
+              razorpayOrderId: orderId,
+              paymentProvider: provider,
+              transactionReference: txRef
             });
             alert('Platform subscription payment successful! All features unlocked.');
-            // Refetch stats to update the dashboard banner
             const res = await apiClient.get('/academics/stats');
             setStats(res.data);
           } catch (err) {
@@ -116,32 +201,9 @@ const SchoolAdminDashboard = () => {
           } finally {
             setPaying(false);
           }
-        },
-        prefill: {
-          name: userProfile.firstName || 'School Admin',
-          email: userProfile.email || '',
-        },
-        theme: {
-          color: "#1a2744"
-        }
-      };
-
-      if (isMock) {
-        if (window.confirm("Razorpay credentials not configured. Proceed with simulated subscription payment?")) {
-          await options.handler({
-            razorpay_order_id: orderId,
-            razorpay_payment_id: generateMockPaymentId(),
-            razorpay_signature: 'mock_signature'
-          });
         } else {
           setPaying(false);
         }
-      } else {
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (response){
-          alert("Payment failed: " + response.error.description);
-        });
-        rzp.open();
       }
     } catch (err) {
       alert(err.response?.data?.error || 'Order creation failed.');

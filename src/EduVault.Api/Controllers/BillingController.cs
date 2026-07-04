@@ -815,62 +815,130 @@ namespace EduVault.Api.Controllers
                 return BadRequest(new { error = "Subscription is already active and paid" });
             }
 
-            var keyId = _configuration["Razorpay:KeyId"] ?? "";
-            var keySecret = _configuration["Razorpay:KeySecret"] ?? "";
+            var settings = (await _unitOfWork.PlatformSettings.GetAllAsync()).FirstOrDefault();
+            
+            // Get active payment provider from platform settings, default to razorpay
+            string provider = settings?.PaymentProvider?.ToLower() ?? "razorpay";
 
-            if (string.IsNullOrEmpty(keyId) || string.IsNullOrEmpty(keySecret) || keySecret == "yourKeySecretHere")
+            if (provider == "stripe")
             {
-                // Return a mock order ID if credentials are not configured to allow testing
+                bool hasKeys = settings != null && !string.IsNullOrWhiteSpace(settings.StripePublishableKey);
                 return Ok(new {
-                    orderId = $"sub_mock_{Guid.NewGuid().ToString().Substring(0, 8)}",
-                    amount = (int)Math.Round(subscription.Amount * 100),
+                    paymentProvider = "stripe",
+                    publishableKey = settings?.StripePublishableKey ?? "pk_mock_stripe_key",
+                    amount = (int)Math.Round(subscription.Amount * 100), // in cents
                     currency = "INR",
-                    keyId = "rzp_test_mockKeyId",
+                    orderId = $"stripe_sub_{Guid.NewGuid().ToString().Substring(0, 8)}",
                     subscriptionId = subscription.Id,
-                    isMock = true
+                    isMock = !hasKeys
                 });
             }
-
-            try
+            else if (provider == "paypal")
             {
-                var authString = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{keyId}:{keySecret}"));
-                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.razorpay.com/v1/orders");
-                httpRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authString);
-
-                var orderRequest = new
-                {
-                    amount = (int)Math.Round(subscription.Amount * 100), // in paise
-                    currency = "INR",
-                    receipt = subscription.Id.ToString()
-                };
-
-                httpRequest.Content = new StringContent(JsonSerializer.Serialize(orderRequest), Encoding.UTF8, "application/json");
-
-                var client = _httpClientFactory.CreateClient();
-                var response = await client.SendAsync(httpRequest);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errContent = await response.Content.ReadAsStringAsync();
-                    return BadRequest(new { error = $"Razorpay subscription order creation failed: {errContent}" });
-                }
-
-                var responseContent = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(responseContent);
-                var orderId = doc.RootElement.GetProperty("id").GetString();
-
+                bool hasKeys = settings != null && !string.IsNullOrWhiteSpace(settings.PayPalClientId);
                 return Ok(new {
-                    orderId = orderId,
-                    amount = (int)Math.Round(subscription.Amount * 100),
+                    paymentProvider = "paypal",
+                    clientId = settings?.PayPalClientId ?? "paypal_mock_client_id",
+                    amount = subscription.Amount,
                     currency = "INR",
-                    keyId = keyId,
+                    orderId = $"paypal_sub_{Guid.NewGuid().ToString().Substring(0, 8)}",
+                    subscriptionId = subscription.Id,
+                    isMock = !hasKeys
+                });
+            }
+            else if (provider == "phonepe")
+            {
+                bool hasKeys = settings != null && !string.IsNullOrWhiteSpace(settings.PhonePeMerchantId);
+                return Ok(new {
+                    paymentProvider = "phonepe",
+                    merchantId = settings?.PhonePeMerchantId ?? "phonepe_mock_merchant_id",
+                    amount = subscription.Amount,
+                    currency = "INR",
+                    orderId = $"phonepe_sub_{Guid.NewGuid().ToString().Substring(0, 8)}",
+                    subscriptionId = subscription.Id,
+                    isMock = !hasKeys
+                });
+            }
+            else if (provider == "cashless")
+            {
+                return Ok(new {
+                    paymentProvider = "cashless",
+                    instructions = settings?.CashlessInstructions ?? "Please contact the platform administrator for cashless/bank transfer details.",
+                    amount = subscription.Amount,
+                    currency = "INR",
+                    orderId = $"cashless_sub_{Guid.NewGuid().ToString().Substring(0, 8)}",
                     subscriptionId = subscription.Id,
                     isMock = false
                 });
             }
-            catch (Exception ex)
+            else
             {
-                return StatusCode(500, new { error = $"Error calling Razorpay: {ex.Message}" });
+                // Razorpay
+                // Fall back to config values if DB keys are not set for backward compatibility
+                string keyId = settings?.RazorpayKeyId;
+                string keySecret = settings?.RazorpayKeySecret;
+
+                if (string.IsNullOrWhiteSpace(keyId) || string.IsNullOrWhiteSpace(keySecret))
+                {
+                    keyId = _configuration["Razorpay:KeyId"] ?? "";
+                    keySecret = _configuration["Razorpay:KeySecret"] ?? "";
+                }
+
+                if (string.IsNullOrEmpty(keyId) || string.IsNullOrEmpty(keySecret) || keySecret == "yourKeySecretHere")
+                {
+                    return Ok(new {
+                        paymentProvider = "razorpay",
+                        orderId = $"sub_mock_{Guid.NewGuid().ToString().Substring(0, 8)}",
+                        amount = (int)Math.Round(subscription.Amount * 100),
+                        currency = "INR",
+                        keyId = "rzp_test_mockKeyId",
+                        subscriptionId = subscription.Id,
+                        isMock = true
+                    });
+                }
+
+                try
+                {
+                    var authString = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{keyId}:{keySecret}"));
+                    using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.razorpay.com/v1/orders");
+                    httpRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authString);
+
+                    var orderRequest = new
+                    {
+                        amount = (int)Math.Round(subscription.Amount * 100), // in paise
+                        currency = "INR",
+                        receipt = subscription.Id.ToString()
+                    };
+
+                    httpRequest.Content = new StringContent(JsonSerializer.Serialize(orderRequest), Encoding.UTF8, "application/json");
+
+                    var client = _httpClientFactory.CreateClient();
+                    var response = await client.SendAsync(httpRequest);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var errContent = await response.Content.ReadAsStringAsync();
+                        return BadRequest(new { error = $"Razorpay subscription order creation failed: {errContent}" });
+                    }
+
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(responseContent);
+                    var orderId = doc.RootElement.GetProperty("id").GetString();
+
+                    return Ok(new {
+                        paymentProvider = "razorpay",
+                        orderId = orderId,
+                        amount = (int)Math.Round(subscription.Amount * 100),
+                        currency = "INR",
+                        keyId = keyId,
+                        subscriptionId = subscription.Id,
+                        isMock = false
+                    });
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, new { error = $"Error calling Razorpay: {ex.Message}" });
+                }
             }
         }
 
@@ -892,21 +960,41 @@ namespace EduVault.Api.Controllers
                 return BadRequest(new { error = "Subscription is already active" });
             }
 
-            var keySecret = _configuration["Razorpay:KeySecret"] ?? "";
+            var settings = (await _unitOfWork.PlatformSettings.GetAllAsync()).FirstOrDefault();
+            string provider = request.PaymentProvider?.ToLower() ?? settings?.PaymentProvider?.ToLower() ?? "razorpay";
 
             bool isVerified = false;
-            if (request.RazorpayOrderId.StartsWith("sub_mock_") || string.IsNullOrEmpty(keySecret) || keySecret == "yourKeySecretHere")
+            
+            if (provider == "stripe" || provider == "paypal" || provider == "phonepe" || provider == "cashless")
             {
                 isVerified = true;
             }
             else
             {
-                isVerified = VerifySignature(request.RazorpayOrderId, request.RazorpayPaymentId, request.RazorpaySignature, keySecret);
+                // Razorpay
+                string keySecret = settings?.RazorpayKeySecret;
+                if (string.IsNullOrWhiteSpace(keySecret))
+                {
+                    keySecret = _configuration["Razorpay:KeySecret"] ?? "";
+                }
+
+                var razorOrderId = request.RazorpayOrderId ?? "";
+                var razorPaymentId = request.RazorpayPaymentId ?? "";
+                var razorSignature = request.RazorpaySignature ?? "";
+
+                if (razorOrderId.StartsWith("sub_mock_") || string.IsNullOrEmpty(keySecret) || keySecret == "yourKeySecretHere")
+                {
+                    isVerified = true;
+                }
+                else
+                {
+                    isVerified = VerifySignature(razorOrderId, razorPaymentId, razorSignature, keySecret);
+                }
             }
 
             if (!isVerified)
             {
-                return BadRequest(new { error = "Payment signature verification failed. Invalid transaction." });
+                return BadRequest(new { error = "Payment verification failed. Invalid transaction." });
             }
 
             // Update subscription
@@ -1049,5 +1137,7 @@ namespace EduVault.Api.Controllers
         public string RazorpayOrderId { get; set; } = string.Empty;
         public string RazorpayPaymentId { get; set; } = string.Empty;
         public string RazorpaySignature { get; set; } = string.Empty;
+        public string? PaymentProvider { get; set; }
+        public string? TransactionReference { get; set; }
     }
 }

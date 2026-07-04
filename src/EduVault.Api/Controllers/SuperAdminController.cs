@@ -280,6 +280,35 @@ namespace EduVault.Api.Controllers
             settings.BackupTime = request.BackupTime;
             settings.BackupTarget = request.BackupTarget;
 
+            if (string.IsNullOrEmpty(request.PaymentProvider) || request.PaymentProvider.Equals("none", StringComparison.OrdinalIgnoreCase))
+            {
+                settings.PaymentProvider = "none";
+                settings.RazorpayKeyId = null;
+                settings.RazorpayKeySecret = null;
+                settings.StripePublishableKey = null;
+                settings.StripeSecretKey = null;
+                settings.PayPalClientId = null;
+                settings.PayPalClientSecret = null;
+                settings.PhonePeMerchantId = null;
+                settings.PhonePeSaltKey = null;
+                settings.PhonePeSaltIndex = null;
+                settings.CashlessInstructions = null;
+            }
+            else
+            {
+                settings.PaymentProvider = request.PaymentProvider;
+                settings.RazorpayKeyId = request.RazorpayKeyId;
+                settings.RazorpayKeySecret = request.RazorpayKeySecret;
+                settings.StripePublishableKey = request.StripePublishableKey;
+                settings.StripeSecretKey = request.StripeSecretKey;
+                settings.PayPalClientId = request.PayPalClientId;
+                settings.PayPalClientSecret = request.PayPalClientSecret;
+                settings.PhonePeMerchantId = request.PhonePeMerchantId;
+                settings.PhonePeSaltKey = request.PhonePeSaltKey;
+                settings.PhonePeSaltIndex = request.PhonePeSaltIndex;
+                settings.CashlessInstructions = request.CashlessInstructions;
+            }
+
             _unitOfWork.PlatformSettings.Update(settings);
             await _unitOfWork.CompleteAsync();
 
@@ -668,21 +697,37 @@ namespace EduVault.Api.Controllers
                 return NotFound(new { error = "School not found" });
             }
 
-            school.WhatsAppProvider = request.WhatsAppProvider;
-            school.TwilioAccountSid = request.TwilioAccountSid;
-            school.TwilioAuthToken = request.TwilioAuthToken;
-            school.TwilioWhatsAppFromNumber = request.TwilioWhatsAppFromNumber;
-            school.MetaAccessToken = request.MetaAccessToken;
-            school.MetaPhoneNumberId = request.MetaPhoneNumberId;
-            school.MetaWhatsAppFromNumber = request.MetaWhatsAppFromNumber;
-            school.CustomProviderUrl = request.CustomProviderUrl;
-            school.CustomProviderApiKey = request.CustomProviderApiKey;
-            school.CustomProviderFromNumber = request.CustomProviderFromNumber;
+            if (string.IsNullOrEmpty(request.WhatsAppProvider) || request.WhatsAppProvider.Equals("none", StringComparison.OrdinalIgnoreCase))
+            {
+                school.WhatsAppProvider = "none";
+                school.TwilioAccountSid = null;
+                school.TwilioAuthToken = null;
+                school.TwilioWhatsAppFromNumber = null;
+                school.MetaAccessToken = null;
+                school.MetaPhoneNumberId = null;
+                school.MetaWhatsAppFromNumber = null;
+                school.CustomProviderUrl = null;
+                school.CustomProviderApiKey = null;
+                school.CustomProviderFromNumber = null;
+            }
+            else
+            {
+                school.WhatsAppProvider = request.WhatsAppProvider;
+                school.TwilioAccountSid = request.TwilioAccountSid;
+                school.TwilioAuthToken = request.TwilioAuthToken;
+                school.TwilioWhatsAppFromNumber = request.TwilioWhatsAppFromNumber;
+                school.MetaAccessToken = request.MetaAccessToken;
+                school.MetaPhoneNumberId = request.MetaPhoneNumberId;
+                school.MetaWhatsAppFromNumber = request.MetaWhatsAppFromNumber;
+                school.CustomProviderUrl = request.CustomProviderUrl;
+                school.CustomProviderApiKey = request.CustomProviderApiKey;
+                school.CustomProviderFromNumber = request.CustomProviderFromNumber;
+            }
 
             _unitOfWork.Schools.Update(school);
             await _unitOfWork.CompleteAsync();
 
-            if (!string.IsNullOrWhiteSpace(request.TestPhoneNumber))
+            if (!string.IsNullOrWhiteSpace(request.TestPhoneNumber) && school.WhatsAppProvider != "none")
             {
                 var testMsg = $"Hello! Your WhatsApp integration for {school.Name} has been successfully configured.";
                 var success = await whatsAppService.SendMessageAsync(request.TestPhoneNumber, testMsg, school.Id);
@@ -701,17 +746,34 @@ namespace EduVault.Api.Controllers
                 return NotFound(new { error = "School not found" });
             }
 
-            school.PaymentProvider = request.PaymentProvider;
-            school.RazorpayKeyId = request.RazorpayKeyId;
-            school.RazorpayKeySecret = request.RazorpayKeySecret;
-            school.StripePublishableKey = request.StripePublishableKey;
-            school.StripeSecretKey = request.StripeSecretKey;
-            school.PayPalClientId = request.PayPalClientId;
-            school.PayPalClientSecret = request.PayPalClientSecret;
-            school.PhonePeMerchantId = request.PhonePeMerchantId;
-            school.PhonePeSaltKey = request.PhonePeSaltKey;
-            school.PhonePeSaltIndex = request.PhonePeSaltIndex;
-            school.CashlessInstructions = request.CashlessInstructions;
+            if (string.IsNullOrEmpty(request.PaymentProvider) || request.PaymentProvider.Equals("none", StringComparison.OrdinalIgnoreCase))
+            {
+                school.PaymentProvider = "none";
+                school.RazorpayKeyId = null;
+                school.RazorpayKeySecret = null;
+                school.StripePublishableKey = null;
+                school.StripeSecretKey = null;
+                school.PayPalClientId = null;
+                school.PayPalClientSecret = null;
+                school.PhonePeMerchantId = null;
+                school.PhonePeSaltKey = null;
+                school.PhonePeSaltIndex = null;
+                school.CashlessInstructions = null;
+            }
+            else
+            {
+                school.PaymentProvider = request.PaymentProvider;
+                school.RazorpayKeyId = request.RazorpayKeyId;
+                school.RazorpayKeySecret = request.RazorpayKeySecret;
+                school.StripePublishableKey = request.StripePublishableKey;
+                school.StripeSecretKey = request.StripeSecretKey;
+                school.PayPalClientId = request.PayPalClientId;
+                school.PayPalClientSecret = request.PayPalClientSecret;
+                school.PhonePeMerchantId = request.PhonePeMerchantId;
+                school.PhonePeSaltKey = request.PhonePeSaltKey;
+                school.PhonePeSaltIndex = request.PhonePeSaltIndex;
+                school.CashlessInstructions = request.CashlessInstructions;
+            }
 
             _unitOfWork.Schools.Update(school);
             await _unitOfWork.CompleteAsync();
