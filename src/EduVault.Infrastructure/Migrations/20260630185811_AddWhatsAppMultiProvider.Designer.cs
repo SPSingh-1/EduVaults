@@ -3,6 +3,7 @@ using System;
 using EduVault.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EduVault.Infrastructure.Migrations
 {
     [DbContext(typeof(EduVaultDbContext))]
-    partial class EduVaultDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260630185811_AddWhatsAppMultiProvider")]
+    partial class AddWhatsAppMultiProvider
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -567,9 +570,6 @@ namespace EduVault.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("CashlessInstructions")
-                        .HasColumnType("text");
-
                     b.Property<string>("City")
                         .IsRequired()
                         .HasColumnType("text");
@@ -605,24 +605,6 @@ namespace EduVault.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("PayPalClientId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PayPalClientSecret")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PaymentProvider")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PhonePeMerchantId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PhonePeSaltIndex")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PhonePeSaltKey")
-                        .HasColumnType("text");
-
                     b.Property<string>("RazorpayKeyId")
                         .HasColumnType("text");
 
@@ -635,12 +617,6 @@ namespace EduVault.Infrastructure.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("StripePublishableKey")
-                        .HasColumnType("text");
-
-                    b.Property<string>("StripeSecretKey")
                         .HasColumnType("text");
 
                     b.Property<string>("ThemeColor")

@@ -22,6 +22,24 @@ namespace EduVault.Core.Entities
         public string? TwilioAccountSid { get; set; }
         public string? TwilioAuthToken { get; set; }
         public string? TwilioWhatsAppFromNumber { get; set; }
+        
+        public string? WhatsAppProvider { get; set; } // "twilio", "meta", "custom"
+        public string? MetaAccessToken { get; set; }
+        public string? MetaPhoneNumberId { get; set; }
+        public string? MetaWhatsAppFromNumber { get; set; }
+        public string? CustomProviderUrl { get; set; }
+        public string? CustomProviderApiKey { get; set; }
+        public string? CustomProviderFromNumber { get; set; }
+
+        public string? PaymentProvider { get; set; } // "razorpay", "stripe", "paypal", "phonepe", "cashless"
+        public string? StripePublishableKey { get; set; }
+        public string? StripeSecretKey { get; set; }
+        public string? PayPalClientId { get; set; }
+        public string? PayPalClientSecret { get; set; }
+        public string? PhonePeMerchantId { get; set; }
+        public string? PhonePeSaltKey { get; set; }
+        public string? PhonePeSaltIndex { get; set; }
+        public string? CashlessInstructions { get; set; }
 
         // Navigation properties
         public virtual ICollection<User> Users { get; set; } = new List<User>();

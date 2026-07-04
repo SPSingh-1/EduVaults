@@ -32,9 +32,26 @@ const Settings = () => {
   // Credentials state
   const [razorpayKeyId, setRazorpayKeyId] = useState('');
   const [razorpayKeySecret, setRazorpayKeySecret] = useState('');
+  const [paymentProvider, setPaymentProvider] = useState('razorpay');
+  const [stripePublishableKey, setStripePublishableKey] = useState('');
+  const [stripeSecretKey, setStripeSecretKey] = useState('');
+  const [payPalClientId, setPayPalClientId] = useState('');
+  const [payPalClientSecret, setPayPalClientSecret] = useState('');
+  const [phonePeMerchantId, setPhonePeMerchantId] = useState('');
+  const [phonePeSaltKey, setPhonePeSaltKey] = useState('');
+  const [phonePeSaltIndex, setPhonePeSaltIndex] = useState('');
+  const [cashlessInstructions, setCashlessInstructions] = useState('');
   const [twilioAccountSid, setTwilioAccountSid] = useState('');
   const [twilioAuthToken, setTwilioAuthToken] = useState('');
   const [twilioWhatsAppFromNumber, setTwilioWhatsAppFromNumber] = useState('');
+  const [whatsAppProvider, setWhatsAppProvider] = useState('twilio');
+  const [metaAccessToken, setMetaAccessToken] = useState('');
+  const [metaPhoneNumberId, setMetaPhoneNumberId] = useState('');
+  const [metaWhatsAppFromNumber, setMetaWhatsAppFromNumber] = useState('');
+  const [customProviderUrl, setCustomProviderUrl] = useState('');
+  const [customProviderApiKey, setCustomProviderApiKey] = useState('');
+  const [customProviderFromNumber, setCustomProviderFromNumber] = useState('');
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
 
   // Logs state
   const [logs, setLogs] = useState([]);
@@ -152,9 +169,26 @@ const Settings = () => {
       if (res.data) {
         setRazorpayKeyId(res.data.razorpayKeyId || '');
         setRazorpayKeySecret(res.data.razorpayKeySecret || '');
+        setPaymentProvider(res.data.paymentProvider || 'razorpay');
+        setStripePublishableKey(res.data.stripePublishableKey || '');
+        setStripeSecretKey(res.data.stripeSecretKey || '');
+        setPayPalClientId(res.data.payPalClientId || '');
+        setPayPalClientSecret(res.data.payPalClientSecret || '');
+        setPhonePeMerchantId(res.data.phonePeMerchantId || '');
+        setPhonePeSaltKey(res.data.phonePeSaltKey || '');
+        setPhonePeSaltIndex(res.data.phonePeSaltIndex || '');
+        setCashlessInstructions(res.data.cashlessInstructions || '');
         setTwilioAccountSid(res.data.twilioAccountSid || '');
         setTwilioAuthToken(res.data.twilioAuthToken || '');
         setTwilioWhatsAppFromNumber(res.data.twilioWhatsAppFromNumber || '');
+        setWhatsAppProvider(res.data.whatsAppProvider || 'twilio');
+        setMetaAccessToken(res.data.metaAccessToken || '');
+        setMetaPhoneNumberId(res.data.metaPhoneNumberId || '');
+        setMetaWhatsAppFromNumber(res.data.metaWhatsAppFromNumber || '');
+        setCustomProviderUrl(res.data.customProviderUrl || '');
+        setCustomProviderApiKey(res.data.customProviderApiKey || '');
+        setCustomProviderFromNumber(res.data.customProviderFromNumber || '');
+        setTestPhoneNumber(''); // Reset test phone number on scope load
       }
     } catch (err) {
       console.error('Error fetching credentials:', err);
@@ -186,26 +220,52 @@ const Settings = () => {
   const handleSavePaymentCreds = async (e) => {
     e.preventDefault();
     try {
-      await apiClient.post(`/super/schools/${selectedScope}/credentials/razorpay`, {
-        keyId: razorpayKeyId,
-        keySecret: razorpayKeySecret
+      await apiClient.post(`/super/schools/${selectedScope}/credentials/payment`, {
+        paymentProvider,
+        razorpayKeyId,
+        razorpayKeySecret,
+        stripePublishableKey,
+        stripeSecretKey,
+        payPalClientId,
+        payPalClientSecret,
+        phonePeMerchantId,
+        phonePeSaltKey,
+        phonePeSaltIndex,
+        cashlessInstructions
       });
-      alert('Razorpay credentials updated successfully for this school!');
+      alert('Payment credentials updated successfully for this school!');
       setShowPaymentModal(false);
     } catch (err) {
-      alert('Failed to update Razorpay credentials: ' + (err.response?.data?.error || err.message));
+      alert('Failed to update payment credentials: ' + (err.response?.data?.error || err.message));
     }
   };
 
   const handleSaveWhatsAppCreds = async (e) => {
     e.preventDefault();
     try {
-      await apiClient.post(`/super/schools/${selectedScope}/credentials/twilio`, {
-        accountSid: twilioAccountSid,
-        authToken: twilioAuthToken,
-        whatsAppFromNumber: twilioWhatsAppFromNumber
+      const res = await apiClient.post(`/super/schools/${selectedScope}/credentials/whatsapp`, {
+        whatsAppProvider,
+        twilioAccountSid,
+        twilioAuthToken,
+        twilioWhatsAppFromNumber,
+        metaAccessToken,
+        metaPhoneNumberId,
+        metaWhatsAppFromNumber,
+        customProviderUrl,
+        customProviderApiKey,
+        customProviderFromNumber,
+        testPhoneNumber
       });
-      alert('Twilio WhatsApp credentials updated successfully for this school!');
+      
+      let alertMsg = 'WhatsApp credentials updated successfully for this school!';
+      if (res.data.testSent) {
+        if (res.data.testSuccess) {
+          alertMsg += `\n\n✅ Test message successfully sent to ${testPhoneNumber}!`;
+        } else {
+          alertMsg += `\n\n⚠️ Credentials saved, but the test message failed to send to ${testPhoneNumber}. Please double check credentials or phone format.`;
+        }
+      }
+      alert(alertMsg);
       setShowWhatsAppModal(false);
     } catch (err) {
       alert('Failed to update WhatsApp credentials: ' + (err.response?.data?.error || err.message));
@@ -671,35 +731,157 @@ const Settings = () => {
                 <h3 className="font-display font-bold text-primary text-xl">💳 Payment Integration</h3>
                 <button type="button" onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
               </div>
-              <p className="text-xs text-gray-400 mb-4">Configure custom Razorpay payment keys for {schoolName}</p>
+              <p className="text-xs text-gray-400 mb-4">Configure custom payment gateway credentials for {schoolName}</p>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Razorpay Key ID</label>
-                  <input 
-                    required 
-                    placeholder="rzp_test_..." 
-                    value={razorpayKeyId} 
-                    onChange={e => setRazorpayKeyId(e.target.value)} 
-                    className="input" 
-                  />
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 font-bold">Select Active Payment Provider</label>
+                  <select 
+                    value={paymentProvider} 
+                    onChange={e => setPaymentProvider(e.target.value)} 
+                    className="input select text-xs bg-slate-50 border border-slate-200"
+                  >
+                    <option value="razorpay">Razorpay Checkout</option>
+                    <option value="stripe">Stripe Payments</option>
+                    <option value="paypal">PayPal Gateway</option>
+                    <option value="phonepe">PhonePe API</option>
+                    <option value="cashless">Cashless / Manual Bank Transfer</option>
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Razorpay Key Secret</label>
-                  <input 
-                    required 
-                    type="password" 
-                    placeholder="••••••••••••" 
-                    value={razorpayKeySecret} 
-                    onChange={e => setRazorpayKeySecret(e.target.value)} 
-                    className="input" 
-                  />
-                </div>
+
+                {paymentProvider === 'razorpay' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Razorpay Key ID</label>
+                      <input 
+                        required={paymentProvider === 'razorpay'} 
+                        placeholder="rzp_test_..." 
+                        value={razorpayKeyId} 
+                        onChange={e => setRazorpayKeyId(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Razorpay Key Secret</label>
+                      <input 
+                        required={paymentProvider === 'razorpay'} 
+                        type="password" 
+                        placeholder="••••••••••••" 
+                        value={razorpayKeySecret} 
+                        onChange={e => setRazorpayKeySecret(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                  </>
+                )}
+
+                {paymentProvider === 'stripe' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Stripe Publishable Key</label>
+                      <input 
+                        required={paymentProvider === 'stripe'} 
+                        placeholder="pk_test_..." 
+                        value={stripePublishableKey} 
+                        onChange={e => setStripePublishableKey(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Stripe Secret Key</label>
+                      <input 
+                        required={paymentProvider === 'stripe'} 
+                        type="password" 
+                        placeholder="sk_test_••••••••••••" 
+                        value={stripeSecretKey} 
+                        onChange={e => setStripeSecretKey(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                  </>
+                )}
+
+                {paymentProvider === 'paypal' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">PayPal Client ID</label>
+                      <input 
+                        required={paymentProvider === 'paypal'} 
+                        placeholder="Client ID..." 
+                        value={payPalClientId} 
+                        onChange={e => setPayPalClientId(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">PayPal Client Secret Key</label>
+                      <input 
+                        required={paymentProvider === 'paypal'} 
+                        type="password" 
+                        placeholder="Client Secret Key..." 
+                        value={payPalClientSecret} 
+                        onChange={e => setPayPalClientSecret(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                  </>
+                )}
+
+                {paymentProvider === 'phonepe' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">PhonePe Merchant ID</label>
+                      <input 
+                        required={paymentProvider === 'phonepe'} 
+                        placeholder="MID..." 
+                        value={phonePeMerchantId} 
+                        onChange={e => setPhonePeMerchantId(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Salt Key</label>
+                      <input 
+                        required={paymentProvider === 'phonepe'} 
+                        type="password" 
+                        placeholder="Salt Key..." 
+                        value={phonePeSaltKey} 
+                        onChange={e => setPhonePeSaltKey(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Salt Index</label>
+                      <input 
+                        required={paymentProvider === 'phonepe'} 
+                        placeholder="e.g. 1" 
+                        value={phonePeSaltIndex} 
+                        onChange={e => setPhonePeSaltIndex(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                  </>
+                )}
+
+                {paymentProvider === 'cashless' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Manual Payment / Bank Transfer Instructions</label>
+                      <textarea 
+                        required={paymentProvider === 'cashless'} 
+                        placeholder="Enter bank details, account number, IFSC code, or QR code instructions..." 
+                        value={cashlessInstructions} 
+                        onChange={e => setCashlessInstructions(e.target.value)} 
+                        className="input h-28 resize-none" 
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
               <button type="button" onClick={() => setShowPaymentModal(false)} className="btn-outline">Cancel</button>
-              <button type="submit" className="btn-primary">Save Keys</button>
+              <button type="submit" className="btn-primary">Save Settings</button>
             </div>
           </form>
         </div>
@@ -714,39 +896,136 @@ const Settings = () => {
                 <h3 className="font-display font-bold text-primary text-xl">💬 WhatsApp Integration</h3>
                 <button type="button" onClick={() => setShowWhatsAppModal(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
               </div>
-              <p className="text-xs text-gray-400 mb-4">Configure custom Twilio WhatsApp credentials for {schoolName}</p>
+              <p className="text-xs text-gray-400 mb-4">Configure custom WhatsApp integration credentials for {schoolName}</p>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Twilio Account SID</label>
-                  <input 
-                    required 
-                    placeholder="AC..." 
-                    value={twilioAccountSid} 
-                    onChange={e => setTwilioAccountSid(e.target.value)} 
-                    className="input" 
-                  />
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 font-bold">Select WhatsApp Provider</label>
+                  <select 
+                    value={whatsAppProvider} 
+                    onChange={e => setWhatsAppProvider(e.target.value)} 
+                    className="input select text-xs bg-slate-50 border border-slate-200"
+                  >
+                    <option value="twilio">Twilio API (Classic)</option>
+                    <option value="meta">Meta Official Cloud API</option>
+                    <option value="custom">Custom HTTP API Gateway</option>
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Twilio Auth Token</label>
+
+                {whatsAppProvider === 'twilio' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Twilio Account SID</label>
+                      <input 
+                        required={whatsAppProvider === 'twilio'} 
+                        placeholder="AC..." 
+                        value={twilioAccountSid} 
+                        onChange={e => setTwilioAccountSid(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Twilio Auth Token</label>
+                      <input 
+                        required={whatsAppProvider === 'twilio'} 
+                        type="password" 
+                        placeholder="••••••••••••" 
+                        value={twilioAuthToken} 
+                        onChange={e => setTwilioAuthToken(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">WhatsApp From Number</label>
+                      <input 
+                        required={whatsAppProvider === 'twilio'} 
+                        placeholder="whatsapp:+14155238886" 
+                        value={twilioWhatsAppFromNumber} 
+                        onChange={e => setTwilioWhatsAppFromNumber(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                  </>
+                )}
+
+                {whatsAppProvider === 'meta' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Meta Access Token</label>
+                      <input 
+                        required={whatsAppProvider === 'meta'} 
+                        type="password"
+                        placeholder="EAABw..." 
+                        value={metaAccessToken} 
+                        onChange={e => setMetaAccessToken(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Phone Number ID</label>
+                      <input 
+                        required={whatsAppProvider === 'meta'} 
+                        placeholder="e.g. 106558455648875" 
+                        value={metaPhoneNumberId} 
+                        onChange={e => setMetaPhoneNumberId(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">From Phone Number (Optional)</label>
+                      <input 
+                        placeholder="e.g. +14155552671" 
+                        value={metaWhatsAppFromNumber} 
+                        onChange={e => setMetaWhatsAppFromNumber(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                  </>
+                )}
+
+                {whatsAppProvider === 'custom' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">API Endpoint URL</label>
+                      <input 
+                        required={whatsAppProvider === 'custom'} 
+                        placeholder="https://api.mygateway.com/send" 
+                        value={customProviderUrl} 
+                        onChange={e => setCustomProviderUrl(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">API Secret Key / Token (Optional)</label>
+                      <input 
+                        type="password"
+                        placeholder="API authorization token..." 
+                        value={customProviderApiKey} 
+                        onChange={e => setCustomProviderApiKey(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">From Number / Sender ID (Optional)</label>
+                      <input 
+                        placeholder="e.g. MySchool" 
+                        value={customProviderFromNumber} 
+                        onChange={e => setCustomProviderFromNumber(e.target.value)} 
+                        className="input" 
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="border-t border-slate-100 pt-3">
+                  <label className="block text-xs font-semibold text-blue-600 mb-1.5 font-bold">🧪 Send Test WhatsApp Message (Optional)</label>
                   <input 
-                    required 
-                    type="password" 
-                    placeholder="••••••••••••" 
-                    value={twilioAuthToken} 
-                    onChange={e => setTwilioAuthToken(e.target.value)} 
-                    className="input" 
+                    placeholder="Enter phone with country code: e.g. +919876543210" 
+                    value={testPhoneNumber} 
+                    onChange={e => setTestPhoneNumber(e.target.value)} 
+                    className="input border-blue-200 focus:border-blue-500 bg-blue-50/20 text-xs" 
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">WhatsApp From Number</label>
-                  <input 
-                    required 
-                    placeholder="whatsapp:+14155238886" 
-                    value={twilioWhatsAppFromNumber} 
-                    onChange={e => setTwilioWhatsAppFromNumber(e.target.value)} 
-                    className="input" 
-                  />
+                  <p className="text-[10px] text-gray-400 mt-1">If specified, a test WhatsApp message will be sent to verify configuration.</p>
                 </div>
               </div>
             </div>

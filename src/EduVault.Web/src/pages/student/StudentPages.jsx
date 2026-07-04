@@ -58,6 +58,130 @@ const loadScript = (src) => {
   });
 };
 
+const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
+  if (!invoiceId) return;
+  setLoader(true);
+  try {
+    // 1. Create payment order / get configuration from backend
+    const orderRes = await apiClient.post('/billing/create-order', { invoiceId });
+    const { orderId, amount, currency, keyId, isMock, paymentProvider, publishableKey, clientId, merchantId, instructions } = orderRes.data;
+    
+    const provider = paymentProvider ? paymentProvider.toLowerCase() : 'razorpay';
+    const userProfile = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
+
+    if (provider === 'razorpay') {
+      const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+      if (!scriptLoaded) {
+        alert('Failed to load Razorpay SDK. Please check your internet connection.');
+        setLoader(false);
+        return;
+      }
+
+      const options = {
+        key: keyId,
+        amount: amount,
+        currency: currency,
+        name: "EduVault Payments",
+        description: "School Fee Invoice Payment",
+        order_id: isMock ? undefined : orderId,
+        handler: async function (response) {
+          setLoader(true);
+          try {
+            await apiClient.post('/billing/verify-payment', {
+              invoiceId: invoiceId,
+              razorpayOrderId: response.razorpay_order_id || orderId,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature || 'mock_signature',
+              paymentProvider: 'razorpay'
+            });
+            alert('Payment received and verified successfully!');
+            successCallback();
+          } catch (err) {
+            alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
+          } finally {
+            setLoader(false);
+          }
+        },
+        prefill: {
+          name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`,
+          email: userProfile.email || '',
+        },
+        theme: { color: "#1a2744" }
+      };
+
+      if (isMock) {
+        if (window.confirm("Razorpay credentials not configured. Proceed with simulated payment?")) {
+          await options.handler({
+            razorpay_order_id: orderId,
+            razorpay_payment_id: `pay_mock_${Math.random().toString(36).substring(7)}`,
+            razorpay_signature: 'mock_signature'
+          });
+        } else {
+          setLoader(false);
+        }
+      } else {
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+          alert("Payment failed: " + response.error.description);
+        });
+        rzp.open();
+      }
+    }
+    else if (provider === 'cashless') {
+      // Cashless / bank instructions
+      const confirmMsg = `🏦 Cashless / Bank Transfer Instructions:\n\n${instructions || 'Please transfer the fees to the school account.'}\n\nInvoice Amount: Rs. ${amount}\n\nHave you completed the bank transfer? Click OK to submit transaction for verification.`;
+      if (window.confirm(confirmMsg)) {
+        setLoader(true);
+        try {
+          const txRef = `cashless_ref_${Math.random().toString(36).substring(7)}`;
+          await apiClient.post('/billing/verify-payment', {
+            invoiceId: invoiceId,
+            paymentProvider: 'cashless',
+            transactionReference: txRef
+          });
+          alert('Bank transfer details submitted successfully! The school administration will verify your payment.');
+          successCallback();
+        } catch (err) {
+          alert('Failed to submit cashless transaction: ' + (err.response?.data?.error || err.message));
+        } finally {
+          setLoader(false);
+        }
+      } else {
+        setLoader(false);
+      }
+    }
+    else {
+      // Stripe, PayPal, PhonePe simulations
+      const providerName = provider === 'stripe' ? 'Stripe' : provider === 'paypal' ? 'PayPal' : provider === 'phonepe' ? 'PhonePe' : provider;
+      const confirmMsg = `💳 Active Gateway: ${providerName}\n\nInvoice Amount: Rs. ${amount}\n\nWould you like to proceed with the simulated checkout?`;
+      
+      if (window.confirm(confirmMsg)) {
+        setLoader(true);
+        try {
+          const txRef = `${provider}_ref_${Math.random().toString(36).substring(7)}`;
+          await apiClient.post('/billing/verify-payment', {
+            invoiceId: invoiceId,
+            paymentProvider: provider,
+            transactionReference: txRef
+          });
+          alert(`Payment completed and verified successfully via ${providerName}!`);
+          successCallback();
+        } catch (err) {
+          alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
+        } finally {
+          setLoader(false);
+        }
+      } else {
+        setLoader(false);
+      }
+    }
+  } catch (err) {
+    alert(err.response?.data?.error || 'Failed to initialize payment.');
+    setLoader(false);
+  }
+};
+
+
 const studentLinks = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/student/dashboard' },
   { icon: Calendar, label: 'Daily Schedule', path: '/student/schedule' },
@@ -185,85 +309,10 @@ export const StudentDashboard = () => {
     }
   };
 
+
+
   const handleQuickPay = async (invoiceId) => {
-    if (!invoiceId) return;
-    setPaymentLoading(true);
-    try {
-      const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
-      if (!scriptLoaded) {
-        alert('Failed to load Razorpay SDK. Please check your internet connection.');
-        setPaymentLoading(false);
-        return;
-      }
-
-      // 1. Create Razorpay order
-      const orderRes = await apiClient.post('/billing/create-order', { invoiceId });
-      const { orderId, amount, currency, keyId, isMock } = orderRes.data;
-
-      const userProfile = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
-
-      // 2. Setup checkout options
-      const options = {
-        key: keyId,
-        amount: amount,
-        currency: currency,
-        name: "EduVault Payments",
-        description: "School Fee Invoice Payment",
-        order_id: isMock ? undefined : orderId,
-        handler: async function (response) {
-          setPaymentLoading(true);
-          try {
-            // 3. Verify payment signature on backend
-            await apiClient.post('/billing/verify-payment', {
-              invoiceId: invoiceId,
-              razorpayOrderId: response.razorpay_order_id || orderId,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature || 'mock_signature'
-            });
-            alert('Payment received and verified successfully!');
-            fetchInvoices();
-          } catch (err) {
-            alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
-          } finally {
-            setPaymentLoading(false);
-          }
-        },
-        prefill: {
-          name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`,
-          email: userProfile.email || '',
-        },
-        theme: {
-          color: "#1a2744"
-        }
-      };
-
-      if (isMock) {
-        if (window.confirm("Razorpay credentials not configured. Proceed with simulated payment?")) {
-          await options.handler({
-            razorpay_order_id: orderId,
-            razorpay_payment_id: `pay_mock_${Math.random().toString(36).substring(7)}`,
-            razorpay_signature: 'mock_signature'
-          });
-        } else {
-          setPaymentLoading(false);
-        }
-      } else {
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (response) {
-          alert("Payment failed: " + response.error.description);
-        });
-        rzp.open();
-      }
-    } catch (err) {
-      const errMsg = err.response?.data?.error;
-      if (errMsg === 'PAYMENT_NOT_CONFIGURED') {
-        alert('PAYMENT_NOT_CONFIGURED');
-      } else {
-        alert(errMsg || 'Order creation failed.');
-      }
-    } finally {
-      setPaymentLoading(false);
-    }
+    await executePaymentFlow(invoiceId, setPaymentLoading, fetchInvoices);
   };
 
   useEffect(() => {
@@ -1512,80 +1561,7 @@ export const StudentFees = () => {
   }, []);
 
   const handlePay = async (invoiceId) => {
-    setLoading(true);
-    try {
-      const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
-      if (!scriptLoaded) {
-        alert('Failed to load Razorpay SDK. Please check your internet connection.');
-        setLoading(false);
-        return;
-      }
-
-      // 1. Create Razorpay order
-      const orderRes = await apiClient.post('/billing/create-order', { invoiceId });
-      const { orderId, amount, currency, keyId, isMock } = orderRes.data;
-
-      const userProfile = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
-
-      // 2. Setup checkout options
-      const options = {
-        key: keyId,
-        amount: amount,
-        currency: currency,
-        name: "EduVault Payments",
-        description: "School Fee Invoice Payment",
-        order_id: isMock ? undefined : orderId,
-        handler: async function (response) {
-          setLoading(true);
-          try {
-            // 3. Verify payment signature on backend
-            await apiClient.post('/billing/verify-payment', {
-              invoiceId: invoiceId,
-              razorpayOrderId: response.razorpay_order_id || orderId,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature || 'mock_signature'
-            });
-            alert('Payment received and verified successfully!');
-            fetchInvoicesAndStructures();
-          } catch (err) {
-            alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
-          } finally {
-            setLoading(false);
-          }
-        },
-        prefill: {
-          name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`,
-          email: userProfile.email || '',
-        },
-        theme: {
-          color: "#1a2744"
-        }
-      };
-
-      if (isMock) {
-        // Mock gateway fallback for easy demonstration/testing
-        if (window.confirm("Razorpay credentials not configured. Proceed with simulated payment?")) {
-          // Trigger the handler directly with fake parameters
-          await options.handler({
-            razorpay_order_id: orderId,
-            razorpay_payment_id: generateMockPaymentId(),
-            razorpay_signature: 'mock_signature'
-          });
-        } else {
-          setLoading(false);
-        }
-      } else {
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (response) {
-          alert("Payment failed: " + response.error.description);
-        });
-        rzp.open();
-      }
-    } catch (err) {
-      alert(err.response?.data?.error || 'Order creation failed.');
-    } finally {
-      setLoading(false);
-    }
+    await executePaymentFlow(invoiceId, setLoading, fetchInvoicesAndStructures);
   };
 
   const [dateFrom, setDateFrom] = useState('');

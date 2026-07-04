@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using EduVault.Core.Entities;
 using EduVault.Core.Interfaces;
 using EduVault.Core.DTOs;
+using EduVault.Api.Services;
+
 
 namespace EduVault.Api.Controllers
 {
@@ -600,7 +602,23 @@ namespace EduVault.Api.Controllers
                 school.RazorpayKeySecret,
                 school.TwilioAccountSid,
                 school.TwilioAuthToken,
-                school.TwilioWhatsAppFromNumber
+                school.TwilioWhatsAppFromNumber,
+                school.WhatsAppProvider,
+                school.MetaAccessToken,
+                school.MetaPhoneNumberId,
+                school.MetaWhatsAppFromNumber,
+                school.CustomProviderUrl,
+                school.CustomProviderApiKey,
+                school.CustomProviderFromNumber,
+                school.PaymentProvider,
+                school.StripePublishableKey,
+                school.StripeSecretKey,
+                school.PayPalClientId,
+                school.PayPalClientSecret,
+                school.PhonePeMerchantId,
+                school.PhonePeSaltKey,
+                school.PhonePeSaltIndex,
+                school.CashlessInstructions
             });
         }
 
@@ -640,7 +658,68 @@ namespace EduVault.Api.Controllers
 
             return Ok(new { success = true });
         }
+
+        [HttpPost("schools/{id}/credentials/whatsapp")]
+        public async Task<IActionResult> UpdateWhatsAppCredentials(Guid id, [FromBody] UpdateWhatsAppRequest request, [FromServices] WhatsAppService whatsAppService)
+        {
+            var school = await _unitOfWork.Schools.GetByIdAsync(id);
+            if (school == null)
+            {
+                return NotFound(new { error = "School not found" });
+            }
+
+            school.WhatsAppProvider = request.WhatsAppProvider;
+            school.TwilioAccountSid = request.TwilioAccountSid;
+            school.TwilioAuthToken = request.TwilioAuthToken;
+            school.TwilioWhatsAppFromNumber = request.TwilioWhatsAppFromNumber;
+            school.MetaAccessToken = request.MetaAccessToken;
+            school.MetaPhoneNumberId = request.MetaPhoneNumberId;
+            school.MetaWhatsAppFromNumber = request.MetaWhatsAppFromNumber;
+            school.CustomProviderUrl = request.CustomProviderUrl;
+            school.CustomProviderApiKey = request.CustomProviderApiKey;
+            school.CustomProviderFromNumber = request.CustomProviderFromNumber;
+
+            _unitOfWork.Schools.Update(school);
+            await _unitOfWork.CompleteAsync();
+
+            if (!string.IsNullOrWhiteSpace(request.TestPhoneNumber))
+            {
+                var testMsg = $"Hello! Your WhatsApp integration for {school.Name} has been successfully configured.";
+                var success = await whatsAppService.SendMessageAsync(request.TestPhoneNumber, testMsg, school.Id);
+                return Ok(new { success = true, testSent = true, testSuccess = success });
+            }
+
+            return Ok(new { success = true });
+        }
+
+        [HttpPost("schools/{id}/credentials/payment")]
+        public async Task<IActionResult> UpdatePaymentCredentials(Guid id, [FromBody] UpdatePaymentRequest request)
+        {
+            var school = await _unitOfWork.Schools.GetByIdAsync(id);
+            if (school == null)
+            {
+                return NotFound(new { error = "School not found" });
+            }
+
+            school.PaymentProvider = request.PaymentProvider;
+            school.RazorpayKeyId = request.RazorpayKeyId;
+            school.RazorpayKeySecret = request.RazorpayKeySecret;
+            school.StripePublishableKey = request.StripePublishableKey;
+            school.StripeSecretKey = request.StripeSecretKey;
+            school.PayPalClientId = request.PayPalClientId;
+            school.PayPalClientSecret = request.PayPalClientSecret;
+            school.PhonePeMerchantId = request.PhonePeMerchantId;
+            school.PhonePeSaltKey = request.PhonePeSaltKey;
+            school.PhonePeSaltIndex = request.PhonePeSaltIndex;
+            school.CashlessInstructions = request.CashlessInstructions;
+
+            _unitOfWork.Schools.Update(school);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true });
+        }
     }
+
 
     public class UpdateRazorpayRequest
     {
@@ -654,6 +733,38 @@ namespace EduVault.Api.Controllers
         public string? AuthToken { get; set; }
         public string? WhatsAppFromNumber { get; set; }
     }
+
+    public class UpdateWhatsAppRequest
+    {
+        public string? WhatsAppProvider { get; set; }
+        public string? TwilioAccountSid { get; set; }
+        public string? TwilioAuthToken { get; set; }
+        public string? TwilioWhatsAppFromNumber { get; set; }
+        public string? MetaAccessToken { get; set; }
+        public string? MetaPhoneNumberId { get; set; }
+        public string? MetaWhatsAppFromNumber { get; set; }
+        public string? CustomProviderUrl { get; set; }
+        public string? CustomProviderApiKey { get; set; }
+        public string? CustomProviderFromNumber { get; set; }
+        public string? TestPhoneNumber { get; set; }
+    }
+
+    public class UpdatePaymentRequest
+    {
+        public string? PaymentProvider { get; set; }
+        public string? RazorpayKeyId { get; set; }
+        public string? RazorpayKeySecret { get; set; }
+        public string? StripePublishableKey { get; set; }
+        public string? StripeSecretKey { get; set; }
+        public string? PayPalClientId { get; set; }
+        public string? PayPalClientSecret { get; set; }
+        public string? PhonePeMerchantId { get; set; }
+        public string? PhonePeSaltKey { get; set; }
+        public string? PhonePeSaltIndex { get; set; }
+        public string? CashlessInstructions { get; set; }
+    }
+
+
 
     public class SaveCustomPlanRequest
     {
