@@ -471,7 +471,7 @@ namespace EduVault.Api.Controllers
             if (invoice.Status == "Paid") return BadRequest(new { error = "Invoice is already paid" });
 
             var user = await _unitOfWork.Users.GetByIdAsync(invoice.StudentId);
-            var school = user != null ? await _unitOfWork.Schools.GetByIdAsync(user.SchoolId) : null;
+            var school = (user != null && user.SchoolId.HasValue) ? await _unitOfWork.Schools.GetByIdAsync(user.SchoolId.Value) : null;
 
             // Get active payment provider
             string provider = school?.PaymentProvider?.ToLower() ?? "razorpay";
@@ -532,13 +532,13 @@ namespace EduVault.Api.Controllers
                 // Razorpay
                 bool hasSchoolKeys = school != null && !string.IsNullOrWhiteSpace(school.RazorpayKeyId) && !string.IsNullOrWhiteSpace(school.RazorpayKeySecret);
 
-                if (!hasSchoolKeys)
+                if (!hasSchoolKeys || school == null)
                 {
                     return BadRequest(new { error = "PAYMENT_NOT_CONFIGURED" });
                 }
 
-                var keyId = school.RazorpayKeyId;
-                var keySecret = school.RazorpayKeySecret;
+                var keyId = school.RazorpayKeyId!;
+                var keySecret = school.RazorpayKeySecret!;
 
                 if (keyId.Contains("mock") || keySecret.Contains("mock"))
                 {
