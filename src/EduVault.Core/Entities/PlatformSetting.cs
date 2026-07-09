@@ -26,5 +26,11 @@ namespace EduVault.Core.Entities
         public string? PhonePeSaltKey { get; set; }
         public string? PhonePeSaltIndex { get; set; }
         public string? CashlessInstructions { get; set; }
+
+        // Contact settings for marketing landing page
+        public string? ContactEmail { get; set; } = "support@eduvault.com";
+        public string? ContactPhone { get; set; } = "+91 99999 88888";
+        public string? ContactAddress { get; set; } = "EduVault Systems HQ, 12th Floor, Tech Tower, Sector 62, Noida, NCR, India";
+        public string? ContactHours { get; set; } = "Monday - Saturday: 9:00 AM - 6:00 PM IST";
     }
 }

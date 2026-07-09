@@ -12,6 +12,7 @@ namespace EduVault.Core.Entities
         public string GuardianPhone { get; set; } = string.Empty;
         public string GuardianRelationship { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
+        public string DateOfBirth { get; set; } = string.Empty;
 
         // Navigation properties
         public virtual User? User { get; set; }

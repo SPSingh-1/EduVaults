@@ -71,8 +71,15 @@ const Students = () => {
     guardianPhone: '',
     guardianRelationship: 'Father',
     address: '',
+    dateOfBirth: '',
     status: 'ACTIVE'
   });
+
+  // Bulk Import state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importClassId, setImportClassId] = useState('');
+  const [importResult, setImportResult] = useState(null);
+  const [importError, setImportError] = useState('');
 
   const fetchData = async () => {
     try {
@@ -115,6 +122,7 @@ const Students = () => {
       guardianPhone: '',
       guardianRelationship: 'Father',
       address: '',
+      dateOfBirth: '',
       status: 'ACTIVE'
     });
     setEditMode(false);
@@ -186,6 +194,7 @@ const Students = () => {
         guardianPhone: student.guardianPhone || '',
         guardianRelationship: student.guardianRelationship || 'Father',
         address: student.address || '',
+        dateOfBirth: student.dateOfBirth || '',
         status: student.status || 'ACTIVE'
       });
       setEditStudentId(id);
@@ -251,6 +260,185 @@ const Students = () => {
     }
   };
 
+  const parseCSV = (text) => {
+    const lines = text.split(/\r\n|\n/);
+    if (lines.length < 2) return [];
+    const result = [];
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const values = [];
+      let insideQuote = false;
+      let currentValue = '';
+      for (let c = 0; c < line.length; c++) {
+        const char = line[c];
+        if (char === '"') {
+          insideQuote = !insideQuote;
+        } else if (char === ',' && !insideQuote) {
+          values.push(currentValue.trim());
+          currentValue = '';
+        } else {
+          currentValue += char;
+        }
+      }
+      values.push(currentValue.trim());
+
+      const row = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] ? values[index].replace(/^"|"$/g, '') : '';
+      });
+      result.push(row);
+    }
+    return result;
+  };
+
+  const handleCsvUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!importClassId) {
+      setImportError('Please select a target enrollment class first.');
+      return;
+    }
+    
+    // Validate that it's a CSV file
+    const fileName = file.name || '';
+    const fileExtension = fileName.split('.').pop().toLowerCase();
+    const isCsv = fileExtension === 'csv' && (file.type === '' || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel' || file.type === 'application/csv');
+    if (!isCsv) {
+      setImportError('Invalid file type. Only CSV files (.csv) are allowed.');
+      return;
+    }
+
+    // Limit file size to 1 MB to prevent Denial of Service
+    if (file.size > 1 * 1024 * 1024) {
+      setImportError('File size is too large. Maximum size is 1 MB.');
+      return;
+    }
+
+    setImportError('');
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const text = evt.target.result;
+        const parsed = parseCSV(text);
+        if (parsed.length === 0) {
+          setImportError('No valid rows found in CSV file.');
+          return;
+        }
+
+        if (parsed.length > 100) {
+          setImportError('Bulk import is limited to a maximum of 100 rows at a time.');
+          return;
+        }
+
+        // Validate each row for formula injection and script/HTML injection
+        const hasFormulaOrScript = (val, isPhone = false) => {
+          if (!val) return false;
+          const str = val.toString().trim();
+          if (str.length === 0) return false;
+          
+          const firstChar = str[0];
+          if (firstChar === '=' || firstChar === '-' || firstChar === '@') {
+            return true;
+          }
+          if (firstChar === '+' && !isPhone) {
+            return true;
+          }
+          if (isPhone && !/^\+?[0-9\s\-()]+$/.test(str)) {
+            return true;
+          }
+          if (str.includes('<') || str.includes('>')) {
+            return true;
+          }
+          return false;
+        };
+
+        for (let i = 0; i < parsed.length; i++) {
+          const row = parsed[i];
+          const nameVal = row['name'] || row['student name'] || row['studentname'] || '';
+          let first = row['first name'] || row['firstname'] || row['first_name'] || '';
+          let last = row['last name'] || row['lastname'] || row['last_name'] || '';
+          if (!first && nameVal) {
+            const parts = nameVal.trim().split(/\s+/);
+            first = parts[0] || '';
+            last = parts.slice(1).join(' ') || '';
+          }
+          const dob = row['date of birth'] || row['dob'] || row['birth date'] || row['birthdate'] || row['dateofbirth'] || '';
+          const blood = row['blood group'] || row['bloodgroup'] || row['blood'] || '';
+          const gName = row['guardian name'] || row['guardianname'] || row['father name'] || row['fathername'] || row["father's name"] || row['father'] || '';
+          const gPhone = row['guardian phone'] || row['guardianphone'] || row['phone'] || row['contact'] || row['phone number'] || row['phonenumber'] || '';
+          const gRel = row['guardian relationship'] || row['guardianrelationship'] || row['relationship'] || row['relation'] || '';
+          const address = row['address'] || row['location'] || row['residence'] || '';
+
+          if (hasFormulaOrScript(first)) {
+            setImportError(`Row ${i + 1}: First Name contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(last)) {
+            setImportError(`Row ${i + 1}: Last Name contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(blood)) {
+            setImportError(`Row ${i + 1}: Blood Group contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(gName)) {
+            setImportError(`Row ${i + 1}: Guardian Name contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(gPhone, true)) {
+            setImportError(`Row ${i + 1}: Guardian Phone contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(gRel)) {
+            setImportError(`Row ${i + 1}: Guardian Relationship contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(address)) {
+            setImportError(`Row ${i + 1}: Address contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(dob)) {
+            setImportError(`Row ${i + 1}: Date of Birth contains invalid or unsafe characters.`);
+            return;
+          }
+        }
+
+        const mappedStudents = parsed.map(row => {
+          const nameVal = row['name'] || row['student name'] || row['studentname'] || '';
+          let first = row['first name'] || row['firstname'] || row['first_name'] || '';
+          let last = row['last name'] || row['lastname'] || row['last_name'] || '';
+          if (!first && nameVal) {
+            const parts = nameVal.trim().split(/\s+/);
+            first = parts[0] || '';
+            last = parts.slice(1).join(' ') || '';
+          }
+          return {
+            firstName: first || 'Unknown',
+            lastName: last || 'Student',
+            dateOfBirth: row['date of birth'] || row['dob'] || row['birth date'] || row['birthdate'] || row['dateofbirth'] || '01-01-2015',
+            classId: importClassId,
+            bloodGroup: row['blood group'] || row['bloodgroup'] || row['blood'] || '',
+            guardianName: row['guardian name'] || row['guardianname'] || row['father name'] || row['fathername'] || row["father's name"] || row['father'] || 'Guardian',
+            guardianPhone: row['guardian phone'] || row['guardianphone'] || row['phone'] || row['contact'] || row['phone number'] || row['phonenumber'] || '',
+            guardianRelationship: row['guardian relationship'] || row['guardianrelationship'] || row['relationship'] || row['relation'] || 'Father',
+            address: row['address'] || row['location'] || row['residence'] || ''
+          };
+        });
+
+        const res = await apiClient.post('/academics/students/import', { students: mappedStudents });
+        setImportResult(res.data);
+        fetchData();
+      } catch (err) {
+        console.error('Error importing CSV:', err);
+        setImportError(err.response?.data?.error || 'Failed to import student CSV roster.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   // Helper to normalize class names for comparison (e.g. "Class 1" or "1" => "1")
   const normalizeClass = (cls) => {
     if (!cls) return '';
@@ -286,7 +474,7 @@ const Students = () => {
     <div>
       <Topbar title="Student Directory" subtitle="Admin Portal" actions={
         <div className="flex gap-2">
-          <button className="btn-outline text-xs">↑ Bulk Import</button>
+          <button onClick={() => { setImportError(''); setImportResult(null); setImportClassId(''); setShowImportModal(true); }} className="btn-outline text-xs">↑ Bulk Import</button>
           <button onClick={() => { setError(''); resetForm(); setShowModal(true); }} className="btn-primary text-xs">+ Add New Student</button>
         </div>
       } />
@@ -348,6 +536,7 @@ const Students = () => {
                   <th className="table-th">Class</th>
                   <th className="table-th">Section</th>
                   <th className="table-th">Father's Name</th>
+                  <th className="table-th">Date of Birth</th>
                   <th className="table-th">Status</th>
                   <th className="table-th">Actions</th>
                 </tr>
@@ -370,6 +559,7 @@ const Students = () => {
                     <td className="table-td text-sm">{s.class}</td>
                     <td className="table-td text-sm">{s.section}</td>
                     <td className="table-td text-sm">{s.father}</td>
+                    <td className="table-td text-sm text-gray-500">{s.dateOfBirth || 'N/A'}</td>
                     <td className="table-td"><span className={sc[s.status] || 'badge-success'}>{s.status}</span></td>
                     <td className="table-td">
                       <div className="flex items-center gap-1.5">
@@ -435,6 +625,10 @@ const Students = () => {
                 <div>
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Email Address</div>
                   <div className="text-primary font-medium">{viewStudentData.email}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Date of Birth</div>
+                  <div className="text-primary font-medium">{viewStudentData.dateOfBirth || 'Not Specified'}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Blood Group</div>
@@ -520,6 +714,10 @@ const Students = () => {
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Blood Group</label>
                     <input value={form.bloodGroup} onChange={e => setForm(f => ({ ...f, bloodGroup: e.target.value }))} placeholder="e.g. O+" className="input" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5" htmlFor="form-dob-input">Date of Birth *</label>
+                    <input id="form-dob-input" required type="text" value={form.dateOfBirth} onChange={e => setForm(f => ({ ...f, dateOfBirth: e.target.value }))} placeholder="dd-MM-yyyy" className="input" />
                   </div>
 
                   {editMode && (
@@ -640,6 +838,109 @@ const Students = () => {
                 className="btn-primary text-xs"
               >
                 {promoting ? 'Promoting...' : 'Promote Student'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden font-sans">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+              <div>
+                <h3 className="font-display font-bold text-lg">Bulk Student Import</h3>
+                <p className="text-blue-200 text-xs">Import a list of students from a CSV file.</p>
+              </div>
+              <button type="button" onClick={() => { setShowImportModal(false); setImportResult(null); setImportError(''); }} className="text-white hover:text-blue-200 text-lg">✖</button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              {importError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">
+                  ⚠️ {importError}
+                </div>
+              )}
+
+              {!importResult ? (
+                <div className="space-y-4 text-left">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-650 mb-1.5" htmlFor="import-class-select">Target Enrollment Class *</label>
+                    <select 
+                      id="import-class-select" 
+                      value={importClassId} 
+                      onChange={e => setImportClassId(e.target.value)} 
+                      className="input"
+                    >
+                      <option value="">Select Target Class</option>
+                      {classSections.map(c => (
+                        <option key={c.id} value={c.id}>Class {c.grade} - {c.section}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-650 mb-1.5">Roster File (CSV) *</label>
+                    <div 
+                      onClick={() => document.getElementById('csv-file-picker').click()} 
+                      className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-all bg-gray-50/50"
+                    >
+                      <span className="text-2xl mb-2 block">📄</span>
+                      <span className="text-xs font-semibold text-gray-500 block">Click to select CSV File</span>
+                      <span className="text-[10px] text-gray-400 mt-1 block">Roster columns: Name/First/Last Name, DOB, Guardian Name/Phone/Relation, Address</span>
+                    </div>
+                    <input 
+                      type="file" 
+                      id="csv-file-picker" 
+                      accept=".csv" 
+                      onChange={handleCsvUpload} 
+                      className="hidden" 
+                      aria-label="Upload CSV File"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 text-left font-sans">
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                    <span className="text-2xl mb-1 block">✅</span>
+                    <h4 className="font-bold text-green-800 text-sm">Import Completed</h4>
+                    <p className="text-xs text-green-600 mt-1">Successfully admitted {importResult.successCount} new students!</p>
+                  </div>
+
+                  {importResult.duplicates.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-primary text-xs uppercase mb-2">⚠️ Skipped Records (Duplicates: {importResult.duplicates.length})</h4>
+                      <p className="text-[11px] text-gray-400 mb-2">The following student entries already exist with identical names and guardian phone details:</p>
+                      <div className="border border-amber-100 rounded-xl overflow-hidden text-xs max-h-40 overflow-y-auto">
+                        <table className="w-full text-left bg-amber-50/20">
+                          <thead>
+                            <tr className="bg-amber-50 text-amber-800 border-b border-amber-100">
+                              <th className="p-2 font-bold text-[10px]">Student Name</th>
+                              <th className="p-2 font-bold text-[10px]">Reason</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {importResult.duplicates.map((dup, idx) => (
+                              <tr key={idx} className="border-b border-amber-50/60 last:border-0">
+                                <td className="p-2 font-medium text-gray-700">{dup.firstName} {dup.lastName}</td>
+                                <td className="p-2 text-gray-500 font-mono text-[10px]">{dup.reason}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 px-6 pb-6 pt-3 bg-gray-50/50 border-t border-gray-100">
+              <button 
+                type="button"
+                onClick={() => { setShowImportModal(false); setImportResult(null); setImportError(''); }} 
+                className="btn-outline text-xs"
+              >
+                {importResult ? 'Done' : 'Cancel'}
               </button>
             </div>
           </div>

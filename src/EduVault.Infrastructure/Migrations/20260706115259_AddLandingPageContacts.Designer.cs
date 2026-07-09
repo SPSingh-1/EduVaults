@@ -3,6 +3,7 @@ using System;
 using EduVault.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EduVault.Infrastructure.Migrations
 {
     [DbContext(typeof(EduVaultDbContext))]
-    partial class EduVaultDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260706115259_AddLandingPageContacts")]
+    partial class AddLandingPageContacts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -783,10 +786,6 @@ namespace EduVault.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("DateOfBirth")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("GuardianName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -978,10 +977,6 @@ namespace EduVault.Infrastructure.Migrations
                 {
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("DateOfBirth")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Department")
                         .IsRequired()

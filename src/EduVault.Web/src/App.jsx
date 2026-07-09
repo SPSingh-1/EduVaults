@@ -7,6 +7,7 @@ import './index.css';
 
 // Marketing
 import Landing from './pages/marketing/Landing';
+import { Demo } from './pages/marketing/Demo';
 
 // Auth
 import Login from './pages/auth/Login';
@@ -79,6 +80,7 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/maintenance" element={<Maintenance />} />
+          <Route path="/demo" element={<Demo />} />
 
           {/* Super Admin */}
           <Route element={<ProtectedRoute allowedRoles={['superadmin']} />}>

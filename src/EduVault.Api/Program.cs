@@ -2,6 +2,8 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using EduVault.Core.Interfaces;
 using EduVault.Infrastructure.Data;
 using EduVault.Infrastructure.Repositories;
@@ -42,6 +44,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddMemoryCache();
 
 // Configure EF Core with PostgreSQL
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -53,6 +56,8 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<WhatsAppService>();
 builder.Services.AddHostedService<FeeAlertBackgroundService>();
+builder.Services.AddSingleton<IWhatsAppQueue, WhatsAppQueue>();
+builder.Services.AddHostedService<WhatsAppQueueWorker>();
 builder.Services.AddHttpClient();
 
 // Configure JWT Authentication
@@ -86,6 +91,18 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
               .AllowAnyHeader();
+    });
+});
+
+// Configure Rate Limiting
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("public-api", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 10; // Max 10 requests per minute
+        opt.QueueLimit = 0;
     });
 });
 
@@ -131,7 +148,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
-
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

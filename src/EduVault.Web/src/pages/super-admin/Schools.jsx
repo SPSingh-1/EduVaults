@@ -50,6 +50,9 @@ const Schools = () => {
   const [added, setAdded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [activatingSchool, setActivatingSchool] = useState(null);
+  const [actEmail, setActEmail] = useState('');
+  const [actPassword, setActPassword] = useState('');
 
   const fetchSchools = async () => {
     try {
@@ -96,15 +99,43 @@ const Schools = () => {
     }
   };
 
-  const toggleStatus = async (id, currentStatus) => {
-    const nextStatus = currentStatus === 'Active' ? 'Suspended' : 'Active';
+  const toggleStatus = async (s) => {
+    if (s.status !== 'Active') {
+      setActEmail(s.adminEmail || '');
+      setActPassword('');
+      setActivatingSchool(s);
+    } else {
+      const confirmSuspend = window.confirm(`Are you sure you want to suspend ${s.name}?`);
+      if (!confirmSuspend) return;
+      try {
+        await apiClient.put(`/super/schools/${s.id}/status`, {
+          status: 'Suspended'
+        });
+        fetchSchools();
+      } catch (err) {
+        console.error('Error suspending school:', err);
+      }
+    }
+  };
+
+  const confirmActivation = async () => {
+    if (!actEmail || !actPassword) {
+      alert('Please fill in both email and password.');
+      return;
+    }
     try {
-      await apiClient.put(`/super/schools/${id}/status`, JSON.stringify(nextStatus), {
-        headers: { 'Content-Type': 'application/json' }
+      await apiClient.put(`/super/schools/${activatingSchool.id}/status`, {
+        status: 'Active',
+        adminEmail: actEmail,
+        adminPassword: actPassword
       });
+      setActivatingSchool(null);
+      setActEmail('');
+      setActPassword('');
       fetchSchools();
     } catch (err) {
-      console.error('Error updating status:', err);
+      console.error('Error activating school:', err);
+      alert(err.response?.data?.error || 'Failed to activate school.');
     }
   };
 
@@ -188,6 +219,7 @@ const Schools = () => {
                 <tr className="border-b border-gray-100">
                   <th className="table-th">School Name</th>
                   <th className="table-th">Code</th>
+                  <th className="table-th">Admin Contact</th>
                   <th className="table-th">Students</th>
                   <th className="table-th">Status</th>
                   <th className="table-th">Date Joined</th>
@@ -202,12 +234,17 @@ const Schools = () => {
                       <div className="text-xs text-gray-400">ID: {s.id}</div>
                     </td>
                     <td className="table-td"><span className="badge badge-gray font-mono">{s.schoolCode}</span></td>
+                    <td className="table-td">
+                      <div className="text-xs font-semibold text-gray-700">{s.adminName || 'N/A'}</div>
+                      <div className="text-[11px] text-gray-500">{s.adminEmail || 'N/A'}</div>
+                      <div className="text-[11px] text-gray-400 font-mono">{s.adminPhone || 'N/A'}</div>
+                    </td>
                     <td className="table-td font-medium">{s.studentsCount}</td>
                     <td className="table-td"><span className={statusColor[s.status] || 'badge-gray'}>{s.status}</span></td>
                     <td className="table-td text-gray-500">{new Date(s.createdAt).toLocaleDateString('en-GB')}</td>
                     <td className="table-td">
                       <div className="flex gap-2">
-                        <button onClick={() => toggleStatus(s.id, s.status)} className="text-blue-600 hover:underline text-xs font-medium">
+                        <button onClick={() => toggleStatus(s)} className="text-blue-600 hover:underline text-xs font-medium">
                           {s.status === 'Active' ? 'Suspend' : 'Activate'}
                         </button>
                       </div>
@@ -298,6 +335,31 @@ const Schools = () => {
               <button onClick={handleAdd} disabled={loading} className="btn-primary flex items-center gap-1.5">
                 {loading ? 'Registering...' : '✓ Register School'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activatingSchool && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden text-left">
+            <div className="bg-primary px-6 py-5">
+              <h3 className="font-display font-bold text-white text-lg">Generate Credentials</h3>
+              <p className="text-blue-200 text-xs mt-0.5">Activate {activatingSchool.name} and configure their admin credentials.</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 font-sans">Admin Email * (For login)</label>
+                <input type="email" value={actEmail} onChange={e => setActEmail(e.target.value)} placeholder="admin@school.com" className="input text-black font-sans" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 font-sans">Admin Password *</label>
+                <input type="password" value={actPassword} onChange={e => setActPassword(e.target.value)} placeholder="Minimum 6 characters" className="input text-black font-sans" />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setActivatingSchool(null)} className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-4 py-2 rounded-xl transition-all font-sans">Cancel</button>
+                <button onClick={confirmActivation} className="btn-primary text-xs px-4 py-2 rounded-xl font-sans">Activate & Save Credentials</button>
+              </div>
             </div>
           </div>
         </div>

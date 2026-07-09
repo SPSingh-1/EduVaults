@@ -3,5 +3,6 @@
     <Project Path="src/EduVault.Api/EduVault.Api.csproj" />
     <Project Path="src/EduVault.Core/EduVault.Core.csproj" />
     <Project Path="src/EduVault.Infrastructure/EduVault.Infrastructure.csproj" />
+    <Project Path="src/EduVault.Tests/EduVault.Tests.csproj" />
   </Folder>
 </Solution>

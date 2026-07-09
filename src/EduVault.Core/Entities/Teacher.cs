@@ -12,6 +12,7 @@ namespace EduVault.Core.Entities
         public string Qualifications { get; set; } = string.Empty;
         public string? Specialization { get; set; }
         public decimal Salary { get; set; }
+        public string DateOfBirth { get; set; } = string.Empty;
 
         // Navigation properties
         public virtual User? User { get; set; }

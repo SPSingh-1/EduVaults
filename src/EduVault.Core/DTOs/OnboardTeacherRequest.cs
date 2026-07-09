@@ -23,5 +23,6 @@ namespace EduVault.Core.DTOs
         public string? OfficeLocation { get; set; }
         public string? Qualifications { get; set; }
         public string? Specialization { get; set; }
+        public string DateOfBirth { get; set; } = string.Empty;
     }
 }

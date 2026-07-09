@@ -19,6 +19,12 @@ const Settings = () => {
   const [backupTime, setBackupTime] = useState('02:00 AM');
   const [backupTarget, setBackupTarget] = useState('Amazon S3: production-vault-01');
 
+  // Landing page contact details state
+  const [contactEmail, setContactEmail] = useState('support@eduvault.com');
+  const [contactPhone, setContactPhone] = useState('+91 99999 88888');
+  const [contactAddress, setContactAddress] = useState('EduVault Systems HQ, 12th Floor, Tech Tower, Sector 62, Noida, NCR, India');
+  const [contactHours, setContactHours] = useState('Monday - Saturday: 9:00 AM - 6:00 PM IST');
+
   // School-specific settings state
   const [schoolName, setSchoolName] = useState('');
   const [schoolLogoUrl, setSchoolLogoUrl] = useState('/logo.jpeg');
@@ -144,6 +150,12 @@ const Settings = () => {
         setBackupTime(d.backupTime || '02:00 AM');
         setBackupTarget(d.backupTarget || 'Amazon S3: production-vault-01');
 
+        // Contact info loading
+        setContactEmail(d.contactEmail || 'support@eduvault.com');
+        setContactPhone(d.contactPhone || '+91 99999 88888');
+        setContactAddress(d.contactAddress || 'EduVault Systems HQ, 12th Floor, Tech Tower, Sector 62, Noida, NCR, India');
+        setContactHours(d.contactHours || 'Monday - Saturday: 9:00 AM - 6:00 PM IST');
+
         // Global payment settings configurations
         setPaymentProvider(d.paymentProvider || 'razorpay');
         setRazorpayKeyId(d.razorpayKeyId || '');
@@ -218,6 +230,12 @@ const Settings = () => {
         setLogoUrl(globalSettings.logoUrl || '/logo.jpeg');
         setPrimaryColor(globalSettings.primaryColor || '#1a2744');
         
+        // Load contact details
+        setContactEmail(globalSettings.contactEmail || 'support@eduvault.com');
+        setContactPhone(globalSettings.contactPhone || '+91 99999 88888');
+        setContactAddress(globalSettings.contactAddress || 'EduVault Systems HQ, 12th Floor, Tech Tower, Sector 62, Noida, NCR, India');
+        setContactHours(globalSettings.contactHours || 'Monday - Saturday: 9:00 AM - 6:00 PM IST');
+
         // Load global settings payment credentials
         setPaymentProvider(globalSettings.paymentProvider || 'razorpay');
         setRazorpayKeyId(globalSettings.razorpayKeyId || '');
@@ -340,6 +358,10 @@ const Settings = () => {
           backupFrequency,
           backupTime,
           backupTarget,
+          contactEmail,
+          contactPhone,
+          contactAddress,
+          contactHours,
           paymentProvider,
           razorpayKeyId,
           razorpayKeySecret,
@@ -650,12 +672,12 @@ const Settings = () => {
         )}
       </div>
 
-      {/* Global settings section (Maintenance & Backup) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 relative">
+      {/* Global settings section (Maintenance, Backup & Contact Info) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 relative">
         {selectedScope !== 'global' && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-xl border border-gray-100">
-            <div className="bg-white px-5 py-3 rounded-xl shadow border border-gray-100 text-xs font-semibold text-gray-500">
-              ℹ Select "Default Platform Branding (Global)" above to configure Maintenance and Backup parameters.
+            <div className="bg-white px-5 py-3 rounded-xl shadow border border-gray-100 text-xs font-semibold text-gray-500 text-center">
+              ℹ Select "Default Platform Branding (Global)" above to configure Maintenance, Backup, and Landing page contact details.
             </div>
           </div>
         )}
@@ -679,10 +701,33 @@ const Settings = () => {
             className="input text-xs resize-none mb-2" 
           />
           {maintenanceMode && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs text-yellow-700">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs text-yellow-700 font-sans">
               ⚠ Enabling this will log out all current users except admins.
             </div>
           )}
+        </div>
+
+        <div className="card">
+          <h3 className="font-semibold text-primary mb-1">Landing Page Contacts</h3>
+          <p className="text-xs text-gray-400 mb-4 font-sans">Edit contact info displayed on marketing page</p>
+          <div className="space-y-3 font-sans">
+            <div>
+              <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wider">Contact Email</label>
+              <input value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="input text-xs text-black" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wider">Contact Phone</label>
+              <input value={contactPhone} onChange={e => setContactPhone(e.target.value)} className="input text-xs text-black" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wider">Office Address</label>
+              <input value={contactAddress} onChange={e => setContactAddress(e.target.value)} className="input text-xs text-black" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wider">Working Hours</label>
+              <input value={contactHours} onChange={e => setContactHours(e.target.value)} className="input text-xs text-black" />
+            </div>
+          </div>
         </div>
 
         <div className="card">

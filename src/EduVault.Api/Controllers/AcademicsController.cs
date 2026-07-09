@@ -11,6 +11,7 @@ using EduVault.Core.Interfaces;
 using EduVault.Core.DTOs;
 using EduVault.Infrastructure.Data;
 using EduVault.Api.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EduVault.Api.Controllers
 {
@@ -23,13 +24,15 @@ namespace EduVault.Api.Controllers
         private readonly IAuthService _authService;
         private readonly EduVaultDbContext _context;
         private readonly WhatsAppService _whatsAppService;
+        private readonly IWhatsAppQueue _whatsAppQueue;
 
-        public AcademicsController(IUnitOfWork unitOfWork, IAuthService authService, EduVaultDbContext context, WhatsAppService whatsAppService)
+        public AcademicsController(IUnitOfWork unitOfWork, IAuthService authService, EduVaultDbContext context, WhatsAppService whatsAppService, IWhatsAppQueue whatsAppQueue)
         {
             _unitOfWork = unitOfWork;
             _authService = authService;
             _context = context;
             _whatsAppService = whatsAppService;
+            _whatsAppQueue = whatsAppQueue;
         }
 
         private Guid GetSchoolId()
@@ -45,6 +48,33 @@ namespace EduVault.Api.Controllers
             var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdStr)) throw new UnauthorizedAccessException("User ID missing in token");
             return Guid.Parse(userIdStr);
+        }
+
+        private bool IsSafeString(string? value, bool allowLeadingPlus = false)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return true;
+            string trimmed = value.Trim();
+
+            char firstChar = trimmed[0];
+            if (firstChar == '=' || firstChar == '-' || firstChar == '@')
+            {
+                return false;
+            }
+            if (firstChar == '+' && !allowLeadingPlus)
+            {
+                return false;
+            }
+            if (trimmed.Contains("<") || trimmed.Contains(">"))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        private bool IsValidPhone(string? phone)
+        {
+            if (string.IsNullOrWhiteSpace(phone)) return true;
+            return System.Text.RegularExpressions.Regex.IsMatch(phone.Trim(), @"^\+?[0-9\s\-()]+$");
         }
 
 
@@ -295,6 +325,7 @@ namespace EduVault.Api.Controllers
                     Father = studentInfo?.GuardianName ?? string.Empty,
                     GuardianPhone = studentInfo?.GuardianPhone ?? string.Empty,
                     Status = enrollment?.Status ?? "ACTIVE",
+                    DateOfBirth = studentInfo?.DateOfBirth ?? string.Empty,
                     CreatedAt = u.CreatedAt,
                     Gpa = gpa,
                     FinalResult = finalResult
@@ -389,7 +420,8 @@ namespace EduVault.Api.Controllers
                 GuardianName = request.GuardianName,
                 GuardianPhone = request.GuardianPhone,
                 GuardianRelationship = request.GuardianRelationship,
-                Address = request.Address
+                Address = request.Address,
+                DateOfBirth = request.DateOfBirth ?? string.Empty
             };
             await _unitOfWork.Students.AddAsync(student);
 
@@ -407,6 +439,179 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.CompleteAsync();
 
             return Ok(new { success = true, studentId = student.StudentId, userId = user.Id });
+        }
+
+        [HttpPost("students/import")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> BulkImportStudents([FromBody] BulkImportRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (request == null || request.Students == null || request.Students.Count == 0)
+            {
+                return BadRequest(new { error = "Request list cannot be empty." });
+            }
+
+            if (request.Students.Count > 100)
+            {
+                return BadRequest(new { error = "Bulk import is limited to 100 students at a time." });
+            }
+
+            // Validate fields for security
+            for (int i = 0; i < request.Students.Count; i++)
+            {
+                var s = request.Students[i];
+                if (!IsSafeString(s.FirstName)) return BadRequest(new { error = $"Row {i + 1}: First Name contains invalid or unsafe characters." });
+                if (!IsSafeString(s.LastName)) return BadRequest(new { error = $"Row {i + 1}: Last Name contains invalid or unsafe characters." });
+                if (!IsSafeString(s.BloodGroup)) return BadRequest(new { error = $"Row {i + 1}: Blood Group contains invalid or unsafe characters." });
+                if (!IsSafeString(s.GuardianName)) return BadRequest(new { error = $"Row {i + 1}: Guardian Name contains invalid or unsafe characters." });
+                if (!IsSafeString(s.GuardianPhone, allowLeadingPlus: true) || !IsValidPhone(s.GuardianPhone)) return BadRequest(new { error = $"Row {i + 1}: Guardian Phone contains invalid or unsafe characters." });
+                if (!IsSafeString(s.GuardianRelationship)) return BadRequest(new { error = $"Row {i + 1}: Guardian Relationship contains invalid or unsafe characters." });
+                if (!IsSafeString(s.Address)) return BadRequest(new { error = $"Row {i + 1}: Address contains invalid or unsafe characters." });
+                if (!IsSafeString(s.DateOfBirth)) return BadRequest(new { error = $"Row {i + 1}: Date of Birth contains invalid or unsafe characters." });
+            }
+
+            var schoolId = GetSchoolId();
+            var school = await _context.Schools.FindAsync(schoolId);
+            string schoolName = school?.Name ?? "School";
+
+            // Load existing students to check duplicates
+            var existingStudents = await _context.Students
+                .Include(s => s.User)
+                .Where(s => s.User.SchoolId == schoolId)
+                .ToListAsync();
+
+            var importedNames = new List<string>();
+            var duplicates = new List<DuplicateStudentDto>();
+            var generatedEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var processedSignatures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            int successCount = 0;
+
+            foreach (var req in request.Students)
+            {
+                if (string.IsNullOrWhiteSpace(req.FirstName) || string.IsNullOrWhiteSpace(req.LastName))
+                {
+                    continue;
+                }
+
+                // Check duplicate: matching FirstName, LastName, and GuardianPhone
+                bool isDuplicate = existingStudents.Any(s =>
+                    s.User != null &&
+                    s.User.FirstName.Equals(req.FirstName, StringComparison.OrdinalIgnoreCase) &&
+                    s.User.LastName.Equals(req.LastName, StringComparison.OrdinalIgnoreCase) &&
+                    s.GuardianPhone == req.GuardianPhone);
+
+                var batchSignature = $"{req.FirstName.Trim().ToLower()}_{req.LastName.Trim().ToLower()}_{req.GuardianPhone.Trim()}";
+
+                if (isDuplicate || processedSignatures.Contains(batchSignature))
+                {
+                    duplicates.Add(new DuplicateStudentDto
+                    {
+                        FirstName = req.FirstName,
+                        LastName = req.LastName,
+                        ClassName = "Target Class",
+                        Reason = "Student with matching name and phone already registered"
+                    });
+                    continue;
+                }
+
+                processedSignatures.Add(batchSignature);
+
+                // Generate Email
+                string cleanName = System.Text.RegularExpressions.Regex.Replace((req.FirstName + req.LastName).ToLower(), @"[^a-z]", "");
+                string dobSuffix = "";
+                string birthYear = "2015";
+                DateTime dob;
+                string[] formats = { "dd-MM-yyyy", "yyyy-MM-dd", "dd/MM/yyyy", "dd-MMM-yyyy" };
+                
+                if (DateTime.TryParseExact(req.DateOfBirth, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out dob))
+                {
+                    dobSuffix = dob.ToString("ddMM");
+                    birthYear = dob.Year.ToString();
+                }
+                else
+                {
+                    dobSuffix = new Random().Next(10, 99).ToString();
+                }
+
+                string baseEmail = $"{cleanName}{dobSuffix}@gmail.com";
+                int counter = 0;
+                string email = baseEmail;
+                
+                while (await _context.Users.AnyAsync(u => u.Email == email) || generatedEmails.Contains(email))
+                {
+                    counter++;
+                    email = $"{cleanName}{dobSuffix}{counter}@gmail.com";
+                }
+                generatedEmails.Add(email);
+
+                // Generate Password
+                string school3 = (schoolName.Length >= 3 ? schoolName.Substring(0, 3) : schoolName).ToLower();
+                string password = $"{school3}!{birthYear}";
+                string passwordHash = _authService.HashPassword(password);
+
+                // Sanitize and Insert
+                var sanitizedFirstName = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.FirstName);
+                var sanitizedLastName = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.LastName);
+                var sanitizedBlood = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.BloodGroup ?? string.Empty);
+                var sanitizedGName = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.GuardianName ?? string.Empty);
+                var sanitizedGPhone = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.GuardianPhone ?? string.Empty);
+                var sanitizedGRel = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.GuardianRelationship ?? string.Empty);
+                var sanitizedAddress = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.Address ?? string.Empty);
+
+                var user = new User
+                {
+                    Id = Guid.NewGuid(),
+                    SchoolId = schoolId,
+                    Email = email,
+                    PasswordHash = passwordHash,
+                    Role = "student",
+                    FirstName = sanitizedFirstName,
+                    LastName = sanitizedLastName,
+                    IsActive = true
+                };
+                await _context.Users.AddAsync(user);
+
+                var student = new Student
+                {
+                    UserId = user.Id,
+                    StudentId = $"STU-{DateTime.UtcNow.Year}-{new Random().Next(1000, 9999)}",
+                    BloodGroup = sanitizedBlood,
+                    GuardianName = sanitizedGName,
+                    GuardianPhone = sanitizedGPhone,
+                    GuardianRelationship = sanitizedGRel,
+                    Address = sanitizedAddress,
+                    DateOfBirth = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.DateOfBirth ?? string.Empty)
+                };
+                await _context.Students.AddAsync(student);
+
+                var enrollment = new Enrollment
+                {
+                    Id = Guid.NewGuid(),
+                    StudentId = user.Id,
+                    ClassId = req.ClassId,
+                    AcademicYear = $"{DateTime.UtcNow.Year}-{((DateTime.UtcNow.Year + 1) % 100):D2}",
+                    Status = "ACTIVE",
+                    EnrollDate = DateTime.UtcNow
+                };
+                await _context.Enrollments.AddAsync(enrollment);
+
+                successCount++;
+                importedNames.Add($"{req.FirstName} {req.LastName}");
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new BulkImportResult
+            {
+                SuccessCount = successCount,
+                ImportedNames = importedNames,
+                Duplicates = duplicates
+            });
         }
 
         [HttpGet("students/{id}")]
@@ -434,6 +639,7 @@ namespace EduVault.Api.Controllers
                 GuardianPhone = student?.GuardianPhone,
                 GuardianRelationship = student?.GuardianRelationship,
                 Address = student?.Address,
+                DateOfBirth = student?.DateOfBirth ?? string.Empty,
                 ClassId = enrollment?.ClassId,
                 Status = enrollment?.Status ?? "ACTIVE"
             });
@@ -482,6 +688,7 @@ namespace EduVault.Api.Controllers
             student.GuardianPhone = request.GuardianPhone;
             student.GuardianRelationship = request.GuardianRelationship;
             student.Address = request.Address;
+            student.DateOfBirth = request.DateOfBirth ?? string.Empty;
             _unitOfWork.Students.Update(student);
 
             var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == id)).FirstOrDefault();
@@ -689,6 +896,7 @@ namespace EduVault.Api.Controllers
                     Department = teacherInfo?.Department ?? string.Empty,
                     Qualifications = teacherInfo?.Qualifications ?? string.Empty,
                     Specialization = teacherInfo?.Specialization ?? string.Empty,
+                    DateOfBirth = teacherInfo?.DateOfBirth ?? string.Empty,
                     Joined = u.CreatedAt.ToString("MMM yyyy"),
                     Classes = string.Join(", ", assignedClasses),
                     Status = u.IsActive ? "Active" : "On Leave",
@@ -732,13 +940,139 @@ namespace EduVault.Api.Controllers
                 Department = request.Department,
                 OfficeLocation = request.OfficeLocation ?? string.Empty,
                 Qualifications = request.Qualifications ?? string.Empty,
-                Specialization = request.Specialization
+                Specialization = request.Specialization,
+                DateOfBirth = request.DateOfBirth ?? string.Empty
             };
             await _unitOfWork.Teachers.AddAsync(teacher);
 
             await _unitOfWork.CompleteAsync();
 
             return Ok(new { success = true, employeeId = teacher.EmployeeId, userId = user.Id });
+        }
+
+        [HttpPost("teachers/import")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> BulkImportTeachers([FromBody] BulkImportTeachersRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (request == null || request.Teachers == null || request.Teachers.Count == 0)
+            {
+                return BadRequest(new { error = "Request list cannot be empty." });
+            }
+
+            if (request.Teachers.Count > 100)
+            {
+                return BadRequest(new { error = "Bulk import is limited to 100 teachers at a time." });
+            }
+
+            // Validate fields for security
+            for (int i = 0; i < request.Teachers.Count; i++)
+            {
+                var t = request.Teachers[i];
+                if (!IsSafeString(t.Email)) return BadRequest(new { error = $"Row {i + 1}: Email contains invalid or unsafe characters." });
+                if (!IsSafeString(t.FirstName)) return BadRequest(new { error = $"Row {i + 1}: First Name contains invalid or unsafe characters." });
+                if (!IsSafeString(t.LastName)) return BadRequest(new { error = $"Row {i + 1}: Last Name contains invalid or unsafe characters." });
+                if (!IsSafeString(t.DateOfBirth)) return BadRequest(new { error = $"Row {i + 1}: Date of Birth contains invalid or unsafe characters." });
+                if (!IsSafeString(t.Department)) return BadRequest(new { error = $"Row {i + 1}: Department contains invalid or unsafe characters." });
+                if (!IsSafeString(t.OfficeLocation)) return BadRequest(new { error = $"Row {i + 1}: Office Location contains invalid or unsafe characters." });
+                if (!IsSafeString(t.Qualifications)) return BadRequest(new { error = $"Row {i + 1}: Qualifications contains invalid or unsafe characters." });
+                if (!IsSafeString(t.Specialization)) return BadRequest(new { error = $"Row {i + 1}: Specialization contains invalid or unsafe characters." });
+            }
+
+            var schoolId = GetSchoolId();
+            var school = await _context.Schools.FindAsync(schoolId);
+            string schoolName = school?.Name ?? "School";
+
+            var importedNames = new List<string>();
+            var duplicates = new List<DuplicateTeacherDto>();
+            var generatedEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            int successCount = 0;
+
+            foreach (var req in request.Teachers)
+            {
+                if (string.IsNullOrWhiteSpace(req.FirstName) || string.IsNullOrWhiteSpace(req.LastName) || string.IsNullOrWhiteSpace(req.Email))
+                {
+                    continue;
+                }
+
+                // Resolve duplicate email address (if exists in DB or current batch) by appending counter suffix
+                string originalEmail = req.Email.Trim();
+                int atIndex = originalEmail.IndexOf('@');
+                string localPart = atIndex >= 0 ? originalEmail.Substring(0, atIndex) : originalEmail;
+                string domainPart = atIndex >= 0 ? originalEmail.Substring(atIndex) : "@gmail.com";
+
+                string email = originalEmail;
+                int counter = 0;
+
+                while (await _context.Users.AnyAsync(u => u.Email == email) || generatedEmails.Contains(email))
+                {
+                    counter++;
+                    email = $"{localPart}{counter}{domainPart}";
+                }
+                generatedEmails.Add(email);
+
+                // Generate Password: last 4 chars of school name + full cleaned DOB
+                string schoolLast4 = (schoolName.Length >= 4 ? schoolName.Substring(schoolName.Length - 4) : schoolName).ToLower();
+                string cleanDob = System.Text.RegularExpressions.Regex.Replace(req.DateOfBirth ?? string.Empty, @"[^a-zA-Z0-9]", "");
+                string password = $"{schoolLast4}{cleanDob}";
+                string passwordHash = _authService.HashPassword(password);
+
+                // Sanitize inputs
+                var sanitizedFirstName = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.FirstName);
+                var sanitizedLastName = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.LastName);
+                var sanitizedEmail = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(email);
+                var sanitizedDept = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.Department ?? string.Empty);
+                var sanitizedOffice = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.OfficeLocation ?? string.Empty);
+                var sanitizedQual = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.Qualifications ?? string.Empty);
+                var sanitizedSpec = string.IsNullOrEmpty(req.Specialization) ? null : System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.Specialization);
+                var sanitizedDob = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(req.DateOfBirth ?? string.Empty);
+
+                var user = new User
+                {
+                    Id = Guid.NewGuid(),
+                    SchoolId = schoolId,
+                    Email = sanitizedEmail,
+                    PasswordHash = passwordHash,
+                    Role = "teacher",
+                    FirstName = sanitizedFirstName,
+                    LastName = sanitizedLastName,
+                    IsActive = true
+                };
+                await _context.Users.AddAsync(user);
+
+                var employeeIdCode = $"T-{new Random().Next(10000, 99999)}";
+                var teacher = new Teacher
+                {
+                    UserId = user.Id,
+                    EmployeeId = employeeIdCode,
+                    Department = sanitizedDept,
+                    OfficeLocation = sanitizedOffice,
+                    Qualifications = sanitizedQual,
+                    Specialization = sanitizedSpec,
+                    DateOfBirth = sanitizedDob
+                };
+                await _context.Teachers.AddAsync(teacher);
+
+                successCount++;
+                importedNames.Add($"{req.FirstName} {req.LastName}");
+            }
+
+            if (successCount > 0)
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new BulkImportTeachersResult
+            {
+                SuccessCount = successCount,
+                ImportedNames = importedNames,
+                Duplicates = duplicates
+            });
         }
 
         [HttpGet("teachers/{id}")]
@@ -764,6 +1098,7 @@ namespace EduVault.Api.Controllers
                 OfficeLocation = teacher?.OfficeLocation,
                 Qualifications = teacher?.Qualifications,
                 Specialization = teacher?.Specialization,
+                DateOfBirth = teacher?.DateOfBirth ?? string.Empty,
                 IsActive = user.IsActive
             });
         }
@@ -805,6 +1140,7 @@ namespace EduVault.Api.Controllers
             teacher.OfficeLocation = request.OfficeLocation;
             teacher.Qualifications = request.Qualifications;
             teacher.Specialization = request.Specialization;
+            teacher.DateOfBirth = request.DateOfBirth ?? string.Empty;
             _unitOfWork.Teachers.Update(teacher);
 
             await _unitOfWork.CompleteAsync();
@@ -1936,6 +2272,7 @@ namespace EduVault.Api.Controllers
         public async Task<IActionResult> SubmitAttendance([FromBody] SubmitAttendanceRequest request)
         {
             var schoolId = GetSchoolId();
+            var studentsToNotify = new List<(Guid StudentId, string Status, string Remarks)>();
 
             foreach (var studentAttendance in request.Students)
             {
@@ -1945,14 +2282,21 @@ namespace EduVault.Api.Controllers
                     .ToListAsync())
                     .FirstOrDefault();
 
+                bool shouldNotify = false;
                 if (existing != null)
                 {
+                    if (existing.Status != studentAttendance.Status || 
+                        (studentAttendance.Status == "Late" && existing.Remarks != studentAttendance.Remarks))
+                    {
+                        shouldNotify = true;
+                    }
                     existing.Status = studentAttendance.Status;
                     existing.Remarks = studentAttendance.Remarks;
                     _context.Attendances.Update(existing);
                 }
                 else
                 {
+                    shouldNotify = true;
                     var attendance = new Attendance
                     {
                         Id = Guid.NewGuid(),
@@ -1964,9 +2308,82 @@ namespace EduVault.Api.Controllers
                     };
                     await _context.Attendances.AddAsync(attendance);
                 }
+
+                if (shouldNotify)
+                {
+                    studentsToNotify.Add((studentAttendance.StudentId, studentAttendance.Status, studentAttendance.Remarks));
+                }
             }
 
             await _context.SaveChangesAsync();
+
+            if (studentsToNotify.Any())
+            {
+                var dateCopy = request.Date;
+                var school = await _context.Schools.FindAsync(schoolId);
+                var schoolName = school?.Name ?? "School";
+
+                foreach (var item in studentsToNotify)
+                {
+                    var student = await _context.Students
+                        .Include(s => s.User)
+                        .FirstOrDefaultAsync(s => s.UserId == item.StudentId);
+
+                    if (student == null || student.User == null || string.IsNullOrWhiteSpace(student.GuardianPhone))
+                    {
+                        continue;
+                    }
+
+                    var studentName = $"{student.User.FirstName} {student.User.LastName}".Trim();
+                    var dateStr = dateCopy.ToString("dd-MM-yyyy");
+                    string message = "";
+
+                    if (item.Status.Equals("Present", StringComparison.OrdinalIgnoreCase))
+                    {
+                        message = $"🏫 *{schoolName}*\n\n" +
+                                  $"Dear Parent, your child *{studentName}* is *Present* today ({dateStr}).\n" +
+                                  $"---\n" +
+                                  $"प्रिय अभिभावक, आपका बच्चा *{studentName}* आज ({dateStr}) *उपस्थित* है।";
+                    }
+                    else if (item.Status.Equals("Absent", StringComparison.OrdinalIgnoreCase))
+                    {
+                        message = $"🏫 *{schoolName}*\n\n" +
+                                  $"Dear Parent, your child *{studentName}* is *Absent* today ({dateStr}).\n" +
+                                  $"---\n" +
+                                  $"प्रिय अभिभावक, आपका बच्चा *{studentName}* आज ({dateStr}) *अनुपस्थित* है।";
+                    }
+                    else if (item.Status.Equals("Late", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int lateMinutes = 0;
+                        if (!string.IsNullOrEmpty(item.Remarks))
+                        {
+                            var match = System.Text.RegularExpressions.Regex.Match(item.Remarks, @"Late by (\d+) mins");
+                            if (match.Success && int.TryParse(match.Groups[1].Value, out int minutes))
+                            {
+                                lateMinutes = minutes;
+                            }
+                        }
+
+                        if (lateMinutes <= 0) lateMinutes = 5; // fallback default
+
+                        message = $"🏫 *{schoolName}*\n\n" +
+                                  $"Dear Parent, your child *{studentName}* is *Late by {lateMinutes} minutes* today ({dateStr}).\n" +
+                                  $"---\n" +
+                                  $"प्रिय अभिभावक, आपका बच्चा *{studentName}* आज ({dateStr}) *{lateMinutes} मिनट देरी* से आया है।";
+                    }
+
+                    if (!string.IsNullOrEmpty(message))
+                    {
+                        _whatsAppQueue.QueueMessage(new WhatsAppQueueItem
+                        {
+                            PhoneNumber = student.GuardianPhone,
+                            Message = message,
+                            SchoolId = schoolId
+                        });
+                    }
+                }
+            }
+
             return Ok(new { success = true });
         }
 

@@ -58,12 +58,114 @@ const SuperAdminDashboard = () => {
     ? (range === 6 ? stats.onboardingTrend.slice(-6) : stats.onboardingTrend)
     : [];
 
+  const handleExportReport = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Pop-up blocker is enabled. Please allow pop-ups to export the report.');
+      return;
+    }
+
+    const mrr = stats?.monthlyRevenue?.toLocaleString('en-IN') ?? '0';
+    const total = stats?.totalSchools ?? '0';
+    const active = stats?.activeSubscriptions ?? '0';
+    const growth = stats?.platformGrowth ?? 'Stable';
+    const currentDate = new Date().toLocaleString();
+
+    const activityRows = stats?.recentActivity?.map(a => `
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 10px; font-weight: 600; color: #1e293b; text-align: left;">${a.name}</td>
+        <td style="padding: 10px; color: #64748b; text-align: left;">${new Date(a.createdAt).toLocaleDateString('en-GB')}</td>
+        <td style="padding: 10px; text-align: left;"><span style="padding: 3px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: ${a.status === 'Active' ? '#dcfce7; color: #15803d;' : a.status === 'Pending' ? '#fef9c3; color: #a16207;' : '#fee2e2; color: #b91c1c;'}">${a.status}</span></td>
+      </tr>
+    `).join('') || `<tr><td colspan="3" style="text-align: center; padding: 20px; color: #94a3b8;">No onboarding records found.</td></tr>`;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>EduFlow Platform Report - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #1e293b; padding: 40px; margin: 0; line-height: 1.5; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+            .logo { font-size: 24px; font-weight: 800; color: #1e2744; }
+            .title { font-size: 11px; color: #64748b; text-align: right; }
+            .section-title { font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 30px; margin-bottom: 15px; border-left: 4px solid #3b82f6; padding-left: 10px; }
+            .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
+            .card { background: #f8fafc; border: 1px solid #f1f5f9; padding: 15px; border-radius: 12px; }
+            .card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
+            .card-value { font-size: 20px; font-weight: 800; color: #1e2744; margin-top: 5px; }
+            table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; margin-top: 10px; }
+            th { background: #f1f5f9; padding: 10px; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; text-align: left; }
+            .footer { margin-top: 50px; border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 10px; color: #94a3b8; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="logo">EduFlow Systems</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 3px;">Platform Super Admin Executive Report</div>
+            </div>
+            <div class="title">
+              <strong>Report Generated On:</strong><br/>
+              ${currentDate}
+            </div>
+          </div>
+
+          <div class="section-title">Key Performance Indicators (KPIs)</div>
+          <div class="grid">
+            <div class="card">
+              <div class="card-label">Total Campuses</div>
+              <div class="card-value">${total}</div>
+            </div>
+            <div class="card">
+              <div class="card-label">Active Subscriptions</div>
+              <div class="card-value">${active}</div>
+            </div>
+            <div class="card">
+              <div class="card-label">Monthly Revenue</div>
+              <div class="card-value">₹${mrr}</div>
+            </div>
+            <div class="card">
+              <div class="card-label">Platform Growth</div>
+              <div class="card-value">${growth}</div>
+            </div>
+          </div>
+
+          <div class="section-title">Recent Institutional Activity Logs</div>
+          <table>
+            <thead>
+              <tr>
+                <th>School Name</th>
+                <th>Onboarding Date</th>
+                <th>Current Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${activityRows}
+            </tbody>
+          </table>
+
+          <div class="footer">
+            Confidential Document. Generated for Super Administrator audit purposes only. © 2026 EduVault Systems Inc.
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <div className="space-y-6">
       {/* Topbar */}
       <Topbar title="Dashboard Overview" subtitle="EduFlow Platform" actions={
         <div className="flex gap-2">
-          <button className="btn-outline text-xs">
+          <button onClick={handleExportReport} className="btn-outline text-xs">
             <Download className="w-3.5 h-3.5" />
             <span>Export Report</span>
           </button>

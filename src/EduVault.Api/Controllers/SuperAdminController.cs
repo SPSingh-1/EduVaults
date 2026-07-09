@@ -47,7 +47,9 @@ namespace EduVault.Api.Controllers
                     s.EmailDomain,
                     s.ThemeColor,
                     StudentsCount = students.Count(),
-                    AdminEmail = adminUser?.Email
+                    AdminEmail = adminUser?.Email,
+                    AdminName = adminUser?.FirstName ?? "N/A",
+                    AdminPhone = adminUser?.LastName ?? "N/A"
                 });
             }
 
@@ -119,7 +121,7 @@ namespace EduVault.Api.Controllers
         }
 
         [HttpPut("schools/{id}/status")]
-        public async Task<IActionResult> UpdateSchoolStatus(Guid id, [FromBody] string status)
+        public async Task<IActionResult> UpdateSchoolStatus(Guid id, [FromBody] SchoolStatusUpdateInput input)
         {
             var school = await _unitOfWork.Schools.GetByIdAsync(id);
             if (school == null)
@@ -127,7 +129,7 @@ namespace EduVault.Api.Controllers
                 return NotFound(new { error = "School not found" });
             }
 
-            school.Status = status;
+            school.Status = input.Status;
             _unitOfWork.Schools.Update(school);
 
             // Synchronize subscription status (Active -> success, Suspended -> pending)
@@ -135,8 +137,31 @@ namespace EduVault.Api.Controllers
             var subscription = subscriptions.FirstOrDefault();
             if (subscription != null)
             {
-                subscription.Status = status == "Active" ? "success" : "pending";
+                subscription.Status = input.Status == "Active" ? "success" : "pending";
                 _unitOfWork.Subscriptions.Update(subscription);
+            }
+
+            // Find and activate/update the admin user credentials
+            var adminUser = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == id && u.Role == "schooladmin")).FirstOrDefault();
+            if (adminUser != null)
+            {
+                if (input.Status == "Active")
+                {
+                    adminUser.IsActive = true;
+                    if (!string.IsNullOrWhiteSpace(input.AdminEmail))
+                    {
+                        adminUser.Email = input.AdminEmail;
+                    }
+                    if (!string.IsNullOrWhiteSpace(input.AdminPassword))
+                    {
+                        adminUser.PasswordHash = _authService.HashPassword(input.AdminPassword);
+                    }
+                }
+                else
+                {
+                    adminUser.IsActive = false;
+                }
+                _unitOfWork.Users.Update(adminUser);
             }
 
             await _unitOfWork.CompleteAsync();
@@ -279,6 +304,12 @@ namespace EduVault.Api.Controllers
             settings.BackupFrequency = request.BackupFrequency;
             settings.BackupTime = request.BackupTime;
             settings.BackupTarget = request.BackupTarget;
+
+            // Save contact details
+            settings.ContactEmail = request.ContactEmail;
+            settings.ContactPhone = request.ContactPhone;
+            settings.ContactAddress = request.ContactAddress;
+            settings.ContactHours = request.ContactHours;
 
             if (string.IsNullOrEmpty(request.PaymentProvider) || request.PaymentProvider.Equals("none", StringComparison.OrdinalIgnoreCase))
             {
@@ -780,6 +811,31 @@ namespace EduVault.Api.Controllers
 
             return Ok(new { success = true });
         }
+
+        [HttpGet("inquiries")]
+        public async Task<IActionResult> GetPublicInquiries()
+        {
+            var inquiries = (await _unitOfWork.SupportTickets.FindAsync(t => t.SchoolId == null))
+                .OrderByDescending(t => t.CreatedAt)
+                .ToList();
+            return Ok(inquiries);
+        }
+
+        [HttpPost("inquiries/{id}/resolve")]
+        public async Task<IActionResult> ResolveInquiry(Guid id)
+        {
+            var ticket = await _unitOfWork.SupportTickets.GetByIdAsync(id);
+            if (ticket == null)
+            {
+                return NotFound(new { error = "Inquiry not found" });
+            }
+
+            ticket.Status = "RESOLVED";
+            _unitOfWork.SupportTickets.Update(ticket);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true });
+        }
     }
 
 
@@ -845,5 +901,12 @@ namespace EduVault.Api.Controllers
         public string StorageLimit { get; set; } = string.Empty;
         public string MonthlyPrice { get; set; } = string.Empty;
         public decimal? UpgradeCharge { get; set; }
+    }
+
+    public class SchoolStatusUpdateInput
+    {
+        public string Status { get; set; } = string.Empty;
+        public string? AdminEmail { get; set; }
+        public string? AdminPassword { get; set; }
     }
 }

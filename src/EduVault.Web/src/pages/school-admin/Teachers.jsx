@@ -57,6 +57,9 @@ const Teachers = () => {
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewTeacherData, setViewTeacherData] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [importError, setImportError] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -74,6 +77,7 @@ const Teachers = () => {
     officeLocation: 'Building B, Room 402',
     qualifications: '',
     specialization: '',
+    dateOfBirth: '',
     isActive: true
   });
 
@@ -149,6 +153,180 @@ const Teachers = () => {
     }
   }, [activeTab, selectedDate, teachers]);
 
+  const parseCSV = (text) => {
+    const lines = text.split(/\r\n|\n/);
+    if (lines.length < 2) return [];
+    const result = [];
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const values = [];
+      let insideQuote = false;
+      let currentValue = '';
+      for (let c = 0; c < line.length; c++) {
+        const char = line[c];
+        if (char === '"') {
+          insideQuote = !insideQuote;
+        } else if (char === ',' && !insideQuote) {
+          values.push(currentValue.trim());
+          currentValue = '';
+        } else {
+          currentValue += char;
+        }
+      }
+      values.push(currentValue.trim());
+
+      const row = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] ? values[index].replace(/^"|"$/g, '') : '';
+      });
+      result.push(row);
+    }
+    return result;
+  };
+
+  const handleCsvUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Validate that it's a CSV file
+    const fileName = file.name || '';
+    const fileExtension = fileName.split('.').pop().toLowerCase();
+    const isCsv = fileExtension === 'csv' && (file.type === '' || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel' || file.type === 'application/csv');
+    if (!isCsv) {
+      setImportError('Invalid file type. Only CSV files (.csv) are allowed.');
+      return;
+    }
+
+    // Limit file size to 1 MB to prevent Denial of Service
+    if (file.size > 1 * 1024 * 1024) {
+      setImportError('File size is too large. Maximum size is 1 MB.');
+      return;
+    }
+
+    setImportError('');
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const text = evt.target.result;
+        const parsed = parseCSV(text);
+        if (parsed.length === 0) {
+          setImportError('No valid rows found in CSV file.');
+          return;
+        }
+
+        if (parsed.length > 100) {
+          setImportError('Bulk import is limited to a maximum of 100 rows at a time.');
+          return;
+        }
+
+        // Validate each row for formula injection and script/HTML injection
+        const hasFormulaOrScript = (val, isPhone = false) => {
+          if (!val) return false;
+          const str = val.toString().trim();
+          if (str.length === 0) return false;
+          
+          const firstChar = str[0];
+          if (firstChar === '=' || firstChar === '-' || firstChar === '@') {
+            return true;
+          }
+          if (firstChar === '+' && !isPhone) {
+            return true;
+          }
+          if (isPhone && !/^\+?[0-9\s\-()]+$/.test(str)) {
+            return true;
+          }
+          if (str.includes('<') || str.includes('>')) {
+            return true;
+          }
+          return false;
+        };
+
+        for (let i = 0; i < parsed.length; i++) {
+          const row = parsed[i];
+          const nameVal = row['name'] || row['teacher name'] || row['teachername'] || '';
+          let first = row['first name'] || row['firstname'] || row['first_name'] || '';
+          let last = row['last name'] || row['lastname'] || row['last_name'] || '';
+          if (!first && nameVal) {
+            const parts = nameVal.trim().split(/\s+/);
+            first = parts[0] || '';
+            last = parts.slice(1).join(' ') || '';
+          }
+          const emailVal = row['email'] || row['email address'] || row['emailid'] || row['mailid'] || row['username'] || '';
+          const dob = row['date of birth'] || row['dob'] || row['birth date'] || row['birthdate'] || row['dateofbirth'] || '';
+          const dept = row['department'] || row['dept'] || '';
+          const office = row['office location'] || row['officelocation'] || row['office'] || '';
+          const qual = row['qualifications'] || row['qualification'] || row['degree'] || '';
+          const spec = row['specialization'] || row['subject'] || '';
+
+          if (hasFormulaOrScript(first)) {
+            setImportError(`Row ${i + 1}: First Name contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(last)) {
+            setImportError(`Row ${i + 1}: Last Name contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(emailVal)) {
+            setImportError(`Row ${i + 1}: Email contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(dob)) {
+            setImportError(`Row ${i + 1}: Date of Birth contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(dept)) {
+            setImportError(`Row ${i + 1}: Department contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(office)) {
+            setImportError(`Row ${i + 1}: Office Location contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(qual)) {
+            setImportError(`Row ${i + 1}: Qualifications contains invalid or unsafe characters.`);
+            return;
+          }
+          if (hasFormulaOrScript(spec)) {
+            setImportError(`Row ${i + 1}: Specialization contains invalid or unsafe characters.`);
+            return;
+          }
+        }
+
+        const mappedTeachers = parsed.map(row => {
+          const nameVal = row['name'] || row['teacher name'] || row['teachername'] || '';
+          let first = row['first name'] || row['firstname'] || row['first_name'] || '';
+          let last = row['last name'] || row['lastname'] || row['last_name'] || '';
+          if (!first && nameVal) {
+            const parts = nameVal.trim().split(/\s+/);
+            first = parts[0] || '';
+            last = parts.slice(1).join(' ') || '';
+          }
+          return {
+            firstName: first || 'Unknown',
+            lastName: last || 'Teacher',
+            email: row['email'] || row['email address'] || row['emailid'] || row['mailid'] || row['username'] || '',
+            dateOfBirth: row['date of birth'] || row['dob'] || row['birth date'] || row['birthdate'] || row['dateofbirth'] || '01-01-1980',
+            department: row['department'] || row['dept'] || departments[0]?.name || 'Science & Mathematics',
+            officeLocation: row['office location'] || row['officelocation'] || row['office'] || '',
+            qualifications: row['qualifications'] || row['qualification'] || row['degree'] || '',
+            specialization: row['specialization'] || row['subject'] || ''
+          };
+        });
+
+        const res = await apiClient.post('/academics/teachers/import', { teachers: mappedTeachers });
+        setImportResult(res.data);
+        fetchTeachers();
+      } catch (err) {
+        console.error('Error importing CSV:', err);
+        setImportError(err.response?.data?.error || 'Failed to import teacher CSV roster.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleSetAttendanceStatus = (id, status) => {
     setAttendanceTeachers(prev => prev.map(t => t.id === id ? { ...t, status, lateMinutes: status === 'Late' ? (t.lateMinutes || '10') : '' } : t));
   };
@@ -203,6 +381,7 @@ const Teachers = () => {
       officeLocation: 'Building B, Room 402',
       qualifications: '',
       specialization: '',
+      dateOfBirth: '',
       isActive: true
     });
     setEditMode(false);
@@ -257,6 +436,7 @@ const Teachers = () => {
         officeLocation: teacher.officeLocation || '',
         qualifications: teacher.qualifications || '',
         specialization: teacher.specialization || '',
+        dateOfBirth: teacher.dateOfBirth || '',
         isActive: teacher.isActive ?? true
       });
       setEditTeacherId(id);
@@ -315,7 +495,12 @@ const Teachers = () => {
 
   return (
     <div>
-      <Topbar title="Teacher Management" actions={activeTab === 'directory' && <button onClick={() => { setError(''); resetForm(); setShowModal(true); }} className="btn-primary">+ Add New Teacher</button>} />
+      <Topbar title="Teacher Management" actions={activeTab === 'directory' && (
+        <div className="flex gap-2">
+          <button onClick={() => { setImportError(''); setImportResult(null); setShowImportModal(true); }} className="btn-outline text-xs">↑ Bulk Import</button>
+          <button onClick={() => { setError(''); resetForm(); setShowModal(true); }} className="btn-primary text-xs">+ Add New Teacher</button>
+        </div>
+      )} />
 
       <div className="card">
         <p className="text-xs text-gray-400 mb-4">Efficiently manage and monitor your faculty records.</p>
@@ -670,6 +855,10 @@ const Teachers = () => {
                   <div className="text-primary font-medium">{viewTeacherData.email}</div>
                 </div>
                 <div>
+                  <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Date of Birth</div>
+                  <div className="text-primary font-medium">{viewTeacherData.dateOfBirth || 'Not Specified'}</div>
+                </div>
+                <div>
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Department</div>
                   <div className="text-primary font-medium">{viewTeacherData.department || 'Not Assigned'}</div>
                 </div>
@@ -728,6 +917,10 @@ const Teachers = () => {
                     <input type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="j.doe@school.edu" className="input" />
                   </div>
                   <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5" htmlFor="teacher-dob-input">Date of Birth *</label>
+                    <input id="teacher-dob-input" required type="text" value={form.dateOfBirth} onChange={e => setForm(f => ({ ...f, dateOfBirth: e.target.value }))} placeholder="dd-MM-yyyy" className="input" />
+                  </div>
+                  <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Password {editMode ? '(Leave blank to keep current)' : '*'}</label>
                     <input type="password" required={!editMode} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} className="input" />
                   </div>
@@ -774,6 +967,96 @@ const Teachers = () => {
               </div>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Bulk Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden font-sans">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+              <div>
+                <h3 className="font-display font-bold text-lg">Bulk Teacher Import</h3>
+                <p className="text-blue-200 text-xs">Import a list of teachers from a CSV file.</p>
+              </div>
+              <button type="button" onClick={() => { setShowImportModal(false); setImportResult(null); setImportError(''); }} className="text-white hover:text-blue-200 text-lg">✖</button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              {importError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">
+                  ⚠️ {importError}
+                </div>
+              )}
+
+              {!importResult ? (
+                <div className="space-y-4 text-left">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-650 mb-1.5">Roster File (CSV) *</label>
+                    <div 
+                      onClick={() => document.getElementById('csv-file-picker').click()} 
+                      className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-all bg-gray-50/50"
+                    >
+                      <span className="text-2xl mb-2 block">📄</span>
+                      <span className="text-xs font-semibold text-gray-500 block">Click to select CSV File</span>
+                      <span className="text-[10px] text-gray-400 mt-1 block">Roster columns: Name/First/Last Name, Email, DOB, Department, Office, Qualifications, Specialization</span>
+                    </div>
+                    <input 
+                      type="file" 
+                      id="csv-file-picker" 
+                      accept=".csv" 
+                      onChange={handleCsvUpload} 
+                      className="hidden" 
+                      aria-label="Upload CSV File"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 text-left font-sans">
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                    <span className="text-2xl mb-1 block">✅</span>
+                    <h4 className="font-bold text-green-800 text-sm">Import Completed</h4>
+                    <p className="text-xs text-green-600 mt-1">Successfully registered {importResult.successCount} new teachers!</p>
+                  </div>
+
+                  {importResult.duplicates.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-primary text-xs uppercase mb-2">⚠️ Skipped Records (Duplicates: {importResult.duplicates.length})</h4>
+                      <p className="text-[11px] text-gray-400 mb-2">The following email addresses already exist in the database:</p>
+                      <div className="border border-amber-100 rounded-xl overflow-hidden text-xs max-h-40 overflow-y-auto">
+                        <table className="w-full text-left bg-amber-50/20">
+                          <thead>
+                            <tr className="bg-amber-50 text-amber-800 border-b border-amber-100">
+                              <th className="p-2 font-bold text-[10px]">Teacher</th>
+                              <th className="p-2 font-bold text-[10px]">Email</th>
+                              <th className="p-2 font-bold text-[10px]">Reason</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {importResult.duplicates.map((dup, idx) => (
+                              <tr key={idx} className="border-b border-amber-50/60 last:border-0">
+                                <td className="p-2 font-medium text-gray-700">{dup.firstName} {dup.lastName}</td>
+                                <td className="p-2 text-gray-600 font-mono text-[10px]">{dup.email}</td>
+                                <td className="p-2 text-gray-500 font-mono text-[10px]">{dup.reason}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 px-6 pb-6 pt-3 bg-gray-50/50 border-t border-gray-100">
+              <button 
+                type="button"
+                onClick={() => { setShowImportModal(false); setImportResult(null); setImportError(''); }} 
+                className="btn-outline text-xs"
+              >
+                {importResult ? 'Done' : 'Cancel'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

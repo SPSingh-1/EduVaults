@@ -385,6 +385,107 @@ const Subscriptions = () => {
   const activeSubscribers = data.activeSubscribers;
   const avgArpu = activeSubscribers > 0 ? Math.round(totalMrr / activeSubscribers) : 0;
 
+  const handleExportReport = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Pop-up blocker is enabled. Please allow pop-ups to export the report.');
+      return;
+    }
+
+    const mrr = totalMrr?.toLocaleString('en-IN') ?? '0';
+    const active = activeSubscribers ?? '0';
+    const arpu = avgArpu?.toLocaleString('en-IN') ?? '0';
+    const currentDate = new Date().toLocaleString();
+
+    const renewalRows = data.renewals.map(r => `
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 10px; font-weight: 600; color: #1e293b; text-align: left;">${r.institutionName}</td>
+        <td style="padding: 10px; color: #475569; text-align: left;">${r.planType}</td>
+        <td style="padding: 10px; font-weight: 500; color: #0f172a; text-align: left;">₹${r.amount}</td>
+        <td style="padding: 10px; color: #64748b; text-align: left;">${r.renewDate}</td>
+        <td style="padding: 10px; text-align: left;"><span style="padding: 3px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: ${r.status === 'success' ? '#dcfce7; color: #15803d;' : r.status === 'pending' ? '#fef9c3; color: #a16207;' : '#fee2e2; color: #b91c1c;'}">${r.status.toUpperCase()}</span></td>
+      </tr>
+    `).join('') || `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #94a3b8;">No renewal transactions found.</td></tr>`;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>EduFlow Subscriptions Report - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #1e293b; padding: 40px; margin: 0; line-height: 1.5; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+            .logo { font-size: 24px; font-weight: 800; color: #1e2744; }
+            .title { font-size: 11px; color: #64748b; text-align: right; }
+            .section-title { font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 30px; margin-bottom: 15px; border-left: 4px solid #3b82f6; padding-left: 10px; }
+            .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }
+            .card { background: #f8fafc; border: 1px solid #f1f5f9; padding: 15px; border-radius: 12px; }
+            .card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
+            .card-value { font-size: 20px; font-weight: 800; color: #1e2744; margin-top: 5px; }
+            table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; margin-top: 10px; }
+            th { background: #f1f5f9; padding: 10px; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; text-align: left; }
+            .footer { margin-top: 50px; border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 10px; color: #94a3b8; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="logo">EduFlow Systems</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 3px;">Platform Subscription Billing & Revenue Report</div>
+            </div>
+            <div class="title">
+              <strong>Report Generated On:</strong><br/>
+              ${currentDate}
+            </div>
+          </div>
+
+          <div class="section-title">Revenue & Subscriber Metrics</div>
+          <div class="grid">
+            <div class="card">
+              <div class="card-label">Monthly Recurring Revenue (MRR)</div>
+              <div class="card-value">₹${mrr}</div>
+            </div>
+            <div class="card">
+              <div class="card-label">Active Subscribers</div>
+              <div class="card-value">${active}</div>
+            </div>
+            <div class="card">
+              <div class="card-label">Average Revenue Per School (ARPU)</div>
+              <div class="card-value">₹${arpu}</div>
+            </div>
+          </div>
+
+          <div class="section-title">Recent Renewal Transactions</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Institution Name</th>
+                <th>Plan Type</th>
+                <th>Amount</th>
+                <th>Renew Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renewalRows}
+            </tbody>
+          </table>
+
+          <div class="footer">
+            Confidential Document. Generated for billing audit purposes only. © 2026 EduVault Systems Inc.
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
@@ -400,7 +501,7 @@ const Subscriptions = () => {
         title="Subscription Management"
         actions={
           <div className="flex gap-2">
-            <button className="btn-outline text-xs">Export Report</button>
+            <button onClick={handleExportReport} className="btn-outline text-xs">Export Report</button>
             <button 
               onClick={() => { setCreateError(''); setShowCreateModal(true); }}
               className="btn-primary text-xs"

@@ -33,5 +33,6 @@ namespace EduVault.Core.DTOs
         public string GuardianRelationship { get; set; } = string.Empty; // Father, Mother, etc.
 
         public string Address { get; set; } = string.Empty;
+        public string DateOfBirth { get; set; } = string.Empty;
     }
 }
