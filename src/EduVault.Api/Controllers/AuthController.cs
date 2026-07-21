@@ -250,15 +250,23 @@ namespace EduVault.Api.Controllers
             if (!_cache.TryGetValue(CacheKey, out object? cachedStats))
             {
                 var schools = await _unitOfWork.Schools.GetAllAsync();
-                var activeSchools = schools.Count(s => s.Status == "Active");
+                var activeSchools = schools != null ? schools.Count(s => s.Status == "Active") : 0;
 
                 var students = await _unitOfWork.Users.FindAsync(u => u.Role == "student");
-                var activeStudentsCount = students.Count();
+                var activeStudentsCount = students != null ? students.Count() : 0;
+
+                var teachers = await _unitOfWork.Users.FindAsync(u => u.Role == "teacher");
+                var activeTeachersCount = teachers != null ? teachers.Count() : 0;
+
+                var transactions = await _unitOfWork.Transactions.GetAllAsync();
+                var totalRevenue = transactions != null ? transactions.Where(t => t.Status.Equals("success", StringComparison.OrdinalIgnoreCase)).Sum(t => t.Amount) : 0;
 
                 cachedStats = new
                 {
-                    totalSchools = activeSchools > 0 ? activeSchools : 12,
-                    totalStudents = activeStudentsCount > 0 ? activeStudentsCount : 1500
+                    totalSchools = activeSchools,
+                    totalStudents = activeStudentsCount,
+                    totalTeachers = activeTeachersCount,
+                    totalRevenue = totalRevenue
                 };
 
                 var cacheEntryOptions = new MemoryCacheEntryOptions()

@@ -3,6 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import Topbar from '../../components/layout/Topbar';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../api/apiClient';
+import Loader from '../../components/common/Loader';
 import { 
   School, 
   CheckCircle2, 
@@ -39,6 +40,53 @@ const SuperAdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState(6); // 6 months or 12 months (1 Year)
+
+  // Add School Modal States
+  const [showModal, setShowModal] = useState(false);
+  const [errorModal, setErrorModal] = useState('');
+  const [loadingModal, setLoadingModal] = useState(false);
+  const [form, setForm] = useState({
+    schoolName: '',
+    address: '',
+    city: '',
+    website: '',
+    adminName: '',
+    adminEmail: '',
+    adminPassword: '',
+    logoUrl: '/logo.jpeg',
+    emailDomain: '',
+    themeColor: '#1a2744'
+  });
+
+  const handleAddSchool = async () => {
+    if (!form.schoolName || !form.adminEmail || !form.adminPassword || !form.adminName) {
+      setErrorModal('Please fill in all required fields.');
+      return;
+    }
+    setErrorModal('');
+    setLoadingModal(true);
+    try {
+      await apiClient.post('/super/schools', form);
+      setShowModal(false);
+      setForm({
+        schoolName: '',
+        address: '',
+        city: '',
+        website: '',
+        adminName: '',
+        adminEmail: '',
+        adminPassword: '',
+        logoUrl: '/logo.jpeg',
+        emailDomain: '',
+        themeColor: '#1a2744'
+      });
+      navigate('/super-admin/schools', { state: { added: true } });
+    } catch (err) {
+      setErrorModal(err.response?.data?.error || 'Failed to register school.');
+    } finally {
+      setLoadingModal(false);
+    }
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -160,6 +208,10 @@ const SuperAdminDashboard = () => {
     printWindow.document.close();
   };
 
+  if (loading) {
+    return <Loader message="Accessing global system stats" />;
+  }
+
   return (
     <div className="space-y-6">
       {/* Topbar */}
@@ -169,7 +221,7 @@ const SuperAdminDashboard = () => {
             <Download className="w-3.5 h-3.5" />
             <span>Export Report</span>
           </button>
-          <button onClick={() => navigate('/super-admin/schools')} className="btn-primary text-xs">
+          <button onClick={() => { setErrorModal(''); setShowModal(true); }} className="btn-primary text-xs">
             <Plus className="w-3.5 h-3.5" />
             <span>Add New School</span>
           </button>
@@ -181,7 +233,7 @@ const SuperAdminDashboard = () => {
         {[
           {label:'Total Schools',value: stats?.totalSchools ?? '0',change:'Real-time',icon: School,color:'text-blue-500',bgColor:'bg-blue-50/50'},
           {label:'Active Subscriptions',value: stats?.activeSubscriptions ?? '0',change:'Active',icon: CheckCircle2,color:'text-emerald-500',bgColor:'bg-emerald-50/50'},
-          {label:'Monthly Revenue',value: `$${stats?.monthlyRevenue?.toLocaleString() ?? '0'}`,change:'MRR',icon: DollarSign,color:'text-violet-500',bgColor:'bg-violet-50/50'},
+          {label:'Monthly Revenue',value: `Rs. ${stats?.monthlyRevenue?.toLocaleString() ?? '0'}`,change:'MRR',icon: DollarSign,color:'text-violet-500',bgColor:'bg-violet-50/50'},
           {label:'Platform Growth',value: stats?.platformGrowth ?? 'Stable',change:'Steady',icon: TrendingUp,color:'text-orange-500',bgColor:'bg-orange-50/50'},
         ].map(s=>(
           <div key={s.label} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
@@ -286,6 +338,84 @@ const SuperAdminDashboard = () => {
           </button>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-primary px-6 py-5 rounded-t-2xl">
+              <h3 className="font-display font-bold text-white text-lg">Register New School</h3>
+              <p className="text-blue-200 text-sm">Enter the required information to onboard a new educational institution.</p>
+            </div>
+            <div className="p-6 space-y-4 font-sans text-left">
+              {errorModal && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{errorModal}</div>}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">School Name *</label>
+                <input value={form.schoolName} onChange={e => setForm(p => ({ ...p, schoolName: e.target.value }))} placeholder="e.g. Greenwood Academy" className="input" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Address *</label>
+                  <input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="Street address" className="input" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">City / State *</label>
+                  <input value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} placeholder="City, State" className="input" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">School Email Domain *</label>
+                  <input value={form.emailDomain} onChange={e => setForm(p => ({ ...p, emailDomain: e.target.value }))} placeholder="e.g. greenwood.edu" className="input" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Website</label>
+                  <input value={form.website} onChange={e => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://www.school.edu" className="input" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-1">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Admin Full Name *</label>
+                  <input value={form.adminName} onChange={e => setForm(p => ({ ...p, adminName: e.target.value }))} placeholder="e.g. Dr. Jenkins" className="input" />
+                </div>
+                <div className="col-span-1">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Admin Email *</label>
+                  <input 
+                    type="email" 
+                    value={form.adminEmail} 
+                    onChange={e => {
+                      const email = e.target.value;
+                      const parts = email.split('@');
+                      const domain = parts.length > 1 ? parts[1] : '';
+                      setForm(p => {
+                        const oldEmailParts = p.adminEmail.split('@');
+                        const oldDomain = oldEmailParts.length > 1 ? oldEmailParts[1] : '';
+                        const shouldUpdateDomain = !p.emailDomain || p.emailDomain === oldDomain;
+                        return {
+                          ...p,
+                          adminEmail: email,
+                          emailDomain: shouldUpdateDomain ? domain : p.emailDomain
+                        };
+                      });
+                    }} 
+                    placeholder="admin@school.edu" 
+                    className="input" 
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Admin Password *</label>
+                  <input type="password" value={form.adminPassword} onChange={e => setForm(p => ({ ...p, adminPassword: e.target.value }))} placeholder="••••••••" className="input" />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
+              <button onClick={() => setShowModal(false)} className="btn-outline">Cancel</button>
+              <button onClick={handleAddSchool} disabled={loadingModal} className="btn-primary flex items-center gap-1.5">
+                {loadingModal ? 'Registering...' : '✓ Register School'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -79,13 +79,13 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, process.env.JWT_SECRET || 'EduVaultSuperSecretJWTKey2025!WithSecureKey32BytesLength', (err, user) => {
     if (err) return res.status(403).json({ error: 'Token invalid or expired' });
-    
+
     // Normalize claims from .NET schema URIs
     const idClaim = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier';
     const emailClaim = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress';
     const roleClaim = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role';
     const microsoftRoleClaim = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
-    
+
     user.id = user.id || user.nameid || user.sub || user[idClaim];
     user.email = user.email || user[emailClaim];
     user.role = user.role || user[roleClaim] || user[microsoftRoleClaim];
@@ -264,8 +264,8 @@ app.post('/api/notifications', authenticateToken, async (req, res) => {
       }
     }
 
-    const senderName = req.user.firstName && req.user.lastName 
-      ? `${req.user.firstName} ${req.user.lastName}` 
+    const senderName = req.user.firstName && req.user.lastName
+      ? `${req.user.firstName} ${req.user.lastName}`
       : (req.user.email || 'Platform Administrator');
     const senderRole = req.user.role || 'system';
 
@@ -683,7 +683,7 @@ app.post('/api/document/upload', authenticateToken, async (req, res) => {
   try {
     // Note: In real production, this would use multer to save files. We will mock the file record.
     const { fileName, fileSize, contentType, documentType } = req.body;
-    
+
     const doc = new DocumentMetadata({
       schoolId: req.user.schoolId,
       ownerId: req.user.id,
@@ -794,7 +794,7 @@ app.post('/api/teacher-attendance/submit', authenticateToken, async (req, res) =
     }
     const { schoolId } = req.user;
     const { date, attendance } = req.body;
-    
+
     if (!schoolId) {
       return res.status(400).json({ error: 'School ID missing in token' });
     }
@@ -873,12 +873,12 @@ io.use((socket, next) => {
 
   jwt.verify(token, process.env.JWT_SECRET || 'EduVaultSuperSecretJWTKey2025!WithSecureKey32BytesLength', (err, decoded) => {
     if (err) return next(new Error('Authentication error: Token invalid'));
-    
+
     const idClaim = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier';
     const emailClaim = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress';
     const roleClaim = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role';
     const microsoftRoleClaim = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
-    
+
     decoded.id = decoded.id || decoded.nameid || decoded.sub || decoded[idClaim];
     decoded.email = decoded.email || decoded[emailClaim];
     decoded.role = decoded.role || decoded[roleClaim] || decoded[microsoftRoleClaim];
@@ -900,7 +900,7 @@ io.use((socket, next) => {
 
 io.on('connection', (socket) => {
   console.log(`Socket Connected: User ${socket.user.id} in School ${socket.user.schoolId}`);
-  
+
   // Join standard school-wide room
   socket.join(socket.user.schoolId);
   // Join private personal room for direct messages
@@ -943,6 +943,18 @@ io.on('connection', (socket) => {
     console.log(`Socket Disconnected: User ${socket.user.id}`);
   });
 });
+
+// Serve React SPA build static files and handle route rewrites
+const webDistPath = path.join(__dirname, '../EduVault.Web/dist');
+if (fs.existsSync(webDistPath)) {
+  app.use(express.static(webDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/api-docs') || req.path.startsWith('/socket.io')) {
+      return next();
+    }
+    res.sendFile(path.join(webDistPath, 'index.html'));
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

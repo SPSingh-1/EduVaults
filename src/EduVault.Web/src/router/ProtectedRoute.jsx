@@ -10,8 +10,9 @@ const roleRoutes = {
 
 export const ProtectedRoute = ({ allowedRoles }) => {
   const { user, token, maintenanceActive } = useAuth();
+  const userRole = user?.role?.toLowerCase();
 
-  if (maintenanceActive && user && user.role !== 'superadmin' && user.role !== 'schooladmin') {
+  if (maintenanceActive && user && userRole !== 'superadmin' && userRole !== 'schooladmin') {
     return <Navigate to="/maintenance" replace />;
   }
 
@@ -19,9 +20,9 @@ export const ProtectedRoute = ({ allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && !allowedRoles.map(r => r.toLowerCase()).includes(userRole)) {
     // If user's role is not authorized, redirect to their authorized landing page
-    return <Navigate to={roleRoutes[user.role] || '/'} replace />;
+    return <Navigate to={roleRoutes[userRole] || '/'} replace />;
   }
 
   return <Outlet />;

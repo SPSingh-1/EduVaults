@@ -2,6 +2,7 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import Topbar from '../../components/layout/Topbar';
+import Loader from '../../components/common/Loader';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { io } from 'socket.io-client';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -32,6 +33,11 @@ import {
   DollarSign, 
   ClipboardList 
 } from 'lucide-react';
+
+const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 const teacherLinks = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/teacher/dashboard' },
@@ -94,12 +100,7 @@ export const TeacherDashboard = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div>
-        <Topbar title="Teacher Dashboard" subtitle="Loading classroom statistics..." />
-        <div className="card text-center py-12 text-gray-400 text-sm">Loading dashboard analytics...</div>
-      </div>
-    );
+    return <Loader message="Assembling classroom stats & analytics" />;
   }
 
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -451,14 +452,14 @@ export const TeacherClasses = () => {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   const periods = [1, 2, 3, 4, 5];
 
+  if (loading) {
+    return <Loader message="Accessing class schedules & mappings" />;
+  }
+
   return (
     <div>
       <Topbar title="My Assigned Classes" subtitle="Manage schedules, remarks, and cancellations" />
-
-      {loading ? (
-        <div className="card text-center py-12 text-gray-400 text-sm">Loading classroom mappings...</div>
-      ) : (
-        <div className="grid grid-cols-4 gap-6">
+      <div className="grid grid-cols-4 gap-6">
           {/* Class List Selector */}
           <div className="space-y-3">
             <h3 className="font-display font-bold text-xs uppercase tracking-wider text-primary/60 mb-2">Class Sections Taught</h3>
@@ -566,7 +567,6 @@ export const TeacherClasses = () => {
             </div>
           </div>
         </div>
-      )}
 
       {/* Remark Modal */}
       {showRemarkModal && (
@@ -643,8 +643,8 @@ export const TeacherStudents = () => {
   const [classes, setClasses] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
   const [activeTab, setActiveTab] = useState('roster'); // 'roster', 'contacts'
 
   const [showViewModal, setShowViewModal] = useState(false);
@@ -764,6 +764,9 @@ export const TeacherStudents = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl text-primary" style={{ width: '130px' }} />
             <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl text-primary" style={{ width: '130px' }} />
+            {(dateFrom || dateTo || search || selectedClass) && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setSelectedClass(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
+            )}
           </div>
 
           <select className="input w-48 text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
@@ -1901,19 +1904,25 @@ export const Remarks = () => {
 // --- Homework Page ---
 export const Homework = () => {
   const [homeworks, setHomeworks] = useState([]);
-      const [classes, setClasses] = useState([]);
-      const [showNew, setShowNew] = useState(false);
-      const [loading, setLoading] = useState(false);
-      const [error, setError] = useState('');
+  const [classes, setClasses] = useState([]);
+  const [showNew, setShowNew] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-      // Form state
-      const [title, setTitle] = useState('');
-      const [classSelector, setClassSelector] = useState('');
-      const [dueDate, setDueDate] = useState('');
-      const [instructions, setInstructions] = useState('');
+  // Filter state
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
 
-      // Dropdown menu state
-      const [openMenuId, setOpenMenuId] = useState(null);
+  // Form state
+  const [title, setTitle] = useState('');
+  const [classSelector, setClassSelector] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [instructions, setInstructions] = useState('');
+
+  // Dropdown menu state
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   // Close dropdown when clicking outside — use capture phase so it fires before child handlers
   useEffect(() => {
@@ -2036,31 +2045,82 @@ export const Homework = () => {
     }
   };
 
+  const filteredHomeworks = homeworks.filter(h => {
+    if (search) {
+      const q = search.toLowerCase();
+      const titleMatch = (h.title || '').toLowerCase().includes(q);
+      const classMatch = (h.className || '').toLowerCase().includes(q);
+      if (!titleMatch && !classMatch) return false;
+    }
+    if (filterStatus && (h.status || '').toLowerCase() !== filterStatus.toLowerCase()) return false;
+
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(h.dueDate || h.createdAt) < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(h.dueDate || h.createdAt) > to) return false;
+    }
+    return true;
+  });
+
   const activeCount = homeworks.filter(h => h.status === 'Active').length;
   const pendingCount = homeworks.filter(h => h.status === 'Pending Review').length;
   const completedCount = homeworks.filter(h => h.status === 'Completed').length;
 
-      return (
-      <div>
-        <Topbar title="Assigned Homework" subtitle="Dashboard › Homework"
-          actions={<button onClick={() => { setError(''); setShowNew(true); }} className="btn-primary text-sm">+ Create New Homework</button>} />
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          {[
-            { l: 'Active Assignments', v: activeCount.toString(), sub: 'Current term', icon: '📋' },
-            { l: 'Pending Review', v: pendingCount.toString(), sub: 'Needs attention', icon: '⚠️', warn: pendingCount > 0 },
-            { l: 'Completed', v: completedCount.toString(), sub: 'Archived assignments', icon: '✅' }
-          ].map(s => (
-            <div key={s.l} className="stat-card flex items-center gap-3">
-              <span className="text-2xl">{s.icon}</span>
-              <div>
-                <div className="font-display text-2xl font-bold text-primary">{s.v}</div>
-                <div className="text-xs text-gray-500">{s.l}</div>
-                <div className={`text-xs font-medium ${s.warn ? 'text-yellow-500' : 'text-blue-500'}`}>{s.sub}</div>
-              </div>
+  return (
+    <div>
+      <Topbar title="Assigned Homework" subtitle="Dashboard › Homework"
+        actions={<button onClick={() => { setError(''); setShowNew(true); }} className="btn-primary text-sm">+ Create New Homework</button>} />
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {[
+          { l: 'Active Assignments', v: activeCount.toString(), sub: 'Current term', icon: '📋' },
+          { l: 'Pending Review', v: pendingCount.toString(), sub: 'Needs attention', icon: '⚠️', warn: pendingCount > 0 },
+          { l: 'Completed', v: completedCount.toString(), sub: 'Archived assignments', icon: '✅' }
+        ].map(s => (
+          <div key={s.l} className="stat-card flex items-center gap-3">
+            <span className="text-2xl">{s.icon}</span>
+            <div>
+              <div className="font-display text-2xl font-bold text-primary">{s.v}</div>
+              <div className="text-xs text-gray-500">{s.l}</div>
+              <div className={`text-xs font-medium ${s.warn ? 'text-yellow-500' : 'text-blue-500'}`}>{s.sub}</div>
             </div>
-          ))}
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 bg-gray-50 p-2.5 border border-gray-100 rounded-xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search homework..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary rounded-xl"
+              style={{ width: '160px' }}
+            />
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary rounded-xl"
+            >
+              <option value="">All Statuses</option>
+              <option value="Active">Active</option>
+              <option value="Pending Review">Pending Review</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '135px' }} />
+            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '135px' }} />
+            {(dateFrom || dateTo || search || filterStatus) && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setFilterStatus(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
+            )}
+          </div>
         </div>
-        <div className="card">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -2073,7 +2133,7 @@ export const Homework = () => {
                 </tr>
               </thead>
               <tbody>
-                {homeworks.map((h, i) => {
+                {filteredHomeworks.map((h, i) => {
                   // Parse submissions: prefer numeric fields, fall back to parsing "X/Y" string
                   const subStr = (h.submissions || '0/0').split('/');
                   const submittedFallback = parseInt(subStr[0]) || 0;
@@ -2244,12 +2304,9 @@ export const TeacherProfile = () => {
       setEditing(false);
   };
 
-      if (loading) return (
-      <div>
-        <Topbar title="My Profile" />
-        <div className="card text-center py-12 text-gray-400 text-sm">Loading profile details...</div>
-      </div>
-      );
+  if (loading) {
+    return <Loader message="Retrieving your teacher profile" />;
+  }
 
       return (
       <div>
@@ -2459,6 +2516,10 @@ export const TeacherSelfAttendance = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
+  if (loading) {
+    return <Loader message="Accessing your attendance logs" />;
+  }
+
   return (
     <div>
       <Topbar title="My Attendance Logs" subtitle="Track your daily attendance status and details" />
@@ -2481,13 +2542,7 @@ export const TeacherSelfAttendance = () => {
         ))}
       </div>
 
-      {loading ? (
-        <div className="card text-center py-16 text-gray-400">
-          <div className="animate-spin text-2xl mb-3">⏳</div>
-          Loading your attendance logs...
-        </div>
-      ) : (
-        <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-6">
           <div className="card col-span-2">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-display font-bold text-primary text-lg">
@@ -2583,7 +2638,6 @@ export const TeacherSelfAttendance = () => {
             </div>
           </div>
         </div>
-      )}
     </div>
   );
 };

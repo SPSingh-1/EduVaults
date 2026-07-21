@@ -73,10 +73,12 @@ namespace EduVault.Tests
                 .Returns(entryMock.Object);
 
             var schools = new List<School> { new School { Status = "Active" } };
-            var students = new List<User> { new User { Role = "student" } };
+            var users = new List<User> { new User { Role = "student" } };
+            var transactions = new List<PaymentTransaction>();
 
             _mockUow.Setup(u => u.Schools.GetAllAsync()).ReturnsAsync(schools);
-            _mockUow.Setup(u => u.Users.FindAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(students);
+            _mockUow.Setup(u => u.Users.FindAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(users);
+            _mockUow.Setup(u => u.Transactions.GetAllAsync()).ReturnsAsync(transactions);
 
             // Act
             var result = await _controller.GetPublicStats();
@@ -85,6 +87,8 @@ namespace EduVault.Tests
             var okResult = Assert.IsType<OkObjectResult>(result);
             Assert.NotNull(okResult.Value);
             _mockUow.Verify(u => u.Schools.GetAllAsync(), Times.Once);
+            _mockUow.Verify(u => u.Users.FindAsync(It.IsAny<Expression<Func<User, bool>>>()), Times.Exactly(2));
+            _mockUow.Verify(u => u.Transactions.GetAllAsync(), Times.Once);
         }
 
         [Fact]

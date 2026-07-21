@@ -1,307 +1,381 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EduFlowLogo from '../../components/common/Logo';
 
-const tourSteps = [
-  {
-    role: 'Super Admin',
-    title: 'Multi-Campus Control Room',
-    desc: 'The centralized dashboard for managing the entire platform. Monitor all onboarded schools, configure subscription plans, track payment collections, setup global SMS/WhatsApp settings, and handle ticket requests.',
-    icon: '👑',
-    color: 'from-blue-600 to-indigo-800',
-    features: [
-      'Multi-School Management: Register and suspend campuses instantly.',
-      'Active Subscriptions Tracker: Real-time billing and invoice logs.',
-      'Global Service Credentials: Set Razorpay & Twilio credentials.',
-      'Support Center: Answer tickets submitted by school administrators.'
-    ],
-    mockup: {
-      title: 'Super Admin Console',
-      stats: [
-        { label: 'Schools', value: '14 Active' },
-        { label: 'Subscriptions', value: '₹1,56,000/mo' },
-        { label: 'Pending Requests', value: '2 Review' }
-      ],
-      listTitle: 'Recent Registrations',
-      listItems: [
-        { name: 'Greenwood High School', status: 'Pending Review', badge: 'bg-yellow-500/20 text-yellow-400' },
-        { name: 'Delhi Public Academy', status: 'Active', badge: 'bg-green-500/20 text-green-400' },
-        { name: 'St. Mary Convent School', status: 'Active', badge: 'bg-green-500/20 text-green-400' }
-      ]
+const demoContent = {
+  en: {
+    title: "Interactive Product Walkthrough",
+    subtitle: "Discover how EduVault automates school administration, attendance notifications, marks entries, and online Razorpay payments for everyone.",
+    backToHome: "← Back to Home",
+    roles: {
+      admin: {
+        label: "School Admin",
+        icon: "🏫",
+        color: "from-purple-600 to-pink-800",
+        features: [
+          {
+            name: "Dashboard Overview",
+            desc: "This is the School Admin main dashboard. It provides an immediate overview of the school's statistics (Active Students, Staff Members, and Classes) and displays the Student Enrollment Trend graph alongside a Platform Subscription Pending alert and quick action shortcuts.",
+            image: "/school_admin_dashboard_overview.png"
+          },
+          {
+            name: "Admission Form",
+            desc: "The student admission form allows registering new students manually. It collects Student Personal Details (First Name, Last Name, Email, Password, Enrollment Class, Blood Group, Date of Birth) and Guardian Information (Guardian Name, Contact, Relationship, Address).",
+            image: "/student_admission_form.png"
+          },
+          {
+            name: "Bulk Student Import",
+            desc: "The bulk student import tool allows administrators to upload a CSV file containing multiple student records to import them at once. Requires selecting a target class and choosing a valid CSV file with specific columns.",
+            image: "/bulk_student_import.png"
+          },
+          {
+            name: "Student Directory",
+            desc: "The student directory lists all student records in a clean tabular grid. Administrators can search by name, filter by date, class, section, or status, and use action buttons to: View student profiles, Edit their information, or Delete their records permanently.",
+            image: "/admin_student_grid.png"
+          },
+          {
+            name: "Teacher Directory",
+            desc: "Allows administrators to manage the school's teaching staff. Register new teachers, assign them to academic departments, record credentials, and manage qualifications.",
+            image: "/school_admin_dashboard_overview.png"
+          },
+          {
+            name: "Fees & Billing",
+            desc: "Set tuition and transport fee structures, issue invoices, track unpaid balances, and monitor transaction receipts in real time.",
+            image: "/fee_payment_mockup.png"
+          }
+        ]
+      },
+      teacher: {
+        label: "Teacher",
+        icon: "👨‍🏫",
+        color: "from-emerald-600 to-teal-800",
+        features: [
+          {
+            name: "Teacher Dashboard",
+            desc: "This is the Teacher main dashboard page. It shows an immediate summary of the academic session, listing total classes assigned, active student enrollments, pending review gradebooks, and their direct deposit monthly salary details.",
+            image: "/teacher_dashboard.png"
+          },
+          {
+            name: "My Assigned Classes",
+            desc: "Displays the teacher's active classes roster and interactive timetable grid, detailing period schedules, subject names, and section rooms (e.g. Class 1 - A).",
+            image: "/teacher_assigned_classes.png"
+          },
+          {
+            name: "Mark Student Attendance",
+            desc: "Allows teachers to select their assigned class sections and log daily attendance (Present, Late, Absent). Saving the record instantly triggers automated bilingual WhatsApp alerts to the student's guardian.",
+            image: "/teacher_mark_attendance.png"
+          },
+          {
+            name: "My Attendance Logs",
+            desc: "Provides a full interactive monthly log showing the teacher's own attendance, displaying overall attendance rate percentage alongside Present, Late, and Absent calendar days.",
+            image: "/teacher_self_attendance.png"
+          },
+          {
+            name: "Student Marks Entry",
+            desc: "Enables teachers to input students' exam grade results (Theory and Practical marks) in a clean ledger structure. Finalizing locks the report cards from further editing.",
+            image: "/teacher_marks_entry.png"
+          }
+        ]
+      },
+      student: {
+        label: "Student & Parent",
+        icon: "👨‍🎓",
+        color: "from-amber-600 to-orange-800",
+        features: [
+          {
+            name: "Fee Payment Portal",
+            desc: "Parents can view detailed school fee invoices and pay online securely via 1-click Razorpay integration, supporting Cards, UPI, Netbanking, and Wallets.",
+            image: "/fee_payment_mockup.png"
+          },
+          {
+            name: "Attendance Calendar",
+            desc: "Provides a monthly interactive attendance calendar displaying color-coded daily presence indicators (Green for Present, Yellow for Late, Red for Absent).",
+            image: "/simple_attendance_mockup.png"
+          },
+          {
+            name: "Report Card",
+            desc: "Allows students and parents to view published report cards, view exam mark breakdowns, and download official approved term marksheets.",
+            image: "/admin_student_grid.png"
+          }
+        ]
+      }
     }
   },
-  {
-    role: 'School Admin',
-    title: 'Institution Control Center',
-    desc: 'Comprehensive tools for the school Principal or Administrator. Register teachers and students, organize grade classes and sections, setup customizable fee structures, approve gradebooks, and oversee daily operations.',
-    icon: '🏫',
-    color: 'from-purple-600 to-pink-800',
-    features: [
-      'Admission Portal: Simple CSV upload or single registration form.',
-      'Class & Period Timetables: Visual schedule planner for classes.',
-      'Fee Structure Configurator: Define tuition, transport, or custom fees.',
-      'Report Cards Approval: Lock/unlock marks publication to parents.'
-    ],
-    mockup: {
-      title: 'Greenwood High Admin Panel',
-      stats: [
-        { label: 'Students Enrolled', value: '840 Students' },
-        { label: 'Active Teachers', value: '42 Staff' },
-        { label: 'Collection Rate', value: '89.4%' }
-      ],
-      listTitle: 'Pending Report Cards Approval',
-      listItems: [
-        { name: 'Class 10 - Section A (Semester 1)', status: 'Awaiting Lock', badge: 'bg-yellow-500/20 text-yellow-400' },
-        { name: 'Class 12 - Section C (Semester 1)', status: 'Approved', badge: 'bg-green-500/20 text-green-400' }
-      ]
-    }
-  },
-  {
-    role: 'Teacher',
-    title: 'Digital Classroom Assistant',
-    desc: 'Empowers teachers to complete classroom tasks in seconds. Mark daily attendance with automatic parents alerts, input exam marks, schedule student homework, and broadcast immediate class notices.',
-    icon: '👨‍🏫',
-    color: 'from-emerald-600 to-teal-800',
-    features: [
-      'Simple Attendance marking: Save daily attendance in under 30 seconds.',
-      'Bilingual WhatsApp Notifications: Auto-sends Present/Absent/Late alerts to parents.',
-      'Marks Entry Board: Input exam metrics with automatic validation.',
-      'Announcements Broadcast: Instantly alert your section on noticeboard.'
-    ],
-    mockup: {
-      title: 'Teacher Portal (Class 10-A)',
-      stats: [
-        { label: 'Today\'s Attendance', value: '96.2% Present' },
-        { label: 'Pending Marks', value: 'Science Test' },
-        { label: 'Active Notices', value: '2 Board' }
-      ],
-      listTitle: 'Roster Status (Real-time WhatsApp Alerts Trigger)',
-      listItems: [
-        { name: 'Aarav Sharma', status: 'Present', badge: 'bg-green-500/20 text-green-400' },
-        { name: 'Ishita Verma', status: 'Late (15 min)', badge: 'bg-yellow-500/20 text-yellow-400' },
-        { name: 'Kabir Mehta', status: 'Absent', badge: 'bg-red-500/20 text-red-400' }
-      ]
-    }
-  },
-  {
-    role: 'Student & Parent',
-    title: 'Transparency Portal',
-    desc: 'A unified portal for parents and students to monitor progress. View daily attendance charts, track homework deadlines, download approved report cards, and pay school invoices securely via Razorpay.',
-    icon: '👨‍🎓',
-    color: 'from-amber-600 to-orange-800',
-    features: [
-      'Razorpay Direct Payments: Pay school fees in 1-click via Cards, UPI, Netbanking.',
-      'Real-Time Attendance Calendar: Track daily present, late, or absent record.',
-      'Digital Marksheets: Instantly view and download approved results.',
-      'Homework Ledger: Never miss a school submission deadline.'
-    ],
-    mockup: {
-      title: 'Parent Portal (Aarav Sharma)',
-      stats: [
-        { label: 'Overall Attendance', value: '97.5% Average' },
-        { label: 'Fees Due', value: '₹4,500' },
-        { label: 'Exam Grade', value: 'A+ (Science)' }
-      ],
-      listTitle: 'School Transactions',
-      listItems: [
-        { name: 'Term 1 Tuition Fee Invoice', status: 'PAID (Razorpay)', badge: 'bg-green-500/20 text-green-400' },
-        { name: 'Transport Fee Invoice', status: 'PENDING', badge: 'bg-red-500/20 text-red-400' }
-      ]
+  hi: {
+    title: "इंटरएक्टिव उत्पाद डेमो",
+    subtitle: "जानें कि कैसे एडुवॉल्ट स्कूल प्रशासन, माता-पिता को व्हाट्सएप संदेश, परीक्षा अंक प्रविष्टि और ऑनलाइन फीस भुगतान को आसान बनाता है।",
+    backToHome: "← मुख्य पृष्ठ",
+    roles: {
+      admin: {
+        label: "स्कूल एडमिन",
+        icon: "🏫",
+        color: "from-purple-600 to-pink-800",
+        features: [
+          {
+            name: "डैशबोर्ड ओवरव्यू",
+            desc: "यह स्कूल एडमिन का मुख्य डैशबोर्ड है। यह स्कूल के आँकड़ों (सक्रिय छात्रों, शिक्षकों और कक्षाओं) का विवरण देता है और प्लेटफॉर्म सदस्यता लंबित चेतावनी और त्वरित कार्यों के साथ छात्र नामांकन प्रवृत्ति ग्राफ़ प्रदर्शित करता है।",
+            image: "/school_admin_dashboard_overview.png"
+          },
+          {
+            name: "प्रवेश फ़ॉर्म (एडमिशन)",
+            desc: "छात्र प्रवेश फॉर्म नए छात्रों को मैन्युअल रूप से पंजीकृत करने की अनुमति देता है। यह छात्र के व्यक्तिगत विवरण (नाम, ईमेल, पासवर्ड, कक्षा, रक्त समूह, जन्म तिथि) और अभिभावक की जानकारी (नाम, संपर्क, संबंध, पता) एकत्र करता है।",
+            image: "/student_admission_form.png"
+          },
+          {
+            name: "थोक छात्र आयात",
+            desc: "बल्क स्टूडेंट इम्पोर्ट टूल स्कूल एडमिन को एक साथ कई छात्रों के रिकॉर्ड आयात करने के लिए एक सीएसवी फ़ाइल अपलोड करने की अनुमति देता है। इसके लिए एक लक्षित कक्षा का चयन करना और विशिष्ट कॉलम वाली वैध सीएसवी फ़ाइल चुनना आवश्यक है।",
+            image: "/bulk_student_import.png"
+          },
+          {
+            name: "छात्र तालिका (निर्देशिका)",
+            desc: "छात्र निर्देशिका सभी छात्र रिकॉर्ड को एक साफ तालिका (ग्रिड) में सूचीबद्ध करती है। एडमिन नाम से खोज सकते हैं, कक्षा, अनुभाग या स्थिति से फ़िल्टर कर सकते हैं, और एक्शन बटन का उपयोग कर सकते हैं: छात्र प्रोफाइल देखने के लिए **View**, जानकारी बदलने के लिए **Edit**, या रिकॉर्ड को हमेशा के लिए हटाने के लिए **Delete**।",
+            image: "/admin_student_grid.png"
+          },
+          {
+            name: "शिक्षक निर्देशिका",
+            desc: "स्कूल के शिक्षण कर्मचारियों को प्रबंधित करने की अनुमति देता है। नए शिक्षकों को पंजीकृत करें, उन्हें विभागों में नियुक्त करें, और उनकी योग्यताएं प्रबंधित करें।",
+            image: "/school_admin_dashboard_overview.png"
+          },
+          {
+            name: "फीस और बिलिंग",
+            desc: "ट्यूशन और परिवहन शुल्क संरचनाएं निर्धारित करें, इनवॉइस जारी करें, बकाया राशि को ट्रैक करें और वास्तविक समय में लेनदेन रसीदों की निगरानी करें।",
+            image: "/fee_payment_mockup.png"
+          }
+        ]
+      },
+      teacher: {
+        label: "शिक्षक",
+        icon: "👨‍🏫",
+        color: "from-emerald-600 to-teal-800",
+        features: [
+          {
+            name: "शिक्षक डैशबोर्ड",
+            desc: "यह शिक्षक का मुख्य डैशबोर्ड पृष्ठ है। यह शैक्षणिक सत्र का विवरण देता है, जैसे कि कुल कक्षाएं, सक्रिय छात्र नामांकन, लंबित समीक्षा रिपोर्ट, और मासिक वेतन विवरण की सूची।",
+            image: "/teacher_dashboard.png"
+          },
+          {
+            name: "आवंटित कक्षाएं (My Classes)",
+            desc: "शिक्षक के सक्रिय कक्षा रोस्टर और इंटरैक्टिव समय सारिणी ग्रिड को प्रदर्शित करता है, जिसमें अवधि कार्यक्रम, विषय का नाम और अनुभाग कमरे शामिल हैं (जैसे Class 1 - A)।",
+            image: "/teacher_assigned_classes.png"
+          },
+          {
+            name: "छात्र हाजिरी दर्ज करें",
+            desc: "शिक्षकों को अपनी आवंटित कक्षाओं का चयन करने और दैनिक हाजिरी (उपस्थित, देरी, अनुपस्थित) दर्ज करने की अनुमति देता है। रिकॉर्ड सहेजने पर तुरंत अभिभावक को स्वचालित व्हाट्सएप सूचना चली जाती है।",
+            image: "/teacher_mark_attendance.png"
+          },
+          {
+            name: "मेरी उपस्थिति लॉग",
+            desc: "शिक्षक की स्वयं की मासिक उपस्थिति लॉग प्रदान करता है, जो कुल उपस्थिति दर प्रतिशत के साथ कैलेंडर दिनों को दिखाता है।",
+            image: "/teacher_self_attendance.png"
+          },
+          {
+            name: "छात्र अंक प्रविष्टि (Marks Entry)",
+            desc: "शिक्षकों को छात्रों के परीक्षा परिणामों (सिद्धांत और व्यावहारिक अंक) को सीधे दर्ज करने में सक्षम बनाता है। अंतिम रूप देने के बाद रिपोर्ट कार्ड लॉक हो जाता है।",
+            image: "/teacher_marks_entry.png"
+          }
+        ]
+      },
+      student: {
+        label: "छात्र और अभिभावक",
+        icon: "👨‍🎓",
+        color: "from-amber-600 to-orange-800",
+        features: [
+          {
+            name: "शुल्क भुगतान पोर्टल",
+            desc: "अभिभावक विस्तृत स्कूल शुल्क इनवॉइस देख सकते हैं और कार्ड, यूपीआई, नेटबैंकिंग और वॉलेट का समर्थन करने वाले 1-क्लिक रेज़रपे एकीकरण के माध्यम से सुरक्षित रूप से ऑनलाइन भुगतान कर सकते हैं।",
+            image: "/fee_payment_mockup.png"
+          },
+          {
+            name: "हाजिरी कैलेंडर",
+            desc: "एक मासिक उपस्थिति कैलेंडर प्रदान करता है जो रंग-कोडित दैनिक उपस्थिति स्थिति (उपस्थित के लिए हरा, देरी के लिए पीला, अनुपस्थित के लिए लाल) प्रदर्शित करता है।",
+            image: "/simple_attendance_mockup.png"
+          },
+          {
+            name: "प्रगति पत्रक (Report Card)",
+            desc: "छात्रों और अभिभावकों को प्रकाशित रिपोर्ट कार्ड देखने, परीक्षा अंकों का विवरण देखने और आधिकारिक स्वीकृत टर्म मार्कशीट डाउनलोड करने की अनुमति देता है।",
+            image: "/admin_student_grid.png"
+          }
+        ]
+      }
     }
   }
-];
+};
 
 export const Demo = () => {
   const navigate = useNavigate();
-  const [activeStep, setActiveStep] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [progress, setProgress] = useState(0);
+  const [lang, setLang] = useState('en'); // 'en' or 'hi'
+  const [activeRole, setActiveRole] = useState('admin'); // 'admin', 'teacher', 'student'
+  const [activeFeatureIdx, setActiveFeatureIdx] = useState(0);
 
-  useEffect(() => {
-    let interval;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setProgress(p => {
-          if (p >= 100) {
-            setActiveStep(prev => (prev + 1) % tourSteps.length);
-            return 0;
-          }
-          return p + 2; // increments progress
-        });
-      }, 100); // 5 seconds per step
+  const t = demoContent[lang];
+  const currentRole = t.roles[activeRole];
+  const currentFeature = currentRole.features[activeFeatureIdx];
+
+  const getNextFeature = () => {
+    if (activeFeatureIdx + 1 < currentRole.features.length) {
+      return currentRole.features[activeFeatureIdx + 1];
+    } else {
+      const roleKeys = Object.keys(t.roles);
+      const nextRoleIdx = (roleKeys.indexOf(activeRole) + 1) % roleKeys.length;
+      return t.roles[roleKeys[nextRoleIdx]].features[0];
     }
-    return () => clearInterval(interval);
-  }, [isPlaying]);
-
-  const handleStepClick = (idx) => {
-    setActiveStep(idx);
-    setProgress(0);
   };
 
-  const step = tourSteps[activeStep];
+  const nextFeature = getNextFeature();
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans">
       {/* Top Navbar */}
       <nav className="flex items-center justify-between px-6 py-5 border-b border-white/10 bg-slate-900/50 backdrop-blur">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-          <EduFlowLogo size={36} />
+          <EduFlowLogo size={36} alwaysShowDefaultText={true} />
           <span className="font-display font-bold text-lg hidden sm:inline">EduVault Tour</span>
         </div>
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => setIsPlaying(!isPlaying)} 
-            className="text-xs bg-white/10 hover:bg-white/20 text-blue-200 border border-white/10 rounded-full px-3 py-1.5 font-medium transition-all"
-          >
-            {isPlaying ? '⏸ Pause Autoplay' : '▶ Play Autoplay'}
-          </button>
-          <button 
             onClick={() => navigate('/')} 
             className="text-xs bg-accent hover:bg-accent-light text-white font-semibold rounded-lg px-4 py-2 transition-all"
           >
-            ← Back to Home
+            {t.backToHome}
           </button>
         </div>
       </nav>
 
       {/* Main Container */}
       <div className="max-w-6xl mx-auto px-6 py-10">
+        {/* Language Selector Toggle */}
+        <div className="flex justify-end mb-6">
+          <div className="inline-flex items-center gap-2 bg-slate-900 border border-white/10 rounded-full p-1 text-xs">
+            <button 
+              onClick={() => setLang('en')} 
+              className={`px-4 py-1.5 rounded-full font-semibold transition-all ${lang === 'en' ? 'bg-accent text-white shadow' : 'text-gray-400 hover:text-white'}`}
+            >
+              English
+            </button>
+            <button 
+              onClick={() => setLang('hi')} 
+              className={`px-4 py-1.5 rounded-full font-semibold transition-all ${lang === 'hi' ? 'bg-accent text-white shadow' : 'text-gray-400 hover:text-white'}`}
+            >
+              हिन्दी
+            </button>
+          </div>
+        </div>
+
         <div className="text-center max-w-2xl mx-auto mb-10">
           <h1 className="font-display text-3xl sm:text-4xl font-extrabold mb-3">
-            Interactive Product Walkthrough
+            {t.title}
           </h1>
           <p className="text-gray-400 text-xs sm:text-sm">
-            Discover how EduVault automates school administration, attendance notifications, marks entries, and online Razorpay payments for everyone.
+            {t.subtitle}
           </p>
         </div>
 
         {/* Roles Tab Selector */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-          {tourSteps.map((s, idx) => (
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          {Object.entries(t.roles).map(([roleKey, r]) => (
             <button
-              key={s.role}
-              onClick={() => handleStepClick(idx)}
-              className={`p-3 rounded-xl border transition-all text-left flex items-center gap-3 relative overflow-hidden ${
-                activeStep === idx 
+              key={roleKey}
+              onClick={() => { setActiveRole(roleKey); setActiveFeatureIdx(0); }}
+              className={`p-4 rounded-xl border transition-all text-center flex flex-col sm:flex-row items-center justify-center gap-3 relative overflow-hidden ${
+                activeRole === roleKey 
                   ? 'bg-white/5 border-accent text-white shadow-md' 
                   : 'bg-white/2 border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
               }`}
             >
-              <span className="text-2xl">{s.icon}</span>
+              <span className="text-3xl">{r.icon}</span>
               <div>
                 <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Role</div>
-                <div className="text-xs font-bold font-display">{s.role}</div>
+                <div className="text-xs sm:text-sm font-bold font-display">{r.label}</div>
               </div>
-              {/* Step Progress Line (Only shown on active item when autoplaying) */}
-              {activeStep === idx && isPlaying && (
-                <div className="absolute bottom-0 left-0 h-1 bg-accent transition-all duration-100" style={{ width: `${progress}%` }}></div>
-              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Sub-Feature Selector */}
+        <div className="flex flex-wrap gap-2.5 mb-8 justify-center">
+          {currentRole.features.map((feature, idx) => (
+            <button
+              key={idx}
+              onClick={() => setActiveFeatureIdx(idx)}
+              className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-all ${
+                activeFeatureIdx === idx
+                  ? 'bg-accent border-accent text-white shadow'
+                  : 'bg-slate-900 border-white/10 text-gray-300 hover:border-white/20 hover:text-white'
+              }`}
+            >
+              {feature.name}
             </button>
           ))}
         </div>
 
         {/* Showcase Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch text-left">
           {/* Explanation Area */}
           <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
               <span className="text-xs font-bold uppercase tracking-wider text-accent bg-accent/15 px-3 py-1 rounded-full border border-accent/20">
-                {step.role} Dashboard
+                {currentRole.label} Features
               </span>
               <h2 className="font-display text-2xl sm:text-3xl font-extrabold leading-tight">
-                {step.title}
+                {currentFeature.name}
               </h2>
-              <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
-                {step.desc}
+              <p className="text-gray-300 text-xs sm:text-sm leading-relaxed font-normal">
+                {currentFeature.desc}
               </p>
-              
-              <hr className="border-white/10 my-4" />
-              
-              <h3 className="font-display font-bold text-sm text-white">Core Functionality</h3>
-              <ul className="space-y-2 text-xs text-gray-400">
-                {step.features.map((f, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <span className="text-accent mt-0.5">✦</span>
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
 
             <div className="bg-slate-900 border border-white/10 rounded-xl p-4 flex items-center justify-between">
               <div>
-                <div className="text-xs text-gray-400">Next Dashboard Preview</div>
+                <div className="text-[10px] text-gray-500 uppercase tracking-wider">Next Feature Preview</div>
                 <div className="text-xs font-bold mt-0.5 text-blue-200">
-                  {tourSteps[(activeStep + 1) % tourSteps.length].role}
+                  {nextFeature.name}
                 </div>
               </div>
               <button 
-                onClick={() => handleStepClick((activeStep + 1) % tourSteps.length)}
-                className="bg-white/10 hover:bg-white/20 text-white rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all"
+                onClick={() => {
+                  if (activeFeatureIdx + 1 < currentRole.features.length) {
+                    setActiveFeatureIdx(activeFeatureIdx + 1);
+                  } else {
+                    const roleKeys = Object.keys(t.roles);
+                    const nextRoleIdx = (roleKeys.indexOf(activeRole) + 1) % roleKeys.length;
+                    setActiveRole(roleKeys[nextRoleIdx]);
+                    setActiveFeatureIdx(0);
+                  }
+                }}
+                className="bg-white/10 hover:bg-white/20 text-white rounded-lg px-3 py-1.5 text-[10px] font-semibold transition-all"
               >
-                Next Dashboard →
+                Next →
               </button>
             </div>
           </div>
 
-          {/* Interactive Interface Simulation Mockup */}
+          {/* Screenshot / Mockup Display */}
           <div className="lg:col-span-7">
-            <div className={`bg-gradient-to-br ${step.color} rounded-3xl p-1 shadow-2xl`}>
+            <div className={`bg-gradient-to-br ${currentRole.color} rounded-3xl p-1 shadow-2xl`}>
               <div className="bg-slate-950 rounded-[22px] overflow-hidden border border-white/10">
                 {/* Mockup Header */}
-                <div className="bg-slate-900 px-5 py-3.5 border-b border-white/10 flex items-center justify-between">
+                <div className="bg-slate-900 px-5 py-3 border-b border-white/10 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
                     <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
                     <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
                     <span className="text-gray-400 font-mono text-[10px] ml-2 truncate max-w-[200px] sm:max-w-none">
-                      https://eduvault.com/dashboard/mockup
+                      https://eduvault.com/demo/{activeRole}/{currentFeature.name.toLowerCase().replace(/\s+/g, '-')}
                     </span>
                   </div>
-                  <span className="bg-white/10 text-[9px] font-mono text-gray-400 px-2 py-0.5 rounded uppercase">
-                    Preview Mode
+                  <span className="bg-white/10 text-[8px] font-mono text-gray-400 px-2 py-0.5 rounded uppercase">
+                    Interactive Screen
                   </span>
                 </div>
 
-                {/* Mockup Body */}
-                <div className="p-5 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-display font-bold text-sm sm:text-base text-white">{step.mockup.title}</h4>
-                    <span className="text-[10px] text-gray-500">Last updated: Just now</span>
-                  </div>
-
-                  {/* Quick Cards */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {step.mockup.stats.map(s => (
-                      <div key={s.label} className="bg-slate-900 border border-white/5 rounded-xl p-3">
-                        <div className="text-[9px] text-gray-500 uppercase font-semibold truncate">{s.label}</div>
-                        <div className="text-[11px] sm:text-sm font-bold text-white mt-1 truncate">{s.value}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* List Simulator */}
-                  <div className="bg-slate-900 border border-white/5 rounded-xl p-4 space-y-3">
-                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{step.mockup.listTitle}</div>
-                    <div className="space-y-2">
-                      {step.mockup.listItems.map((item, idx) => (
-                        <div key={idx} className="bg-slate-950 border border-white/5 rounded-lg p-2.5 flex items-center justify-between text-xs">
-                          <span className="font-medium text-gray-300">{item.name}</span>
-                          <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${item.badge}`}>
-                            {item.status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Interactive Button Simulation */}
-                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex items-center gap-3 text-xs text-blue-300">
-                    <span className="text-lg">💡</span>
-                    <div>
-                      <span className="font-semibold text-white">Feature Demo Tip:</span> Switch roles above to inspect other dashboard layouts. Use the "Pause Autoplay" controls to stop timer cycles.
-                    </div>
-                  </div>
+                {/* Mockup Image Display */}
+                <div className="p-4 bg-slate-950 flex justify-center items-center min-h-[300px]">
+                  <img 
+                    key={`${activeRole}_${activeFeatureIdx}`} 
+                    src={currentFeature.image} 
+                    alt={currentFeature.name} 
+                    className="max-w-full h-auto rounded-lg border border-white/5 shadow-md object-contain max-h-[350px] animate-fadeIn" 
+                  />
                 </div>
               </div>
             </div>

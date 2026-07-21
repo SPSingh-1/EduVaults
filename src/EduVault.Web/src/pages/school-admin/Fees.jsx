@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
+import Loader from '../../components/common/Loader';
 import { 
   TrendingUp, 
   CheckCircle2, 
@@ -58,13 +59,20 @@ const DateFilterInput = ({ label, value, onChange, className = '', style = {} })
   );
 };
 
+const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const Fees = () => {
   const [invoices, setInvoices] = useState([]);
   const [structures, setStructures] = useState([]);
   const [studentLedger, setStudentLedger] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('invoices');
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -192,20 +200,33 @@ const Fees = () => {
 
   // Filtered lists for rendering and statistics based on date ranges
   const filteredInvoices = invoices.filter(t => {
+    if (search) {
+      const q = search.toLowerCase();
+      const nameMatch = (t.studentName || t.name || '').toLowerCase().includes(q);
+      const invMatch = (t.invoiceNo || t.id || '').toLowerCase().includes(q);
+      if (!nameMatch && !invMatch) return false;
+    }
+    if (statusFilter && (t.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
     if (dateFrom) {
       const from = new Date(dateFrom);
       from.setHours(0, 0, 0, 0);
-      if (new Date(t.date) < from) return false;
+      if (new Date(t.date || t.createdAt) < from) return false;
     }
     if (dateTo) {
       const to = new Date(dateTo);
       to.setHours(23, 59, 59, 999);
-      if (new Date(t.date) > to) return false;
+      if (new Date(t.date || t.createdAt) > to) return false;
     }
     return true;
   });
 
   const filteredLedger = studentLedger.filter(sl => {
+    if (search) {
+      const q = search.toLowerCase();
+      const nameMatch = (sl.studentName || sl.name || '').toLowerCase().includes(q);
+      if (!nameMatch) return false;
+    }
+    if (statusFilter && (sl.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
     if (dateFrom) {
       const from = new Date(dateFrom);
       from.setHours(0, 0, 0, 0);
@@ -220,15 +241,22 @@ const Fees = () => {
   });
 
   const filteredTransactions = transactions.filter(t => {
+    if (search) {
+      const q = search.toLowerCase();
+      const nameMatch = (t.studentName || t.payerName || '').toLowerCase().includes(q);
+      const txnMatch = (t.transactionId || t.id || '').toLowerCase().includes(q);
+      if (!nameMatch && !txnMatch) return false;
+    }
+    if (statusFilter && (t.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
     if (dateFrom) {
       const from = new Date(dateFrom);
       from.setHours(0, 0, 0, 0);
-      if (new Date(t.date) < from) return false;
+      if (new Date(t.date || t.createdAt) < from) return false;
     }
     if (dateTo) {
       const to = new Date(dateTo);
       to.setHours(23, 59, 59, 999);
-      if (new Date(t.date) > to) return false;
+      if (new Date(t.date || t.createdAt) > to) return false;
     }
     return true;
   });
@@ -277,6 +305,10 @@ const Fees = () => {
     if (s === 'PENDING') return 'badge-warning';
     return 'badge-danger';
   };
+
+  if (loading) {
+    return <Loader message="Accessing school financial logs & structures" />;
+  }
 
   return (
     <div className="space-y-6">
@@ -424,12 +456,31 @@ const Fees = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 p-3 bg-gray-50 border border-gray-100 rounded-xl">
-          <span className="text-xs font-semibold text-gray-500">📅 Filter Active Tab by Date Range:</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="text"
+              placeholder="Search student / invoice..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary rounded-xl"
+              style={{ width: '170px' }}
+            />
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary rounded-xl"
+            >
+              <option value="">All Statuses</option>
+              <option value="Paid">Paid</option>
+              <option value="Pending">Pending</option>
+              <option value="Overdue">Overdue</option>
+            </select>
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl" style={{ width: '135px' }} />
             <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl" style={{ width: '135px' }} />
-            {(dateFrom || dateTo) && (
-              <button onClick={() => { setDateFrom(''); setDateTo(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
+            {(dateFrom || dateTo || search || statusFilter) && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setStatusFilter(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
             )}
           </div>
         </div>

@@ -1137,7 +1137,7 @@ const Setup = () => {
       <Topbar title="Academic Setup & Configurations" subtitle="Dashboard › Academics › Setup" />
 
       {/* Tabs Menu */}
-      <div className="flex gap-2 border-b border-gray-100 pb-4 mt-4 px-6 overflow-x-auto whitespace-nowrap scrollbar-none">
+      <div className="flex border-b border-slate-100 mt-4 px-6 overflow-x-auto whitespace-nowrap scrollbar-none gap-6">
         {[
           { id: 'infrastructure', label: 'Infrastructure Setup', icon: '📂' },
           { id: 'timetable', label: 'Weekly Timetable Config', icon: '📅', action: fetchTimetableMeta },
@@ -1157,16 +1157,16 @@ const Setup = () => {
                 setSuccess('');
                 if (tab.action) tab.action();
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 border ${isActive
-                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/20 scale-[1.02]'
-                  : 'bg-white text-gray-500 border-gray-200/60 hover:text-primary hover:border-primary/20 hover:bg-gray-50'
-                }`}
+              className={`flex items-center gap-2 pb-3.5 text-xs font-bold transition-all relative border-b-2 ${
+                isActive
+                  ? 'text-primary border-primary'
+                  : 'text-gray-400 border-transparent hover:text-gray-700'
+              }`}
             >
               <span className="text-sm">{tab.icon}</span>
               <span>{tab.label}</span>
               {tab.badge > 0 && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? 'bg-rose-500 text-white' : 'bg-rose-500 text-white animate-pulse'
-                  }`}>
+                <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-rose-500 text-white ml-0.5">
                   {tab.badge}
                 </span>
               )}
@@ -2538,7 +2538,9 @@ const Setup = () => {
                         <div>
                           <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Plan Cost</span>
                           <span className="text-2xl font-black text-primary">
-                            {p.monthlyPrice.includes('Rs.') ? p.monthlyPrice.replace('Rs.', '$') : p.monthlyPrice.includes('$') ? p.monthlyPrice : `$${p.monthlyPrice}`}
+                            {p.monthlyPrice.startsWith('$') || p.monthlyPrice.startsWith('₹') || p.monthlyPrice.toLowerCase().includes('per') || p.monthlyPrice.toLowerCase().includes('custom')
+                              ? p.monthlyPrice
+                              : p.monthlyPrice.includes('Rs.') ? p.monthlyPrice.replace('Rs.', '$') : `$${p.monthlyPrice}`}
                           </span>
                         </div>
                       </div>

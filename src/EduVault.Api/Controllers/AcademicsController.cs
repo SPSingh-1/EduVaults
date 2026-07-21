@@ -2211,7 +2211,7 @@ namespace EduVault.Api.Controllers
             var enrollment = await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == studentId && e.Status == "ACTIVE");
             var currentEnrollment = enrollment.FirstOrDefault();
             var attendanceList = await _context.Attendances
-                .Where(a => a.StudentId == studentId && (currentEnrollment == null || a.Date >= currentEnrollment.EnrollDate))
+                .Where(a => a.StudentId == studentId && (currentEnrollment == null || a.Date.Date >= currentEnrollment.EnrollDate.Date))
                 .OrderBy(a => a.Date)
                 .Select(a => new {
                     a.Id,

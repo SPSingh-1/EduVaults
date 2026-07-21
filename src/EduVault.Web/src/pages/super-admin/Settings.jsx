@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
+import Loader from '../../components/common/Loader';
 
 const Settings = () => {
   const { user, setUser } = useAuth();
@@ -475,11 +476,7 @@ const Settings = () => {
   });
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin text-3xl text-primary">⟳</div>
-      </div>
-    );
+    return <Loader message="Retrieving global platform configurations" />;
   }
 
   return (

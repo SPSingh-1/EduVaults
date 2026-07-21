@@ -29,12 +29,17 @@ const DateFilterInput = ({ label, value, onChange, className = '', style = {} })
   );
 };
 
+const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const Students = () => {
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [search, setSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
 
   // Dropdown filter states
   const [selectedClass, setSelectedClass] = useState('');
@@ -294,6 +299,30 @@ const Students = () => {
     return result;
   };
 
+  const downloadCsvTemplate = () => {
+    const headers = ['FirstName', 'LastName', 'DateOfBirth', 'ClassId', 'BloodGroup', 'GuardianName', 'GuardianPhone', 'GuardianRelationship', 'Address'];
+    const sampleRows = [
+      ['Aarav', 'Sharma', '15-03-2010', '101', 'A+', 'Rajesh Sharma', '919876543210', 'Father', 'Jaipur'],
+      ['Ananya', 'Verma', '22-07-2011', '101', 'B+', 'Sunita Verma', '919812345678', 'Mother', 'Alwar'],
+      ['Vivaan', 'Singh', '05/11/2010', '102', 'O+', 'Mahesh Singh', '91990012233', 'Father', 'Bhilwara']
+    ];
+    
+    let csvContent = headers.join(',') + '\n';
+    sampleRows.forEach(row => {
+      csvContent += row.map(val => `"${val}"`).join(',') + '\n';
+    });
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'student_import_template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleCsvUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -489,6 +518,9 @@ const Students = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '130px' }} />
             <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '130px' }} />
+            {(dateFrom || dateTo || search || selectedClass || selectedSection || selectedStatus) && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setSelectedClass(''); setSelectedSection(''); setSelectedStatus(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-2 shrink-0 w-full xl:w-auto">
@@ -863,7 +895,7 @@ const Students = () => {
               )}
 
               {!importResult ? (
-                <div className="space-y-4 text-left">
+                <div className="space-y-4 text-left font-sans">
                   <div>
                     <label className="block text-xs font-semibold text-gray-650 mb-1.5" htmlFor="import-class-select">Target Enrollment Class *</label>
                     <select 
@@ -877,6 +909,75 @@ const Students = () => {
                         <option key={c.id} value={c.id}>Class {c.grade} - {c.section}</option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Expected CSV Template Structure */}
+                  <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 space-y-3 font-sans">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Required CSV Roster Format</span>
+                      <button 
+                        type="button" 
+                        onClick={downloadCsvTemplate}
+                        className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold bg-blue-50 hover:bg-blue-100/70 border border-blue-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
+                      >
+                        📥 Download CSV Template
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto max-w-full rounded-lg border border-slate-150 bg-white shadow-sm">
+                      <table className="min-w-[650px] text-[10px] text-left border-collapse font-sans">
+                        <thead>
+                          <tr className="bg-slate-100/70 border-b border-slate-150 font-mono text-slate-705 font-semibold">
+                            <th className="p-2 border-r border-slate-150">FirstName</th>
+                            <th className="p-2 border-r border-slate-150">LastName</th>
+                            <th className="p-2 border-r border-slate-150">DateOfBirth</th>
+                            <th className="p-2 border-r border-slate-150">ClassId</th>
+                            <th className="p-2 border-r border-slate-150">BloodGroup</th>
+                            <th className="p-2 border-r border-slate-150">GuardianName</th>
+                            <th className="p-2 border-r border-slate-150">GuardianPhone</th>
+                            <th className="p-2 border-r border-slate-150">GuardianRelationship</th>
+                            <th className="p-2">Address</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-slate-150/60 font-mono text-gray-500">
+                            <td className="p-2 border-r border-slate-150">Aarav</td>
+                            <td className="p-2 border-r border-slate-150">Sharma</td>
+                            <td className="p-2 border-r border-slate-150">15-03-2010</td>
+                            <td className="p-2 border-r border-slate-150">101</td>
+                            <td className="p-2 border-r border-slate-150">A+</td>
+                            <td className="p-2 border-r border-slate-150">Rajesh Sharma</td>
+                            <td className="p-2 border-r border-slate-150">919876543210</td>
+                            <td className="p-2 border-r border-slate-150">Father</td>
+                            <td className="p-2">Jaipur</td>
+                          </tr>
+                          <tr className="border-b border-slate-150/60 font-mono text-gray-500">
+                            <td className="p-2 border-r border-slate-150">Ananya</td>
+                            <td className="p-2 border-r border-slate-150">Verma</td>
+                            <td className="p-2 border-r border-slate-150">22-07-2011</td>
+                            <td className="p-2 border-r border-slate-150">101</td>
+                            <td className="p-2 border-r border-slate-150">B+</td>
+                            <td className="p-2 border-r border-slate-150">Sunita Verma</td>
+                            <td className="p-2 border-r border-slate-150">919812345678</td>
+                            <td className="p-2 border-r border-slate-150">Mother</td>
+                            <td className="p-2">Alwar</td>
+                          </tr>
+                          <tr className="font-mono text-gray-500">
+                            <td className="p-2 border-r border-slate-150">Vivaan</td>
+                            <td className="p-2 border-r border-slate-150">Singh</td>
+                            <td className="p-2 border-r border-slate-150">05/11/2010</td>
+                            <td className="p-2 border-r border-slate-150">102</td>
+                            <td className="p-2 border-r border-slate-150">O+</td>
+                            <td className="p-2 border-r border-slate-150">Mahesh Singh</td>
+                            <td className="p-2 border-r border-slate-150">91990012233</td>
+                            <td className="p-2 border-r border-slate-150">Father</td>
+                            <td className="p-2">Bhilwara</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="text-[10px] text-gray-405 font-medium leading-normal">
+                      ℹ️ Please upload a CSV file matching this exact header structure. Select target enrollment class to apply class mapping.
+                    </div>
                   </div>
 
                   <div>

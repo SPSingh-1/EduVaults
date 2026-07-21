@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
+import Loader from '../../components/common/Loader';
 import { DollarSign, Users, CreditCard } from 'lucide-react';
 
 const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
@@ -28,20 +29,26 @@ const DateFilterInput = ({ label, value, onChange, className = '', style = {} })
   );
 };
 
+const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const Subscriptions = () => {
   const [data, setData] = useState({
     totalMrr: 0,
     activeSubscribers: 0,
+    growthPercentage: '0.0%',
     renewals: []
   });
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Date filter states
-  const [renewDateFrom, setRenewDateFrom] = useState('');
-  const [renewDateTo, setRenewDateTo] = useState('');
-  const [requestDateFrom, setRequestDateFrom] = useState('');
-  const [requestDateTo, setRequestDateTo] = useState('');
+  const [renewDateFrom, setRenewDateFrom] = useState(getTodayStr());
+  const [renewDateTo, setRenewDateTo] = useState(getTodayStr());
+  const [requestDateFrom, setRequestDateFrom] = useState(getTodayStr());
+  const [requestDateTo, setRequestDateTo] = useState(getTodayStr());
   
   // Tab state
   const [activeSubTab, setActiveSubTab] = useState('global'); // global, custom, requests
@@ -54,7 +61,7 @@ const Subscriptions = () => {
   // Custom pricing state
   const [selectedSchoolId, setSelectedSchoolId] = useState('');
   const [customPlansForm, setCustomPlansForm] = useState({
-    standard: { implementationCost: 199, studentCapacity: '500 Students', storageLimit: '50 GB', monthlyPrice: '$49/mo' },
+    standard: { implementationCost: 0, studentCapacity: 'Scale on Demand', storageLimit: 'Varying / DB Cost', monthlyPrice: 'Per-User Pricing' },
     enterprise: { implementationCost: 499, studentCapacity: 'Unlimited', storageLimit: '2 TB', monthlyPrice: 'Custom /mo' }
   });
   const [savingCustom, setSavingCustom] = useState(false);
@@ -202,10 +209,10 @@ const Subscriptions = () => {
     
     setCustomPlansForm({
       standard: {
-        implementationCost: standardConfig ? standardConfig.implementationCost : 199,
-        studentCapacity: standardConfig ? standardConfig.studentCapacity : '500 Students',
-        storageLimit: standardConfig ? standardConfig.storageLimit : '50 GB',
-        monthlyPrice: standardConfig ? standardConfig.monthlyPrice : '$49/mo'
+        implementationCost: standardConfig ? standardConfig.implementationCost : 0,
+        studentCapacity: standardConfig ? standardConfig.studentCapacity : 'Scale on Demand',
+        storageLimit: standardConfig ? standardConfig.storageLimit : 'Varying / DB Cost',
+        monthlyPrice: standardConfig ? standardConfig.monthlyPrice : 'Per-User Pricing'
       },
       enterprise: {
         implementationCost: enterpriseConfig ? enterpriseConfig.implementationCost : 499,
@@ -487,12 +494,7 @@ const Subscriptions = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-        <p className="text-sm text-gray-500">Loading Subscription Management...</p>
-      </div>
-    );
+    return <Loader message="Accessing global billing & subscription records" />;
   }
 
   return (
@@ -561,9 +563,9 @@ const Subscriptions = () => {
           {/* Metrics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { label: 'Total MRR', value: `$${totalMrr.toLocaleString()}`, change: 'Real-time', icon: DollarSign, color: 'text-violet-500', bgColor: 'bg-violet-50/50' },
+              { label: 'Total MRR', value: `Rs. ${totalMrr.toLocaleString()}`, change: 'Real-time', icon: DollarSign, color: 'text-violet-500', bgColor: 'bg-violet-50/50' },
               { label: 'Active Subscribers', value: activeSubscribers.toString(), change: 'Platform Stats', icon: Users, color: 'text-blue-500', bgColor: 'bg-blue-50/50' },
-              { label: 'Avg. Revenue / User', value: `$${avgArpu.toLocaleString()}`, change: 'Computed', icon: CreditCard, color: 'text-orange-500', bgColor: 'bg-orange-50/50' },
+              { label: 'Avg. Revenue / User', value: `Rs. ${avgArpu.toLocaleString()}`, change: 'Computed', icon: CreditCard, color: 'text-orange-500', bgColor: 'bg-orange-50/50' },
             ].map(s => (
               <div key={s.label} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all bg-white border border-gray-100 rounded-xl shadow-sm">
                 <div className="space-y-1">
@@ -616,7 +618,7 @@ const Subscriptions = () => {
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 font-semibold">Implementation Cost ($)</label>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 font-semibold">Implementation Cost (Rs.)</label>
                           <input 
                             type="number"
                             value={p.implementationCost}
@@ -664,8 +666,8 @@ const Subscriptions = () => {
                       /* READ-ONLY PREMIUM MODE (Original design layout) */
                       <div className="space-y-3 mb-2">
                         <div className="flex items-center justify-between text-sm py-1">
-                          <span className="text-gray-500 font-semibold">Implementation Cost ($)</span>
-                          <span className="font-bold text-primary">${p.implementationCost.toLocaleString()}</span>
+                          <span className="text-gray-500 font-semibold">Implementation Cost (Rs.)</span>
+                          <span className="font-bold text-primary">Rs. {p.implementationCost.toLocaleString()}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm py-1">
                           <span className="text-gray-500">Student Capacity</span>
@@ -729,7 +731,7 @@ const Subscriptions = () => {
                     <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="table-td font-semibold text-primary">{r.institutionName}</td>
                       <td className="table-td"><span className="badge badge-gray">{r.planType}</span></td>
-                      <td className="table-td font-medium">${r.amount}</td>
+                      <td className="table-td font-medium">Rs. {r.amount}</td>
                       <td className="table-td text-gray-500">Stripe</td>
                       <td className="table-td text-gray-500">{r.renewDate}</td>
                       <td className="table-td"><span className={r.status === 'success' ? 'badge-success' : r.status === 'pending' ? 'badge-warning' : 'badge-danger'}>{r.status.toUpperCase()}</span></td>
@@ -787,7 +789,7 @@ const Subscriptions = () => {
                       </div>
                       <div className="flex flex-col sm:flex-row gap-4 items-end mt-2 pt-3 border-t border-indigo-100/50">
                         <div className="flex-1 w-full max-w-xs">
-                          <label className="block text-[10px] font-bold text-indigo-900 uppercase tracking-wider mb-1">Set Charge for this Modification ($) *</label>
+                          <label className="block text-[10px] font-bold text-indigo-900 uppercase tracking-wider mb-1">Set Charge for this Modification (Rs.) *</label>
                           <input
                             type="number"
                             placeholder="e.g. 150"
@@ -808,7 +810,7 @@ const Subscriptions = () => {
                                 alert('Please enter a valid amount to charge.');
                                 return;
                               }
-                              if (!window.confirm(`Approve custom modifications with charge of $${charge}?`)) return;
+                              if (!window.confirm(`Approve custom modifications with charge of Rs. ${charge}?`)) return;
                               
                               setProcessingRequestId(pendingCustomRequestForSchool.id);
                               try {

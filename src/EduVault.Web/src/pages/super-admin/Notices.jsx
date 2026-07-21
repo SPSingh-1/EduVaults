@@ -3,6 +3,7 @@ import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { io } from 'socket.io-client';
 import { useNotifications } from '../../contexts/NotificationContext';
+import Loader from '../../components/common/Loader';
 
 const SuperAdminNotices = () => {
   const { markAllAsRead } = useNotifications();
@@ -20,6 +21,7 @@ const SuperAdminNotices = () => {
   const [actEmail, setActEmail] = useState('');
   const [actPassword, setActPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const fetchNoticesAndSchools = async () => {
     try {
@@ -36,6 +38,8 @@ const SuperAdminNotices = () => {
       setInquiries(inquiriesRes.data || []);
     } catch (err) {
       console.error('Error fetching notices/schools/inquiries:', err);
+    } finally {
+      setInitialLoading(false);
     }
   };
 
@@ -104,6 +108,10 @@ const SuperAdminNotices = () => {
     if (recipientId === 'STUDENTS') return 'Students';
     return recipientId;
   };
+
+  if (initialLoading) {
+    return <Loader message="Accessing global announcement logs & credentials" />;
+  }
 
   return (
     <div>

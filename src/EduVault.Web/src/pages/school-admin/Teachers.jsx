@@ -29,6 +29,11 @@ const DateFilterInput = ({ label, value, onChange, className = '', style = {} })
   );
 };
 
+const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const Teachers = () => {
   const user = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
   const schoolName = user?.schoolName || 'Central High';
@@ -39,7 +44,7 @@ const Teachers = () => {
   const [activeTab, setActiveTab] = useState('directory');
 
   // Teacher Attendance States
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getTodayStr());
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceSubmitting, setAttendanceSubmitting] = useState(false);
   const [attendanceSaved, setAttendanceSaved] = useState(false);
@@ -50,8 +55,8 @@ const Teachers = () => {
   // Dropdown filter states
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
 
   // Modals state
   const [showModal, setShowModal] = useState(false);
@@ -185,6 +190,30 @@ const Teachers = () => {
       result.push(row);
     }
     return result;
+  };
+
+  const downloadCsvTemplate = () => {
+    const headers = ['First Name', 'Last Name', 'Email', 'Date of Birth', 'Department', 'Office Location', 'Qualifications', 'Specialization'];
+    const sampleRows = [
+      ['Amit', 'Sharma', 'amit.sharma@school.com', '15-03-1985', 'Mathematics', 'Block A - Room 10', 'M.Sc Mathematics; B.Ed', 'Algebra'],
+      ['Priya', 'Verma', 'priya.verma@school.com', '22-07-1988', 'Science', 'Block B - Lab 2', 'M.Sc Physics; B.Ed', 'Physics'],
+      ['Rahul', 'Singh', 'rahul.singh@school.com', '09/11/1982', 'English', 'Block C - Room 20', 'M.A English; B.Ed', 'English Literature']
+    ];
+    
+    let csvContent = headers.join(',') + '\n';
+    sampleRows.forEach(row => {
+      csvContent += row.map(val => `"${val}"`).join(',') + '\n';
+    });
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'teacher_import_template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleCsvUpload = (e) => {
@@ -545,6 +574,9 @@ const Teachers = () => {
               <div className="flex items-center gap-2 flex-wrap">
                 <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl" style={{ width: '130px' }} />
                 <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl" style={{ width: '130px' }} />
+                {(dateFrom || dateTo || search || selectedDepartment || selectedStatus) && (
+                  <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setSelectedDepartment(''); setSelectedStatus(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
+                )}
               </div>
               <div style={{ display: 'flex', gap: '8px' }} className="w-full xl:w-auto">
                 <select className="input text-xs" style={{ flex: 1, minWidth: 100 }} value={selectedDepartment} onChange={e => setSelectedDepartment(e.target.value)}>
@@ -989,7 +1021,73 @@ const Teachers = () => {
               )}
 
               {!importResult ? (
-                <div className="space-y-4 text-left">
+                <div className="space-y-4 text-left font-sans">
+                  
+                  {/* Expected CSV Template Structure */}
+                  <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 space-y-3 font-sans">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Required CSV Roster Format</span>
+                      <button 
+                        type="button" 
+                        onClick={downloadCsvTemplate}
+                        className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold bg-blue-50 hover:bg-blue-100/70 border border-blue-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
+                      >
+                        📥 Download CSV Template
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto max-w-full rounded-lg border border-slate-150 bg-white shadow-sm">
+                      <table className="min-w-[650px] text-[10px] text-left border-collapse font-sans">
+                        <thead>
+                          <tr className="bg-slate-100/70 border-b border-slate-150 font-mono text-slate-705 font-semibold">
+                            <th className="p-2 border-r border-slate-150">First Name</th>
+                            <th className="p-2 border-r border-slate-150">Last Name</th>
+                            <th className="p-2 border-r border-slate-150">Email</th>
+                            <th className="p-2 border-r border-slate-150">Date of Birth</th>
+                            <th className="p-2 border-r border-slate-150">Department</th>
+                            <th className="p-2 border-r border-slate-150">Office Location</th>
+                            <th className="p-2 border-r border-slate-150">Qualifications</th>
+                            <th className="p-2">Specialization</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-slate-150/60 font-mono text-gray-500">
+                            <td className="p-2 border-r border-slate-150">Amit</td>
+                            <td className="p-2 border-r border-slate-150">Sharma</td>
+                            <td className="p-2 border-r border-slate-150 font-mono text-[10px]">amit.sharma@school.com</td>
+                            <td className="p-2 border-r border-slate-150">15-03-1985</td>
+                            <td className="p-2 border-r border-slate-150">Mathematics</td>
+                            <td className="p-2 border-r border-slate-150">Block A - Room 10</td>
+                            <td className="p-2 border-r border-slate-150">M.Sc Mathematics; B.Ed</td>
+                            <td className="p-2">Algebra</td>
+                          </tr>
+                          <tr className="border-b border-slate-150/60 font-mono text-gray-500">
+                            <td className="p-2 border-r border-slate-150">Priya</td>
+                            <td className="p-2 border-r border-slate-150">Verma</td>
+                            <td className="p-2 border-r border-slate-150 font-mono text-[10px]">priya.verma@school.com</td>
+                            <td className="p-2 border-r border-slate-150">22-07-1888</td>
+                            <td className="p-2 border-r border-slate-150">Science</td>
+                            <td className="p-2 border-r border-slate-150">Block B - Lab 2</td>
+                            <td className="p-2 border-r border-slate-150">M.Sc Physics; B.Ed</td>
+                            <td className="p-2">Physics</td>
+                          </tr>
+                          <tr className="font-mono text-gray-500">
+                            <td className="p-2 border-r border-slate-150">Rahul</td>
+                            <td className="p-2 border-r border-slate-150">Singh</td>
+                            <td className="p-2 border-r border-slate-150 font-mono text-[10px]">rahul.singh@school.com</td>
+                            <td className="p-2 border-r border-slate-150">09/11/1982</td>
+                            <td className="p-2 border-r border-slate-150">English</td>
+                            <td className="p-2 border-r border-slate-150">Block C - Room 20</td>
+                            <td className="p-2 border-r border-slate-150">M.A English; B.Ed</td>
+                            <td className="p-2">English Literature</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="text-[10px] text-gray-405 font-medium leading-normal">
+                      ℹ️ Please upload a CSV file matching this exact header structure. Headers are case-insensitive.
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-semibold text-gray-650 mb-1.5">Roster File (CSV) *</label>
                     <div 
@@ -998,7 +1096,7 @@ const Teachers = () => {
                     >
                       <span className="text-2xl mb-2 block">📄</span>
                       <span className="text-xs font-semibold text-gray-500 block">Click to select CSV File</span>
-                      <span className="text-[10px] text-gray-400 mt-1 block">Roster columns: Name/First/Last Name, Email, DOB, Department, Office, Qualifications, Specialization</span>
+                      <span className="text-[10px] text-gray-400 mt-1 block">Roster columns: First Name, Last Name, Email, Date of Birth, Department, Office Location, Qualifications, Specialization</span>
                     </div>
                     <input 
                       type="file" 

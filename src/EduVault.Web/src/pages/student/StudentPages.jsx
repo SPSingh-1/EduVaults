@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import Topbar from '../../components/layout/Topbar';
+import Loader from '../../components/common/Loader';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { io } from 'socket.io-client';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -43,6 +44,11 @@ import {
   ChevronDown
 } from 'lucide-react';
 
+const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 
 const loadScript = (src) => {
   return new Promise((resolve) => {
@@ -65,7 +71,7 @@ const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
     // 1. Create payment order / get configuration from backend
     const orderRes = await apiClient.post('/billing/create-order', { invoiceId });
     const { orderId, amount, currency, keyId, isMock, paymentProvider, publishableKey, clientId, merchantId, instructions } = orderRes.data;
-    
+
     const provider = paymentProvider ? paymentProvider.toLowerCase() : 'razorpay';
     const userProfile = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
 
@@ -154,7 +160,7 @@ const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
       // Stripe, PayPal, PhonePe simulations
       const providerName = provider === 'stripe' ? 'Stripe' : provider === 'paypal' ? 'PayPal' : provider === 'phonepe' ? 'PhonePe' : provider;
       const confirmMsg = `💳 Active Gateway: ${providerName}\n\nInvoice Amount: Rs. ${amount}\n\nWould you like to proceed with the simulated checkout?`;
-      
+
       if (window.confirm(confirmMsg)) {
         setLoader(true);
         try {
@@ -407,6 +413,10 @@ export const StudentDashboard = () => {
     { name: 'Class Highest', score: parseFloat(performance?.classHighest ?? 92.0), fill: '#10b981', colorGrad: 'classHighGrad' }
   ];
 
+  if (loading) {
+    return <Loader message="Gathering your academic overview" />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="no-print">
@@ -414,27 +424,29 @@ export const StudentDashboard = () => {
       </div>
 
       {/* Dashboard Sub-Tabs */}
-      <div className="flex gap-2 border-b border-slate-100 pb-3 no-print">
-        <button
-          onClick={() => setDashboardTab('overview')}
-          className={`flex items-center gap-2 px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 border ${dashboardTab === 'overview'
-              ? 'bg-primary text-white border-primary shadow-md shadow-primary/20 scale-[1.02]'
-              : 'bg-white text-gray-500 border-gray-200/60 hover:text-primary hover:border-primary/20 hover:bg-gray-50'
-            }`}
-        >
-          <span>📊</span>
-          <span>Academic Overview</span>
-        </button>
-        <button
-          onClick={() => setDashboardTab('history')}
-          className={`flex items-center gap-2 px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 border ${dashboardTab === 'history'
-              ? 'bg-primary text-white border-primary shadow-md shadow-primary/20 scale-[1.02]'
-              : 'bg-white text-gray-500 border-gray-200/60 hover:text-primary hover:border-primary/20 hover:bg-gray-50'
-            }`}
-        >
-          <span>📜</span>
-          <span>Academic History</span>
-        </button>
+      <div className="flex no-print">
+        <div className="inline-flex bg-slate-100 p-1.5 rounded-2xl gap-1 border border-slate-200/50 shadow-inner">
+          <button
+            onClick={() => setDashboardTab('overview')}
+            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${dashboardTab === 'overview'
+              ? 'bg-white text-primary shadow-sm border border-slate-200/30'
+              : 'text-gray-500 hover:text-gray-800 hover:bg-white/40'
+              }`}
+          >
+            <span className="text-sm">📊</span>
+            <span>Academic Overview</span>
+          </button>
+          <button
+            onClick={() => setDashboardTab('history')}
+            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${dashboardTab === 'history'
+              ? 'bg-white text-primary shadow-sm border border-slate-200/30'
+              : 'text-gray-500 hover:text-gray-800 hover:bg-white/40'
+              }`}
+          >
+            <span className="text-sm">📜</span>
+            <span>Academic History</span>
+          </button>
+        </div>
       </div>
 
       {dashboardTab === 'overview' ? (
@@ -480,17 +492,22 @@ export const StudentDashboard = () => {
           </div>
 
           {/* Dynamic Exam Filter Panel - Positioned directly above the graphs */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4.5 rounded-2xl border border-slate-100 shadow-3xs gap-3">
-            <div className="space-y-0.5">
-              <h4 className="font-display font-bold text-primary text-xs uppercase tracking-wider">Exam Segment Analytics</h4>
-              <p className="text-[10px] text-gray-400">Select an exam type to filter performance scores, averages, and rankings below</p>
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm border-l-4 border-l-primary flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary shrink-0 shadow-3xs">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="font-display font-bold text-slate-800 text-sm tracking-tight">Exam Segment Analytics</h4>
+                <p className="text-[10px] text-slate-400 font-medium">Select an exam type to filter performance scores, averages, and rankings below</p>
+              </div>
             </div>
-            <div className="relative flex items-center w-full sm:w-auto">
-              <BookOpen className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
+
+            <div className="relative flex items-center w-full sm:w-auto shrink-0 shadow-3xs rounded-xl overflow-hidden">
               <select
                 value={selectedExamType}
                 onChange={(e) => setSelectedExamType(e.target.value)}
-                className="pl-9 pr-8 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-350 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all cursor-pointer appearance-none min-w-[220px] w-full sm:w-auto"
+                className="pl-4 pr-10 py-2.5 text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-350 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer appearance-none min-w-[200px] w-full sm:w-auto"
               >
                 {examTypes.map((et, i) => (
                   <option key={i} value={et}>
@@ -498,7 +515,7 @@ export const StudentDashboard = () => {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 w-4 h-4 text-slate-400 pointer-events-none" />
+              <ChevronDown className="absolute right-3.5 w-4 h-4 text-slate-500 pointer-events-none" />
             </div>
           </div>
 
@@ -722,12 +739,12 @@ export const StudentDashboard = () => {
                       <p className="text-sm text-gray-600 leading-relaxed">{r.remarkText}</p>
                       <div className="mt-2">
                         <span className={`inline-block px-2.5 py-0.5 rounded text-2xs font-bold ${r.tag === 'URGENT'
-                            ? 'bg-red-100 text-red-800'
-                            : r.tag === 'POSITIVE'
-                              ? 'bg-green-100 text-green-800'
-                              : r.tag === 'NEGATIVE'
-                                ? 'bg-rose-100 text-rose-800'
-                                : 'bg-gray-100 text-gray-800'
+                          ? 'bg-red-100 text-red-800'
+                          : r.tag === 'POSITIVE'
+                            ? 'bg-green-100 text-green-800'
+                            : r.tag === 'NEGATIVE'
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-gray-100 text-gray-800'
                           }`}>
                           ● {r.tag}
                         </span>
@@ -1079,10 +1096,10 @@ export const StudentAttendance = () => {
 
   const getStatusColor = (status) => {
     return status === 'Present'
-      ? 'bg-green-500 text-white hover:bg-green-600'
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-100/80 hover:bg-emerald-100/50'
       : status === 'Late'
-        ? 'bg-amber-500 text-white hover:bg-amber-600'
-        : 'bg-red-500 text-white hover:bg-red-600';
+        ? 'bg-amber-50 text-amber-700 border-amber-100/80 hover:bg-amber-100/50'
+        : 'bg-rose-50 text-rose-700 border-rose-100/80 hover:bg-rose-100/50';
   };
 
   const monthNames = [
@@ -1090,109 +1107,115 @@ export const StudentAttendance = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
+  if (loading) {
+    return <Loader message="Tracking your classroom presence" />;
+  }
+
   return (
-    <div>
+    <div className="h-[calc(100vh-100px)] lg:h-[calc(100vh-120px)] flex flex-col min-h-[500px]">
       <Topbar title="Attendance Log" subtitle="Academic Presence Tracker" />
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-4 shrink-0">
         {[
           { label: 'Attendance Rate', value: attendanceRate, color: 'text-primary', icon: '📈' },
           { label: 'Present Days', value: presentCount, color: 'text-green-600', icon: '✅' },
           { label: 'Late Days', value: lateCount, color: 'text-amber-500', icon: '⏱️' },
           { label: 'Absent Days', value: absentCount, color: 'text-red-500', icon: '❌' },
         ].map(stat => (
-          <div key={stat.label} className="stat-card flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center text-xl">{stat.icon}</div>
+          <div key={stat.label} className="stat-card flex items-center gap-4 py-3 px-4 shadow-3xs">
+            <div className="w-9 h-9 rounded-lg bg-primary/5 flex items-center justify-center text-xl">{stat.icon}</div>
             <div>
-              <div className={`font-display text-2xl font-bold ${stat.color}`}>{stat.value}</div>
-              <div className="text-xs text-gray-500">{stat.label}</div>
+              <div className={`font-display text-xl font-bold ${stat.color}`}>{stat.value}</div>
+              <div className="text-xxs text-gray-500">{stat.label}</div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="card col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-display font-bold text-primary text-lg">
+      <div className="grid grid-cols-3 gap-6 flex-1 min-h-0">
+        <div className="card col-span-2 h-full flex flex-col justify-between py-4 px-6 overflow-hidden">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <h3 className="font-display font-bold text-primary text-base m-0">
               📅 {monthNames[month]} {year}
             </h3>
-            <div className="flex gap-2">
-              <button onClick={handlePrevMonth} className="btn-outline px-3 py-1.5 text-xs">◀ Prev</button>
-              <button onClick={handleNextMonth} className="btn-outline px-3 py-1.5 text-xs">Next ▶</button>
+            <div className="flex gap-1.5">
+              <button onClick={handlePrevMonth} className="btn-outline px-2.5 py-1 text-2xs">◀ Prev</button>
+              <button onClick={handleNextMonth} className="btn-outline px-2.5 py-1 text-2xs">Next ▶</button>
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-gray-400">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="py-1">{d}</div>)}
-          </div>
-
-          {loading ? (
-            <div className="py-24 text-center text-gray-400 text-sm">Loading attendance logs...</div>
-          ) : (
-            <div className="grid grid-cols-7 gap-2">
-              {calendarDays.map(cd => {
-                if (cd.padding) {
-                  return <div key={cd.key} className="aspect-square bg-gray-50/50 rounded-lg"></div>;
-                }
-
-                const hasRecord = !!cd.record;
-                return (
-                  <button
-                    key={cd.key}
-                    onClick={() => cd.record && setSelectedRecord(cd.record)}
-                    disabled={!hasRecord}
-                    className={`aspect-square rounded-lg flex flex-col items-center justify-center border transition-all ${hasRecord
-                        ? `${getStatusColor(cd.record.status)} border-transparent font-bold cursor-pointer hover:scale-105 active:scale-95 shadow-sm`
-                        : 'border-gray-100 text-gray-300 bg-gray-50/30'
-                      }`}
-                  >
-                    <span className="text-sm">{cd.day}</span>
-                    {hasRecord && (
-                      <span className="text-[9px] mt-0.5 opacity-90">
-                        {cd.record.status === 'Present' ? 'P' : cd.record.status === 'Late' ? 'L' : 'A'}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+          <div className="max-w-[440px] mx-auto w-full flex-1 flex flex-col justify-center">
+            <div className="grid grid-cols-7 gap-3 mb-3 text-center text-xs font-bold text-gray-400 uppercase tracking-wider font-display shrink-0">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="py-1">{d}</div>)}
             </div>
-          )}
+
+            {loading ? (
+              <div className="py-24 text-center text-gray-400 text-sm">Loading attendance logs...</div>
+            ) : (
+              <div className="grid grid-cols-7 gap-3">
+                {calendarDays.map(cd => {
+                  if (cd.padding) {
+                    return <div key={cd.key} className="aspect-square rounded-full bg-transparent border border-transparent"></div>;
+                  }
+
+                  const hasRecord = !!cd.record;
+                  const isSelected = selectedRecord && cd.record && selectedRecord.date === cd.record.date;
+                  return (
+                    <button
+                      key={cd.key}
+                      onClick={() => cd.record && setSelectedRecord(cd.record)}
+                      disabled={!hasRecord}
+                      className={`aspect-square rounded-full flex flex-col items-center justify-center border text-xs transition-all duration-200 ${hasRecord
+                          ? `${getStatusColor(cd.record.status)} font-semibold cursor-pointer hover:scale-105 active:scale-95 shadow-xs ${
+                              isSelected ? 'ring-2 ring-primary ring-offset-2 scale-105 z-10 font-bold' : ''
+                            }`
+                          : 'border-slate-100/60 text-slate-350 bg-slate-50/20 cursor-not-allowed'
+                        }`}
+                    >
+                      <span className="text-xs sm:text-sm font-semibold">{cd.day}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="card h-fit">
-          <h3 className="font-display font-bold text-primary text-base mb-4">📝 Attendance Details</h3>
-          {selectedRecord ? (
-            <div className="space-y-4">
-              <div>
-                <div className="text-xs text-gray-400 font-semibold uppercase">Date</div>
-                <div className="text-sm font-semibold text-primary">{new Date(selectedRecord.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400 font-semibold uppercase mb-1">Status</div>
+        <div className="card h-full flex flex-col overflow-hidden py-4 px-6">
+          <h3 className="font-display font-bold text-primary text-sm mb-4 shrink-0">📝 Attendance Details</h3>
+          <div className="flex-1 overflow-y-auto pr-1">
+            {selectedRecord ? (
+              <div className="space-y-4">
                 <div>
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${selectedRecord.status === 'Present'
+                  <div className="text-xs text-gray-400 font-semibold uppercase">Date</div>
+                  <div className="text-sm font-semibold text-primary">{new Date(selectedRecord.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400 font-semibold uppercase mb-1">Status</div>
+                  <div>
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${selectedRecord.status === 'Present'
                       ? 'bg-green-100 text-green-800'
                       : selectedRecord.status === 'Late'
                         ? 'bg-amber-100 text-amber-800'
                         : 'bg-red-100 text-red-800'
-                    }`}>
-                    ● {selectedRecord.status}
-                  </span>
+                      }`}>
+                      ● {selectedRecord.status}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400 font-semibold uppercase mb-1">Teacher's Remarks</div>
+                  <div className="text-sm font-medium text-gray-600 bg-gray-50 border border-gray-100 rounded-xl p-3 leading-relaxed">
+                    {selectedRecord.remarks || 'No remarks provided for this date.'}
+                  </div>
                 </div>
               </div>
-              <div>
-                <div className="text-xs text-gray-400 font-semibold uppercase mb-1">Teacher's Remarks</div>
-                <div className="text-sm font-medium text-gray-600 bg-gray-50 border border-gray-100 rounded-xl p-3 leading-relaxed">
-                  {selectedRecord.remarks || 'No remarks provided for this date.'}
-                </div>
+            ) : (
+              <div className="text-center py-12 text-gray-400 text-xs">
+                Select any highlighted date in the calendar to view status remarks from the teacher.
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-gray-400 text-xs">
-              Select any highlighted date in the calendar to view status remarks from the teacher.
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1457,8 +1480,8 @@ export const StudentResults = () => {
                     <td className="table-td print:py-2.5 text-center"><span className={`font-bold text-sm print:text-xs ${gradeColor}`}>{s.grade}</span></td>
                     <td className="table-td print:py-2.5 text-center">
                       <span className={`${isPass
-                          ? 'badge-success print:bg-green-50 print:text-green-800 print:border print:border-green-200'
-                          : 'badge-danger print:bg-red-50 print:text-red-800 print:border print:border-red-200'
+                        ? 'badge-success print:bg-green-50 print:text-green-800 print:border print:border-green-200'
+                        : 'badge-danger print:bg-red-50 print:text-red-800 print:border print:border-red-200'
                         } print:text-[10px]`}>
                         {s.status}
                       </span>
@@ -1539,7 +1562,7 @@ export const StudentFees = () => {
   const [invoices, setInvoices] = useState([]);
   const [feeStructures, setFeeStructures] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchInvoicesAndStructures = async () => {
     try {
@@ -1553,6 +1576,8 @@ export const StudentFees = () => {
       setTransactions(txnRes.data);
     } catch (err) {
       console.error('Error loading fees data:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1564,33 +1589,51 @@ export const StudentFees = () => {
     await executePaymentFlow(invoiceId, setLoading, fetchInvoicesAndStructures);
   };
 
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   const filteredInvoices = invoices.filter(t => {
+    if (search) {
+      const q = search.toLowerCase();
+      const titleMatch = (t.title || t.name || '').toLowerCase().includes(q);
+      const invMatch = (t.invoiceNo || t.id || '').toLowerCase().includes(q);
+      if (!titleMatch && !invMatch) return false;
+    }
+    if (statusFilter && (t.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
+
     if (dateFrom) {
       const from = new Date(dateFrom);
       from.setHours(0, 0, 0, 0);
-      if (new Date(t.due) < from) return false;
+      if (new Date(t.due || t.createdAt) < from) return false;
     }
     if (dateTo) {
       const to = new Date(dateTo);
       to.setHours(23, 59, 59, 999);
-      if (new Date(t.due) > to) return false;
+      if (new Date(t.due || t.createdAt) > to) return false;
     }
     return true;
   });
 
   const filteredTransactions = transactions.filter(t => {
+    if (search) {
+      const q = search.toLowerCase();
+      const titleMatch = (t.title || t.payerName || '').toLowerCase().includes(q);
+      const txnMatch = (t.transactionId || t.id || '').toLowerCase().includes(q);
+      if (!titleMatch && !txnMatch) return false;
+    }
+    if (statusFilter && (t.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
+
     if (dateFrom) {
       const from = new Date(dateFrom);
       from.setHours(0, 0, 0, 0);
-      if (new Date(t.date) < from) return false;
+      if (new Date(t.date || t.createdAt) < from) return false;
     }
     if (dateTo) {
       const to = new Date(dateTo);
       to.setHours(23, 59, 59, 999);
-      if (new Date(t.date) > to) return false;
+      if (new Date(t.date || t.createdAt) > to) return false;
     }
     return true;
   });
@@ -1600,17 +1643,40 @@ export const StudentFees = () => {
   const paidInvoices = filteredInvoices.filter(i => i.status === 'Paid');
   const lastPaymentVal = paidInvoices.length > 0 ? paidInvoices[0].amount : 0;
 
+  if (loading) {
+    return <Loader message="Accessing student ledger & invoices" />;
+  }
+
   return (
     <div>
       <Topbar title="Fees & Payments" subtitle="Review your financial standing and manage school dues." />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 p-3 bg-gray-50 border border-gray-100 rounded-xl">
-        <span className="text-xs font-semibold text-gray-500">📅 Filter Invoices & Payments by Date Range:</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="text"
+            placeholder="Search invoice..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary rounded-xl"
+            style={{ width: '150px' }}
+          />
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary rounded-xl"
+          >
+            <option value="">All Statuses</option>
+            <option value="Paid">Paid</option>
+            <option value="Pending">Pending</option>
+            <option value="Overdue">Overdue</option>
+          </select>
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl text-primary" style={{ width: '135px' }} />
           <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl text-primary" style={{ width: '135px' }} />
-          {(dateFrom || dateTo) && (
-            <button onClick={() => { setDateFrom(''); setDateTo(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
+          {(dateFrom || dateTo || search || statusFilter) && (
+            <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setStatusFilter(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
           )}
         </div>
       </div>
@@ -1817,8 +1883,8 @@ export const StudentNotices = () => {
               type="button"
               onClick={() => setActiveFilterTab(tab.id)}
               className={`px-4.5 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 shrink-0 cursor-pointer transition-all duration-200 ease-out select-none active:scale-95 ${isActive
-                  ? 'bg-white text-primary shadow-xs font-bold border border-slate-200/50 scale-100'
-                  : 'text-slate-500 hover:text-primary hover:bg-white/40 bg-transparent border border-transparent'
+                ? 'bg-white text-primary shadow-xs font-bold border border-slate-200/50 scale-100'
+                : 'text-slate-500 hover:text-primary hover:bg-white/40 bg-transparent border border-transparent'
                 }`}
             >
               <tab.Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-primary' : 'text-slate-400 group-hover:text-primary'}`} />
@@ -1837,19 +1903,19 @@ export const StudentNotices = () => {
             <div
               key={n._id || i}
               className={`border border-slate-100/80 rounded-2xl p-5 hover:shadow-md hover:translate-x-0.5 transition-all duration-300 ease-out ${isUrgent
-                  ? 'border-l-4 border-l-rose-500 bg-gradient-to-r from-rose-50/10 via-white to-white'
-                  : isEvent
-                    ? 'border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/10 via-white to-white'
-                    : 'border-l-4 border-l-slate-350 bg-gradient-to-r from-slate-50/10 via-white to-white'
+                ? 'border-l-4 border-l-rose-500 bg-gradient-to-r from-rose-50/10 via-white to-white'
+                : isEvent
+                  ? 'border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/10 via-white to-white'
+                  : 'border-l-4 border-l-slate-350 bg-gradient-to-r from-slate-50/10 via-white to-white'
                 }`}
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100/80 mb-3">
                 <div className="flex items-center gap-2.5">
                   <span className={`badge ${isUrgent
-                      ? 'bg-rose-100 text-rose-700 border border-rose-200'
-                      : isEvent
-                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                        : 'bg-slate-100 text-slate-655 border border-slate-200'
+                    ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                    : isEvent
+                      ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                      : 'bg-slate-100 text-slate-655 border border-slate-200'
                     } text-[10px] py-0.5 uppercase font-bold tracking-wider rounded-lg`}>
                     {n.type}
                   </span>
@@ -1866,8 +1932,8 @@ export const StudentNotices = () => {
                   n.senderName && (
                     <div className="flex items-center gap-1.5 text-2xs text-slate-500 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-lg select-none">
                       <span className={`w-4.5 h-4.5 rounded-full flex items-center justify-center font-bold text-[8px] uppercase ${n.senderRole === 'schooladmin'
-                          ? 'bg-amber-100 text-amber-955 border border-amber-200/50'
-                          : 'bg-blue-50 text-blue-955 border border-blue-100/50'
+                        ? 'bg-amber-100 text-amber-955 border border-amber-200/50'
+                        : 'bg-blue-50 text-blue-955 border border-blue-100/50'
                         }`}>
                         {n.senderName.substring(0, 2).toUpperCase()}
                       </span>
@@ -1951,12 +2017,9 @@ export const StudentProfile = () => {
     setEditing(false);
   };
 
-  if (loading) return (
-    <div>
-      <Topbar title="My Profile" />
-      <div className="card text-center py-12 text-gray-400 text-sm">Loading profile details...</div>
-    </div>
-  );
+  if (loading) {
+    return <Loader message="Retrieving your student profile" />;
+  }
   const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
 
   return (
@@ -2165,77 +2228,76 @@ export const StudentHomework = () => {
     }
   };
 
+  if (loading) {
+    return <Loader message="Retrieving your homework assignments" />;
+  }
+
   return (
     <div>
       <Topbar title="My Homework Assignments" subtitle="Academic Tasks › Homework" />
+      <div className="card">
+        <p className="text-xs text-gray-400 mb-4">Complete and submit your tasks before their due dates.</p>
+        <div className="overflow-hidden border border-slate-100/80 rounded-xl bg-white shadow-3xs">
+          <table className="w-full border-collapse">
+            <thead className="bg-slate-50/50">
+              <tr className="border-b border-slate-150">
+                <th className="table-th text-left">Assignment Details</th>
+                <th className="table-th text-left">Instructions</th>
+                <th className="table-th text-center">Due Date</th>
+                <th className="table-th text-center">Status</th>
+                <th className="table-th text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {homeworks.map((h, i) => {
+                const isSubmitted = h.submittedStudents?.includes(profile?.id);
+                const isClosed = h.status === 'Completed';
 
-      {loading ? (
-        <div className="card text-center py-12 text-gray-400 text-sm">Loading homework assignments...</div>
-      ) : (
-        <div className="card">
-          <p className="text-xs text-gray-400 mb-4">Complete and submit your tasks before their due dates.</p>
-          <div className="overflow-hidden border border-slate-100/80 rounded-xl bg-white shadow-3xs">
-            <table className="w-full border-collapse">
-              <thead className="bg-slate-50/50">
-                <tr className="border-b border-slate-150">
-                  <th className="table-th text-left">Assignment Details</th>
-                  <th className="table-th text-left">Instructions</th>
-                  <th className="table-th text-center">Due Date</th>
-                  <th className="table-th text-center">Status</th>
-                  <th className="table-th text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {homeworks.map((h, i) => {
-                  const isSubmitted = h.submittedStudents?.includes(profile?.id);
-                  const isClosed = h.status === 'Completed';
-
-                  return (
-                    <tr key={h._id || i} className="border-b border-gray-100 hover:bg-gray-50/55 transition-colors">
-                      <td className="table-td">
-                        <div className="font-semibold text-sm text-primary">{h.title}</div>
-                        <div className="text-2xs text-gray-400 mt-0.5">{h.className}</div>
-                      </td>
-                      <td className="table-td text-sm text-slate-650 max-w-xs truncate" title={h.instructions}>
-                        {h.instructions}
-                      </td>
-                      <td className="table-td text-center text-sm font-semibold text-gray-500">
-                        📅 {new Date(h.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                      </td>
-                      <td className="table-td text-center">
-                        <span className={`badge ${isSubmitted ? 'badge-success' : isClosed ? 'badge-gray' : 'badge-warning'}`}>
-                          {isSubmitted ? 'Submitted' : isClosed ? 'Closed' : 'Pending'}
+                return (
+                  <tr key={h._id || i} className="border-b border-gray-100 hover:bg-gray-50/55 transition-colors">
+                    <td className="table-td">
+                      <div className="font-semibold text-sm text-primary">{h.title}</div>
+                      <div className="text-2xs text-gray-400 mt-0.5">{h.className}</div>
+                    </td>
+                    <td className="table-td text-sm text-slate-650 max-w-xs truncate" title={h.instructions}>
+                      {h.instructions}
+                    </td>
+                    <td className="table-td text-center text-sm font-semibold text-gray-500">
+                      📅 {new Date(h.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </td>
+                    <td className="table-td text-center">
+                      <span className={`badge ${isSubmitted ? 'badge-success' : isClosed ? 'badge-gray' : 'badge-warning'}`}>
+                        {isSubmitted ? 'Submitted' : isClosed ? 'Closed' : 'Pending'}
+                      </span>
+                    </td>
+                    <td className="table-td text-center">
+                      {isSubmitted ? (
+                        <span className="text-xs text-green-600 font-semibold flex items-center justify-center gap-1.5">
+                          ✓ Done
                         </span>
-                      </td>
-                      <td className="table-td text-center">
-                        {isSubmitted ? (
-                          <span className="text-xs text-green-600 font-semibold flex items-center justify-center gap-1.5">
-                            ✓ Done
-                          </span>
-                        ) : isClosed ? (
-                          <span className="text-xs text-gray-400 italic">Closed</span>
-                        ) : (
-                          <button
-                            onClick={() => setSelectedHomework(h)}
-                            className="btn-primary text-2xs py-1.5 px-3 rounded-lg hover:scale-[1.03] active:scale-[0.97] transition-all cursor-pointer"
-                          >
-                            📤 Submit
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {homeworks.length === 0 && (
-                  <tr>
-                    <td colSpan="5" className="text-center py-8 text-gray-400 text-sm">No homework assignments posted for your class.</td>
+                      ) : isClosed ? (
+                        <span className="text-xs text-gray-400 italic">Closed</span>
+                      ) : (
+                        <button
+                          onClick={() => setSelectedHomework(h)}
+                          className="btn-primary text-2xs py-1.5 px-3 rounded-lg hover:scale-[1.03] active:scale-[0.97] transition-all cursor-pointer"
+                        >
+                          📤 Submit
+                        </button>
+                      )}
+                    </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+              {homeworks.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="text-center py-8 text-gray-400 text-sm">No homework assignments posted for your class.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
       {/* Submission Modal */}
       {selectedHomework && (
@@ -2366,12 +2428,7 @@ export const StudentSchedule = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div>
-        <Topbar title="Daily Class Schedule" subtitle="Your personalized weekly timetable" />
-        <div className="card text-center py-12 text-gray-400 text-sm">Loading timetable schedule...</div>
-      </div>
-    );
+    return <Loader message="Retrieving your class timetable" />;
   }
 
   if (error) {
@@ -2412,8 +2469,8 @@ export const StudentSchedule = () => {
               key={d}
               onClick={() => setActiveDay(d)}
               className={`px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-1.5 shrink-0 cursor-pointer transition-all duration-200 ease-out select-none active:scale-95 ${isActive
-                  ? 'bg-white text-primary shadow-xs font-bold border border-slate-200/50 scale-100'
-                  : 'text-slate-500 hover:text-primary hover:bg-white/40 bg-transparent border border-transparent'
+                ? 'bg-white text-primary shadow-xs font-bold border border-slate-200/50 scale-100'
+                : 'text-slate-500 hover:text-primary hover:bg-white/40 bg-transparent border border-transparent'
                 }`}
             >
               <span>{d}</span>
@@ -2438,18 +2495,18 @@ export const StudentSchedule = () => {
             <div
               key={p.id}
               className={`border-y border-r border-l-4 border-slate-100 bg-white rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300 ease-out hover:shadow-md hover:translate-x-0.5 ${hasClass
-                  ? isHomeroom
-                    ? 'border-l-amber-500 bg-gradient-to-r from-amber-50/15 via-white to-white hover:border-l-amber-600'
-                    : 'border-l-primary bg-gradient-to-r from-blue-50/10 via-white to-white hover:border-l-indigo-600'
-                  : 'border-l-slate-250 bg-slate-50/30 opacity-75 border-dashed border'
+                ? isHomeroom
+                  ? 'border-l-amber-500 bg-gradient-to-r from-amber-50/15 via-white to-white hover:border-l-amber-600'
+                  : 'border-l-primary bg-gradient-to-r from-blue-50/10 via-white to-white hover:border-l-indigo-600'
+                : 'border-l-slate-250 bg-slate-50/30 opacity-75 border-dashed border'
                 }`}
             >
               <div className="flex items-center gap-4 min-w-[180px]">
                 <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center font-display shrink-0 transition-all duration-200 ${hasClass
-                    ? isHomeroom
-                      ? 'bg-amber-100 text-amber-900 border border-amber-200/60 shadow-2xs'
-                      : 'bg-blue-50 text-blue-700 border border-blue-100/60 shadow-2xs'
-                    : 'bg-slate-100 text-slate-400 border border-slate-200/60'
+                  ? isHomeroom
+                    ? 'bg-amber-100 text-amber-900 border border-amber-200/60 shadow-2xs'
+                    : 'bg-blue-50 text-blue-700 border border-blue-100/60 shadow-2xs'
+                  : 'bg-slate-100 text-slate-400 border border-slate-200/60'
                   }`}>
                   <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400/80 leading-none mb-0.5">PER</span>
                   <span className="text-sm font-black leading-none">{p.periodNumber}</span>
@@ -2523,8 +2580,9 @@ export const StudentSchedule = () => {
 export const StudentExams = () => {
   const [profile, setProfile] = useState(null);
   const [exams, setExams] = useState([]);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -2556,12 +2614,7 @@ export const StudentExams = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div>
-        <Topbar title="Exam Timetable" subtitle="Manage and track your examination schedules" />
-        <div className="card text-center py-12 text-gray-400 text-sm">Loading exam schedules...</div>
-      </div>
-    );
+    return <Loader message="Accessing your examination schedules" />;
   }
 
   if (error) {
@@ -2591,6 +2644,13 @@ export const StudentExams = () => {
   const upcomingExams = exams
     .filter(e => {
       const examDate = getExamDateTime(e.rawDate || e.RawDate, e.time || e.Time);
+      if (search) {
+        const q = search.toLowerCase();
+        const subjMatch = (e.subject || e.subjectName || '').toLowerCase().includes(q);
+        const codeMatch = (e.subjectCode || '').toLowerCase().includes(q);
+        const typeMatch = (e.examType || '').toLowerCase().includes(q);
+        if (!subjMatch && !codeMatch && !typeMatch) return false;
+      }
       if (dateFrom) {
         const from = new Date(dateFrom);
         from.setHours(0, 0, 0, 0);
@@ -2608,6 +2668,13 @@ export const StudentExams = () => {
   const pastAndOtherExams = exams
     .filter(e => {
       const examDate = getExamDateTime(e.rawDate || e.RawDate, e.time || e.Time);
+      if (search) {
+        const q = search.toLowerCase();
+        const subjMatch = (e.subject || e.subjectName || '').toLowerCase().includes(q);
+        const codeMatch = (e.subjectCode || '').toLowerCase().includes(q);
+        const typeMatch = (e.examType || '').toLowerCase().includes(q);
+        if (!subjMatch && !codeMatch && !typeMatch) return false;
+      }
       if (dateFrom) {
         const from = new Date(dateFrom);
         from.setHours(0, 0, 0, 0);
@@ -2625,17 +2692,19 @@ export const StudentExams = () => {
   const nextExam = upcomingExams[0];
 
   const getDaysRemaining = (dateStr) => {
-    const target = new Date(dateStr);
-    target.setHours(0, 0, 0, 0);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const diffTime = target - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Tomorrow';
-    return `In ${diffDays} days`;
+    try {
+      const target = new Date(dateStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffTime = target - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Tomorrow';
+      if (diffDays < 0) return 'Passed';
+      return `In ${diffDays} days`;
+    } catch (e) {
+      return 'Upcoming';
+    }
   };
 
   const getStatusBadgeClass = (status) => {
@@ -2655,12 +2724,21 @@ export const StudentExams = () => {
       <Topbar title="Exam Timetable" subtitle={`Exam schedule for ${profile?.class} - ${profile?.section}`} />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 p-3 bg-gray-50 border border-gray-100 rounded-xl">
-        <span className="text-xs font-semibold text-gray-500">📅 Filter Exam Timetable by Date:</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="text"
+            placeholder="Search exam/subject..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary rounded-xl"
+            style={{ width: '160px' }}
+          />
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl text-primary" style={{ width: '135px' }} />
           <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl text-primary" style={{ width: '135px' }} />
-          {(dateFrom || dateTo) && (
-            <button onClick={() => { setDateFrom(''); setDateTo(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
+          {(dateFrom || dateTo || search) && (
+            <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
           )}
         </div>
       </div>
@@ -2816,4 +2894,6 @@ export const StudentExams = () => {
     </div>
   );
 };
+
+
 

@@ -46,6 +46,8 @@ namespace EduVault.Api.Controllers
                     s.LogoUrl,
                     s.EmailDomain,
                     s.ThemeColor,
+                    s.Address,
+                    s.City,
                     StudentsCount = students.Count(),
                     AdminEmail = adminUser?.Email,
                     AdminName = adminUser?.FirstName ?? "N/A",
@@ -98,7 +100,8 @@ namespace EduVault.Api.Controllers
                 PasswordHash = _authService.HashPassword(request.AdminPassword),
                 Role = "schooladmin",
                 FirstName = request.AdminName,
-                LastName = "Administrator"
+                LastName = "Administrator",
+                IsActive = true
             };
 
             await _unitOfWork.Users.AddAsync(adminUser);
@@ -183,7 +186,36 @@ namespace EduVault.Api.Controllers
             school.EmailDomain = request.EmailDomain;
             school.ThemeColor = request.ThemeColor;
 
+            if (request.Address != null) school.Address = request.Address;
+            if (request.City != null) school.City = request.City;
+            if (request.Website != null) school.Website = request.Website;
+
             _unitOfWork.Schools.Update(school);
+
+            // Update admin user if admin info is provided
+            var adminUser = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == id && u.Role == "schooladmin")).FirstOrDefault();
+            if (adminUser != null)
+            {
+                if (!string.IsNullOrWhiteSpace(request.AdminName))
+                {
+                    adminUser.FirstName = request.AdminName;
+                }
+                if (!string.IsNullOrWhiteSpace(request.AdminEmail))
+                {
+                    var existingUser = (await _unitOfWork.Users.FindAsync(u => u.Email == request.AdminEmail && u.Id != adminUser.Id)).FirstOrDefault();
+                    if (existingUser != null)
+                    {
+                        return BadRequest(new { error = "Admin Email is already in use by another user" });
+                    }
+                    adminUser.Email = request.AdminEmail;
+                }
+                if (!string.IsNullOrWhiteSpace(request.AdminPassword))
+                {
+                    adminUser.PasswordHash = _authService.HashPassword(request.AdminPassword);
+                }
+                _unitOfWork.Users.Update(adminUser);
+            }
+
             await _unitOfWork.CompleteAsync();
 
             return Ok(school);

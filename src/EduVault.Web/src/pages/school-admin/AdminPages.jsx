@@ -4,6 +4,12 @@ import { apiClient, expressClient } from '../../api/apiClient';
 import { io } from 'socket.io-client';
 import { useNotifications } from '../../contexts/NotificationContext';
 
+const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+
 const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
   const [focused, setFocused] = useState(false);
   const formatDisplay = (val) => {
@@ -291,12 +297,21 @@ export const Notices = () => {
   const [loading, setLoading] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState('all'); // 'all', 'school', 'system'
   const [sendWhatsApp, setSendWhatsApp] = useState(false);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [search, setSearch] = useState('');
+  const [targetFilter, setTargetFilter] = useState('');
 
   const filteredNotices = noticesList.filter(n => {
     if (activeFilterTab === 'school' && n.senderRole === 'superadmin') return false;
     if (activeFilterTab === 'system' && n.senderRole !== 'superadmin') return false;
+    if (targetFilter && n.targetGroup && n.targetGroup !== targetFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const titleMatch = (n.title || '').toLowerCase().includes(q);
+      const bodyMatch = (n.body || n.message || '').toLowerCase().includes(q);
+      if (!titleMatch && !bodyMatch) return false;
+    }
     
     if (dateFrom) {
       const from = new Date(dateFrom);
@@ -404,10 +419,34 @@ export const Notices = () => {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 mb-4 flex-wrap bg-gray-50 p-2 border border-gray-100 rounded-xl">
-            <span className="text-xs font-semibold text-gray-500">Filter by Date:</span>
-            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '130px' }} />
-            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '130px' }} />
+          <div className="flex items-center justify-between gap-2 mb-4 flex-wrap bg-gray-50 p-2 border border-gray-100 rounded-xl">
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="text"
+                placeholder="Search notice..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl"
+                style={{ width: '150px' }}
+              />
+              <select
+                value={targetFilter}
+                onChange={e => setTargetFilter(e.target.value)}
+                className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl"
+              >
+                <option value="">All Audiences</option>
+                <option value="ALL">All Users</option>
+                <option value="TEACHERS">Teachers</option>
+                <option value="STUDENTS">Students</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '130px' }} />
+              <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '130px' }} />
+              {(dateFrom || dateTo || search || targetFilter) && (
+                <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setTargetFilter(''); }} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear</button>
+              )}
+            </div>
           </div>
 
           {filteredNotices.map((n, i) => (
@@ -532,8 +571,9 @@ export const Exams = () => {
   // Filter States
   const [filterClassId, setFilterClassId] = useState('');
   const [filterExamType, setFilterExamType] = useState('Semester Examination');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [search, setSearch] = useState('');
 
   const [modalError, setModalError] = useState('');
   const [editMode, setEditMode] = useState(false);
@@ -750,6 +790,13 @@ export const Exams = () => {
     .filter(e => {
       const classMatch = !filterClassId || (selectedClassObj && e.grade === `Grade ${selectedClassObj.grade}` && e.section === selectedClassObj.section);
       const typeMatch = !filterExamType || e.examType === filterExamType;
+      if (search) {
+        const q = search.toLowerCase();
+        const subjMatch = (e.subjectName || e.subject || '').toLowerCase().includes(q);
+        const codeMatch = (e.subjectCode || '').toLowerCase().includes(q);
+        const proctorMatch = (e.proctorName || e.proctor || '').toLowerCase().includes(q);
+        if (!subjMatch && !codeMatch && !proctorMatch) return false;
+      }
       
       if (dateFrom) {
         const from = new Date(dateFrom);
@@ -787,7 +834,7 @@ export const Exams = () => {
       } />
 
       {/* Visual Timeline Section */}
-      <div className="card mb-6 bg-primary text-white border-0 shadow-xl p-6">
+      <div className="card mb-6 bg-gradient-to-br from-primary to-primary-dark text-white border-0 shadow-xl p-6 rounded-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-4">
           <div>
             <h3 className="font-display font-bold text-lg text-white">🗓 Chronological Exam Timeline</h3>
@@ -804,8 +851,19 @@ export const Exams = () => {
                 {sendingSchedule ? 'Sending...' : '📢 Send Schedule'}
               </button>
             )}
+            <input
+              type="text"
+              placeholder="Search subject..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="input bg-white/10 border border-white/30 hover:border-white/50 text-white placeholder-white/60 text-xs py-1 px-2.5 rounded-xl transition-colors shadow-sm"
+              style={{ width: '130px' }}
+            />
             <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input bg-white/10 border border-white/30 hover:border-white/50 text-white text-xs py-1 px-2 rounded-xl transition-colors shadow-sm" style={{ width: '120px' }} />
             <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input bg-white/10 border-white/30 hover:border-white/50 text-white text-xs py-1 px-2 rounded-xl transition-colors shadow-sm" style={{ width: '120px' }} />
+            {(dateFrom || dateTo || search) && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); }} className="text-xs text-amber-200 hover:text-white font-medium">Clear</button>
+            )}
             <div className="flex gap-2 w-full sm:w-auto">
               <select
                 value={filterClassId}
@@ -835,20 +893,40 @@ export const Exams = () => {
             {cycleExams.map((e, idx) => {
               const { weekday, dayNum, month } = getWeekdayAndDay(e.rawDate || e.date);
               return (
-                <div key={e.id} className="bg-white/10 border border-white/20 rounded-xl p-4 flex gap-4 hover:bg-white/15 transition-all shadow-md shadow-black/10 hover:shadow-lg hover:translate-y-[-2px]">
-                  <div className="flex flex-col items-center justify-center bg-white/20 rounded-lg px-3 py-2 border border-white/30 w-16 h-16 shrink-0 shadow-inner">
-                    <span className="text-xxs uppercase tracking-wider text-white/70 font-bold">{weekday.slice(0, 3)}</span>
-                    <span className="text-xl font-bold leading-none my-0.5">{dayNum}</span>
-                    <span className="text-xxs uppercase text-white/70 font-semibold">{month}</span>
+                <div key={e.id} className="bg-white border border-slate-100/90 border-l-4 border-l-accent rounded-xl p-4 flex gap-3.5 hover:bg-slate-50 transition-all shadow-md hover:shadow-lg hover:translate-y-[-2px] text-slate-800 relative group overflow-hidden">
+                  {/* Calendar Badge */}
+                  <div className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200/60 rounded-lg w-14 h-16 shrink-0 shadow-sm overflow-hidden">
+                    <div className="w-full bg-primary text-white text-[9px] font-bold uppercase py-0.5 text-center leading-none tracking-wider">
+                      {weekday.slice(0, 3).toUpperCase()}
+                    </div>
+                    <div className="flex-grow flex flex-col items-center justify-center px-1">
+                      <span className="text-lg font-black leading-none text-slate-800">{dayNum}</span>
+                      <span className="text-[9px] uppercase font-extrabold text-slate-400 mt-0.5">{month.toUpperCase()}</span>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <div className="text-xxs text-white/90 font-bold uppercase tracking-wider mb-0.5">Exam #{idx + 1}</div>
-                    <div className="font-bold text-sm truncate" title={e.subject}>{e.subject}</div>
-                    <div className="text-xxs text-white/80 truncate mt-1">⏱️ Time: {e.time || 'N/A'}</div>
-                    <div className="text-xxs text-white/80 truncate">👨‍🏫 Proctor: {e.proctor}</div>
-                    {e.subjectCode && e.subjectCode.toUpperCase() !== e.subject.toUpperCase().replace(/\s+/g, '') && (
-                      <div className="text-[10px] text-white/60 mt-0.5 font-mono">{e.subjectCode}</div>
-                    )}
+                  
+                  {/* Card Details */}
+                  <div className="flex-1 min-w-0 text-left flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Exam #{idx + 1}</span>
+                        {e.subjectCode && e.subjectCode.toUpperCase() !== e.subject.toUpperCase().replace(/\s+/g, '') && (
+                          <span className="bg-slate-100 text-slate-500 font-mono text-[8px] px-1 py-0.5 rounded uppercase tracking-wider font-semibold">{e.subjectCode}</span>
+                        )}
+                      </div>
+                      <div className="font-bold text-slate-850 text-sm tracking-tight leading-snug group-hover:text-primary transition-colors truncate" title={e.subject}>{e.subject}</div>
+                    </div>
+                    
+                    <div className="mt-2 space-y-1">
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1.5 font-medium">
+                        <span className="text-slate-400 text-xs leading-none">⏱️</span>
+                        <span className="truncate">{e.time || 'N/A'}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1.5 font-medium">
+                        <span className="text-slate-400 text-xs leading-none">🧑‍🏫</span>
+                        <span className="truncate" title={e.proctor}>{e.proctor}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
@@ -984,22 +1062,43 @@ export const Exams = () => {
 // --- Admission Page ---
 export const Admission = () => {
   const [admissions, setAdmissions] = useState([]);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [classesList, setClassesList] = useState([]);
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    const fetchAdmissions = async () => {
+    const fetchData = async () => {
       try {
-        const res = await apiClient.get('/academics/students');
-        setAdmissions(res.data);
+        const [studRes, clsRes] = await Promise.all([
+          apiClient.get('/academics/students'),
+          apiClient.get('/academics/classes')
+        ]);
+        setAdmissions(Array.isArray(studRes.data) ? studRes.data : []);
+        setClassesList(Array.isArray(clsRes.data) ? clsRes.data : []);
       } catch (err) {
         console.error(err);
       }
     };
-    fetchAdmissions();
+    fetchData();
   }, []);
 
   const filteredAdmissions = admissions.filter(a => {
+    if (search) {
+      const q = search.toLowerCase();
+      const nameMatch = (a.name || '').toLowerCase().includes(q);
+      const idMatch = (a.studentId || '').toLowerCase().includes(q);
+      if (!nameMatch && !idMatch) return false;
+    }
+    if (selectedClass) {
+      const classStr = `${a.class || ''}`.toLowerCase();
+      const selStr = selectedClass.toLowerCase();
+      if (!classStr.includes(selStr)) return false;
+    }
+    if (selectedStatus && (a.status || '').toLowerCase() !== selectedStatus.toLowerCase()) return false;
+
     if (dateFrom) {
       const from = new Date(dateFrom);
       from.setHours(0, 0, 0, 0);
@@ -1017,9 +1116,49 @@ export const Admission = () => {
     <div>
       <Topbar title="Admission Registry" subtitle="Manage incoming application cycles." />
       <div className="card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 mb-4 bg-gray-50 p-2.5 border border-gray-100 rounded-xl">
-          <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '135px' }} />
-          <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '135px' }} />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 bg-gray-50 p-2.5 border border-gray-100 rounded-xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search name/ID..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl"
+              style={{ width: '160px' }}
+            />
+            <select
+              value={selectedClass}
+              onChange={e => setSelectedClass(e.target.value)}
+              className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl"
+            >
+              <option value="">All Classes</option>
+              {classesList.map(c => (
+                <option key={c.id} value={`Grade ${c.grade}`}>Grade {c.grade} - {c.section}</option>
+              ))}
+            </select>
+            <select
+              value={selectedStatus}
+              onChange={e => setSelectedStatus(e.target.value)}
+              className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl"
+            >
+              <option value="">All Statuses</option>
+              <option value="Active">Active</option>
+              <option value="Pending">Pending</option>
+              <option value="Enrolled">Enrolled</option>
+            </select>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '135px' }} />
+            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '135px' }} />
+            {(dateFrom || dateTo || search || selectedClass || selectedStatus) && (
+              <button
+                onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setSelectedClass(''); setSelectedStatus(''); }}
+                className="text-xs text-red-500 hover:text-red-700 font-medium ml-1"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
         <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
           <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>

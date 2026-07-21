@@ -152,7 +152,10 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseStaticFiles();
+
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 
 // Database Startup — Schema creation and minimal bootstrap only
 using (var scope = app.Services.CreateScope())
@@ -162,6 +165,16 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<EduVaultDbContext>();
         var authService = services.GetRequiredService<IAuthService>();
+
+        // Apply database migrations programmatically via EF Core
+        try
+        {
+            await context.Database.MigrateAsync();
+        }
+        catch (Exception migEx)
+        {
+            Console.WriteLine($"Migration note: {migEx.Message}");
+        }
 
         // ─── Seed Super Admin (required for platform operation) ────────────────
         if (!context.Users.Any(u => u.Role == "superadmin"))
@@ -183,14 +196,34 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine($"Seeded Super Admin: {seedEmail} / [HIDDEN]");
         }
 
-        // Apply database migrations programmatically via EF Core
-        try
+        // ─── Seed or Update Standard Platform Plan ────────────────
+        var standardPlan = context.PlatformPlans.FirstOrDefault(p => p.PlanName.Contains("Standard"));
+        if (standardPlan == null)
         {
-            await context.Database.MigrateAsync();
+            standardPlan = new EduVault.Core.Entities.PlatformPlan
+            {
+                Id = Guid.NewGuid(),
+                TierLabel = "TIER 1",
+                PlanName = "Standard Plan",
+                ImplementationCost = 0m,
+                StudentCapacity = "Scale on Demand",
+                StorageLimit = "Varying / DB Cost",
+                MonthlyPrice = "Per-User Pricing",
+                IsTopRevenue = false
+            };
+            context.PlatformPlans.Add(standardPlan);
+            context.SaveChanges();
+            Console.WriteLine("Seeded Platform Plan: Standard Plan");
         }
-        catch (Exception migEx)
+        else
         {
-            Console.WriteLine($"Migration note: {migEx.Message}");
+            standardPlan.ImplementationCost = 0m;
+            standardPlan.StudentCapacity = "Scale on Demand";
+            standardPlan.StorageLimit = "Varying / DB Cost";
+            standardPlan.MonthlyPrice = "Per-User Pricing";
+            context.PlatformPlans.Update(standardPlan);
+            context.SaveChanges();
+            Console.WriteLine("Updated Platform Plan: Standard Plan details");
         }
 
         Console.WriteLine("EduVault startup complete. All real data must be entered via the admin portal.");
@@ -202,4 +235,3 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
-

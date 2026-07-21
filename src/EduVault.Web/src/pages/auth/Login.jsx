@@ -5,7 +5,7 @@ import { apiClient } from '../../api/apiClient';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user, token } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -23,6 +23,15 @@ const Login = () => {
     teacher: '/teacher/dashboard',
     student: '/student/dashboard',
   };
+
+  useEffect(() => {
+    if (token && user?.role) {
+      const normalizedRole = user.role.toLowerCase();
+      if (roleRoutes[normalizedRole]) {
+        navigate(roleRoutes[normalizedRole], { replace: true });
+      }
+    }
+  }, [token, user, navigate]);
 
   const applyTheme = (color) => {
     const root = document.documentElement;
@@ -168,7 +177,8 @@ const Login = () => {
     const res = await login(email, password);
     setLoading(false);
     if (res.success) {
-      navigate(roleRoutes[res.role]);
+      const normalizedRole = res.role?.toLowerCase();
+      navigate(roleRoutes[normalizedRole] || '/');
     } else {
       setError(res.error || 'Invalid email or password');
     }

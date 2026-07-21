@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
+import Loader from '../../components/common/Loader';
 import { 
   User, 
   Mail, 
@@ -91,14 +92,7 @@ const SchoolAdminProfile = () => {
   };
 
   if (loading) {
-    return (
-      <div>
-        <Topbar title="My Profile" />
-        <div className="card text-center py-12 text-gray-400 text-sm">
-          Loading profile details...
-        </div>
-      </div>
-    );
+    return <Loader message="Retrieving administrator profile" />;
   }
 
   return (

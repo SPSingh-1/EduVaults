@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
+import Loader from '../../components/common/Loader';
 
 const statusColor = {
   OPEN: 'badge-warning',
@@ -39,10 +40,17 @@ const DateFilterInput = ({ label, value, onChange, className = '', style = {} })
   );
 };
 
+const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const Support = () => {
   const [tickets, setTickets] = useState([]);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [categories, setCategories] = useState([]);
   const [events, setEvents] = useState([]);
   const [stats, setStats] = useState({
@@ -137,6 +145,14 @@ const Support = () => {
 
   const filteredTickets = tickets.filter((t) => {
     if (selectedSchool && t.schoolName !== selectedSchool) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const titleMatch = (t.title || '').toLowerCase().includes(q);
+      const numMatch = (t.ticketNumber || t.id || '').toLowerCase().includes(q);
+      const detailsMatch = (t.details || '').toLowerCase().includes(q);
+      if (!titleMatch && !numMatch && !detailsMatch) return false;
+    }
+    if (statusFilter && (t.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
     
     if (dateFrom) {
       const from = new Date(dateFrom);
@@ -157,12 +173,7 @@ const Support = () => {
   const totalCount = filteredTickets.length;
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-        <p className="text-sm text-gray-500">Loading Support & Help Desk...</p>
-      </div>
-    );
+    return <Loader message="Connecting to Support & Help Desk" />;
   }
 
   return (
@@ -196,24 +207,42 @@ const Support = () => {
         <div className="card lg:col-span-2">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <h3 className="font-display font-semibold text-primary">Active Support Tickets</h3>
-            <div className="flex items-center gap-3 flex-wrap">
-              <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary" style={{ width: '130px' }} />
-              <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary" style={{ width: '130px' }} />
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 font-medium">Filter by School:</span>
-                <select
-                  value={selectedSchool}
-                  onChange={(e) => setSelectedSchool(e.target.value)}
-                  className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white outline-none text-primary font-medium focus:border-primary min-w-[160px]"
-                >
-                  <option value="">All Schools</option>
-                  {uniqueSchools.map((school) => (
-                    <option key={school} value={school}>
-                      {school}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="text"
+                placeholder="Search ticket..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl"
+                style={{ width: '130px' }}
+              />
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl"
+              >
+                <option value="">All Statuses</option>
+                <option value="OPEN">Open</option>
+                <option value="IN PROGRESS">In Progress</option>
+                <option value="RESOLVED">Resolved</option>
+              </select>
+              <select
+                value={selectedSchool}
+                onChange={(e) => setSelectedSchool(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white outline-none text-primary font-medium focus:border-primary min-w-[130px]"
+              >
+                <option value="">All Schools</option>
+                {uniqueSchools.map((school) => (
+                  <option key={school} value={school}>
+                    {school}
+                  </option>
+                ))}
+              </select>
+              <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary" style={{ width: '120px' }} />
+              <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary" style={{ width: '120px' }} />
+              {(dateFrom || dateTo || search || statusFilter || selectedSchool) && (
+                <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setStatusFilter(''); setSelectedSchool(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
+              )}
             </div>
           </div>
 

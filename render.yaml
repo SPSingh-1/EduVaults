@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: eduvault-web
+    env: static
+    buildCommand: cd src/EduVault.Web && npm install && npm run build
+    staticPublishPath: ./src/EduVault.Web/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

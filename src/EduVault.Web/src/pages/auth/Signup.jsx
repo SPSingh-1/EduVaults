@@ -148,7 +148,7 @@ const Signup = () => {
               <div className="space-y-4">
                 <h3 className="font-semibold text-primary flex items-center gap-2">💳 Choose Subscription Plan</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  {[['Standard','$499/mo','Up to 500 students, All core features'],['Enterprise','Custom','Unlimited students, Premium features + API']].map(([p,price,desc])=>(
+                  {[['Standard','Per-User Base','$0.85-1.20/Student/mo, $1.20-1.80/Teacher/mo, $2.40/Admin/mo + DB Cost'],['Enterprise','Custom','Unlimited students, Premium features + API']].map(([p,price,desc])=>(
                     <div key={p} className="border-2 border-primary/20 rounded-xl p-4 cursor-pointer hover:border-primary bg-primary/5 transition-all">
                       <div className="font-display font-bold text-primary text-lg">{p}</div>
                       <div className="text-accent font-bold">{price}</div>

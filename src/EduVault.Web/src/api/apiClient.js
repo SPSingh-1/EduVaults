@@ -31,7 +31,7 @@ expressClient.interceptors.request.use(injectToken, (error) => Promise.reject(er
 
 // Global response error handler
 const handleResponseError = (error) => {
-  if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+  if (error.response && error.response.status === 401) {
     // Clear credentials and redirect to login if session expires
     localStorage.removeItem('eduvault_token');
     localStorage.removeItem('eduvault_user');

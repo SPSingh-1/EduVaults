@@ -43,17 +43,28 @@ const CountUp = ({ to, duration = 1500, suffix = '', decimals = 0, prefix = '' }
   );
 };
 
-const FeatureCard = ({ icon, title, desc }) => (
-  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all">
-    <div className="text-3xl mb-3">{icon}</div>
-    <h3 className="font-display font-semibold text-primary text-sm mb-1">{title}</h3>
-    <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
+const FeatureCard = ({ icon, title, desc, onClick }) => (
+  <div onClick={onClick} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer transform hover:-translate-y-1 text-left flex flex-col justify-between min-h-[170px]">
+    <div>
+      <div className="text-3xl mb-3">{icon}</div>
+      <h3 className="font-display font-semibold text-primary text-sm mb-1">{title}</h3>
+      <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
+    </div>
+    <div className="text-[10px] font-bold text-accent mt-3 flex items-center gap-1">
+      Learn More <span>→</span>
+    </div>
   </div>
 );
 
 const Landing = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ totalSchools: 12, totalStudents: 1500 });
+  const [stats, setStats] = useState({ 
+    totalSchools: 0, 
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalRevenue: 0 
+  });
+  const [selectedFeature, setSelectedFeature] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(''); // 'Standard', 'Yearly', 'Enterprise', 'CustomDev'
   const [form, setForm] = useState({
@@ -92,8 +103,8 @@ const Landing = () => {
   };
 
   const [contacts, setContacts] = useState({
-    contactEmail: 'support@eduvault.com',
-    contactPhone: '+91 99999 88888',
+    contactEmail: 'spsrajjput@gmail.com',
+    contactPhone: '+91 9887146010',
     contactAddress: 'EduVault Systems HQ, 12th Floor, Tech Tower, Sector 62, Noida, NCR, India',
     contactHours: 'Monday - Saturday: 9:00 AM - 6:00 PM IST'
   });
@@ -104,8 +115,10 @@ const Landing = () => {
         const res = await apiClient.get('/auth/public-stats');
         if (res.data) {
           setStats({
-            totalSchools: res.data.totalSchools || 12,
-            totalStudents: res.data.totalStudents || 1500
+            totalSchools: res.data.totalSchools ?? 0,
+            totalStudents: res.data.totalStudents ?? 0,
+            totalTeachers: res.data.totalTeachers ?? 0,
+            totalRevenue: res.data.totalRevenue ?? 0
           });
         }
       } catch (err) {
@@ -118,8 +131,8 @@ const Landing = () => {
         const res = await apiClient.get('/auth/settings');
         if (res.data) {
           setContacts({
-            contactEmail: res.data.contactEmail || 'support@eduvault.com',
-            contactPhone: res.data.contactPhone || '+91 99999 88888',
+            contactEmail: res.data.contactEmail || 'spsrajjput@gmail.com',
+            contactPhone: res.data.contactPhone || '+91 9887146010',
             contactAddress: res.data.contactAddress || 'EduVault Systems HQ, 12th Floor, Tech Tower, Sector 62, Noida, NCR, India',
             contactHours: res.data.contactHours || 'Monday - Saturday: 9:00 AM - 6:00 PM IST'
           });
@@ -276,7 +289,7 @@ const Landing = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-primary to-blue-900 text-white">
       {/* Navbar */}
       <nav className="flex items-center justify-between px-4 sm:px-8 py-5 border-b border-white/10">
-        <EduFlowLogo size={42} />
+        <EduFlowLogo size={42} alwaysShowDefaultText={true} />
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-blue-200">
           <span className="hover:text-white cursor-pointer" onClick={() => scrollToSection('features')}>Features</span>
           <span className="hover:text-white cursor-pointer" onClick={() => scrollToSection('how-it-works')}>How It Works</span>
@@ -321,10 +334,10 @@ const Landing = () => {
             <div className="text-xs text-blue-300 mb-2">Today's Overview</div>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { k: 'Attendance', comp: <CountUp to={94.2} decimals={1} suffix="%" /> },
-                { k: 'Students', comp: <CountUp to={stats.totalStudents} /> },
-                { k: 'Pending Dues', comp: <CountUp to={12400} prefix="Rs." /> },
-                { k: 'Notices Sent', comp: <CountUp to={150} /> }
+                { k: 'Total Revenue', comp: <CountUp to={stats.totalRevenue} prefix="Rs. " /> },
+                { k: 'Active Schools', comp: <CountUp to={stats.totalSchools} /> },
+                { k: 'Total Teachers', comp: <CountUp to={stats.totalTeachers} /> },
+                { k: 'Total Students', comp: <CountUp to={stats.totalStudents} /> }
               ].map(({ k, comp }) => (
                 <div key={k} className="bg-white/10 rounded-lg p-3">
                   <div className="text-xs text-blue-300">{k}</div>
@@ -344,15 +357,23 @@ const Landing = () => {
           <p className="text-blue-200 text-center text-xs sm:text-sm mb-10">Powerful features designed for admins, teachers, and parents</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              ['🎓','Multi-School System','Manage multiple campuses from one super admin dashboard'],
-              ['👨‍🎓','Student Lifecycle','From admission to graduation, track every student milestone'],
-              ['📋','Simple Attendance','Mark attendance digitally, get instant alerts for absences'],
-              ['📊','Exam & Report Cards','Schedule exams, enter marks, and auto-generate report cards'],
-              ['💰','Fee Management','Configure fee structures, track payments, send bulk reminders'],
-              ['📢','Announcements','Broadcast notices to students, teachers, and parents instantly'],
-              ['📈','Analytics','Deep insights on performance, attendance, and financials'],
-              ['🔒','Secure & Reliable','Role-based access, audit logs, daily backups, 99.9% uptime'],
-            ].map(([i,t,d])=><FeatureCard key={t} icon={i} title={t} desc={d} />)}
+              ['🎓','Multi-School System','Manage multiple campuses from one super admin dashboard', 'Manage multiple school branches or campuses from a single centralized super-admin dashboard. Easily onboard new schools, configure individual settings, track plan configurations, and monitor system events.', '/multi_school_system_mockup.png'],
+              ['👨‍🎓','Student Lifecycle','From admission to graduation, track every student milestone', 'Manage everything from student admissions (via safe bulk CSV upload) to section management, student promotions, and active class configurations. Contains actions to View, Edit, and Delete student records.', '/admin_student_grid.png'],
+              ['📋','Simple Attendance','Mark attendance digitally, get instant alerts for absences', 'Mark student daily attendance digitally in under 30 seconds. Includes instant automated WhatsApp/SMS notifications sent to parents to notify them of Present, Absent, or Late status.', '/simple_attendance_mockup.png'],
+              ['📊','Exam & Report Cards','Schedule exams, enter marks, and auto-generate report cards', 'Configure exam types, schedule tests, input student grades with range validation, and auto-generate beautifully formatted academic marksheets and report cards for students to view or download.', '/teacher_marks_entry.png'],
+              ['💰','Fee Management','Configure fee structures, track payments, send bulk reminders', 'Create customizable fee structures (tuition fee, transport fee, lab fee), generate recurring invoices, track school-wide collection rates, and enable parents to pay instantly online using 1-click Razorpay integration.', '/fee_payment_mockup.png'],
+              ['📢','Announcements','Broadcast notices to students, teachers, and parents instantly', 'Easily draft notice announcements on the notice board or broadcast them directly to teachers, students, and parent phone numbers via SMS or WhatsApp queue services instantly.', '/announcements_mockup.png'],
+              ['📈','Analytics','Deep insights on performance, attendance, and financials', 'Get real-time insights and analytics on school collections, class-wise attendance rates, overall student statistics, and support ticket activities.', '/school_admin_dashboard_overview.png'],
+              ['🔒','Secure & Reliable','Role-based access, audit logs, daily backups, 99.9% uptime', 'Features strict role-based access controls (Super Admin, School Admin, Teacher, Student/Parent), detailed backend audit log trails, input validations, CSRF protections, and automatic daily database backups.', '/security_roles_mockup.png'],
+            ].map(([i,t,d,ld,img])=>(
+              <FeatureCard 
+                key={t} 
+                icon={i} 
+                title={t} 
+                desc={d} 
+                onClick={() => setSelectedFeature({ icon: i, title: t, longDesc: ld, image: img })} 
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -383,10 +404,17 @@ const Landing = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
             <div className="bg-white/10 rounded-2xl p-7 border border-white/20">
               <div className="text-xs font-bold text-accent uppercase tracking-wider mb-2">Standard Plan</div>
-              <div className="font-display text-4xl font-bold text-white mb-1">$49 <span className="text-lg text-blue-300">/month</span></div>
-              <p className="text-blue-200 text-sm mb-6">Everything a school needs to manage up to 500 students</p>
+              <div className="font-display text-4xl font-bold text-white mb-1">Per-User <span className="text-lg text-blue-300">Base</span></div>
+              <p className="text-blue-200 text-sm mb-6">Scale as you grow. Pay only for active students, teachers, and admins.</p>
               <ul className="space-y-2 text-sm text-blue-200 mb-7">
-                {['Up to 500 Students','Attendance management','Automated Report Cards','Parent & Staff Support','Full Fee Management'].map(f=>(
+                {[
+                  'Per Student: $0.85 – $1.20/mo (equiv. ₹70 – ₹100/mo, volume-based)',
+                  'Per Teacher: $1.20 – $1.80/mo (equiv. ₹100 – ₹150/mo)',
+                  'School Admin: $2.40/mo (equiv. ₹200/mo)',
+                  'Flexible Database Hosting: Varies by data size',
+                  'Attendance & Full Fee Management',
+                  'Automated Report Cards & Portals',
+                ].map(f=>(
                   <li key={f} className="flex items-center gap-2"><span className="text-green-400">✓</span>{f}</li>
                 ))}
               </ul>
@@ -526,7 +554,7 @@ const Landing = () => {
       {/* Footer */}
       <footer className="border-t border-white/10 px-4 sm:px-8 py-8">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center">
-          <EduFlowLogo size={32} />
+          <EduFlowLogo size={32} alwaysShowDefaultText={true} />
           <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs text-blue-300">
             <span className="hover:text-white cursor-pointer">Privacy Policy</span>
             <span className="hover:text-white cursor-pointer">Terms of Service</span>
@@ -609,6 +637,38 @@ const Landing = () => {
                   </button>
                 </form>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feature Details Modal */}
+      {selectedFeature && (
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border border-white/15 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-primary px-6 py-4 border-b border-white/10 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{selectedFeature.icon}</span>
+                <h3 className="font-display font-bold text-white text-base sm:text-lg">{selectedFeature.title}</h3>
+              </div>
+              <button onClick={() => setSelectedFeature(null)} className="text-white hover:text-red-400 text-lg font-bold">✕</button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-4 flex-1 text-left">
+              <p className="text-blue-200 text-sm leading-relaxed">{selectedFeature.longDesc}</p>
+              
+              <div className="rounded-xl overflow-hidden border border-white/10 bg-slate-950">
+                <div className="bg-slate-900/50 px-4 py-2 border-b border-white/10 text-[10px] text-blue-300 font-semibold tracking-wider uppercase">
+                  Interface Screenshot
+                </div>
+                <div className="p-2 flex justify-center bg-slate-950">
+                  <img src={selectedFeature.image} alt={selectedFeature.title} className="max-w-full h-auto rounded-lg shadow-md border border-white/5 object-contain max-h-[300px]" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-slate-950/40 px-6 py-3.5 border-t border-white/10 flex justify-end">
+              <button onClick={() => setSelectedFeature(null)} className="bg-accent hover:bg-accent-light text-white text-xs font-semibold px-5 py-2 rounded-lg transition-all">
+                Close Details
+              </button>
             </div>
           </div>
         </div>

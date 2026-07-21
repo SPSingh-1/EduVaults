@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../api/apiClient';
+import Loader from '../../components/common/Loader';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
   Users, 
@@ -221,6 +222,10 @@ const SchoolAdminDashboard = () => {
     { month: 'May', admissions: stats?.totalStudents ? Math.round(stats.totalStudents * 0.7) : 28 },
     { month: 'Jun', admissions: stats?.totalStudents ?? 35 },
   ];
+
+  if (loading) {
+    return <Loader message="Assembling school statistics & overview" />;
+  }
 
   return(
     <div className="space-y-6">
