@@ -673,7 +673,12 @@ const Setup = () => {
 
   const normalizePromoClass = (cls) => {
     if (!cls) return '';
-    return cls.toString().toLowerCase().replace(/\s+/g, '').replace(/^class/, '');
+    return cls.toString().toLowerCase().replace(/\s+/g, '').replace(/^(class|grade)/, '');
+  };
+
+  const normalizePromoSection = (sec) => {
+    if (!sec) return '';
+    return sec.toString().toLowerCase().replace(/\s+/g, '').replace(/^section/, '');
   };
 
   const handleSaveClassSubject = async (e) => {
@@ -2284,11 +2289,17 @@ const Setup = () => {
 
         {activeTab === 'promotion-setup' && (() => {
           const promoUniqueSections = [...new Set(promoClassSections.map(c => c.section))].filter(Boolean).sort();
+          const promoUniqueGrades = [...new Set(promoClassSections.map(c => c.grade))].filter(Boolean).sort((a, b) => {
+            const na = parseInt(a, 10);
+            const nb = parseInt(b, 10);
+            if (!isNaN(na) && !isNaN(nb)) return na - nb;
+            return a.localeCompare(b);
+          });
           const filteredPromo = promoStudents.filter(s => {
             const nameStr = s.name || '';
             const matchesName = !promoSearch || nameStr.toLowerCase().includes(promoSearch.toLowerCase());
             const matchesClass = !promoSelectedClass || normalizePromoClass(s.class) === normalizePromoClass(promoSelectedClass);
-            const matchesSection = !promoSelectedSection || s.section === promoSelectedSection;
+            const matchesSection = !promoSelectedSection || normalizePromoSection(s.section) === normalizePromoSection(promoSelectedSection);
             const statusStr = s.status || '';
             const matchesStatus = !promoSelectedStatus || statusStr.toUpperCase() === promoSelectedStatus.toUpperCase();
 
@@ -2329,8 +2340,8 @@ const Setup = () => {
                 <div className="grid grid-cols-3 gap-2 shrink-0 w-full xl:w-auto">
                   <select className="input w-full text-xs sm:text-sm" value={promoSelectedClass} onChange={e => setPromoSelectedClass(e.target.value)}>
                     <option value="">Class All</option>
-                    {promoClasses.map(c => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
+                    {promoUniqueGrades.map(grade => (
+                      <option key={grade} value={grade}>Class {grade}</option>
                     ))}
                   </select>
 

@@ -200,6 +200,9 @@ export const AuthProvider = ({ children }) => {
       return { success: true, role: userData.role };
     } catch (error) {
       console.error('Login error:', error);
+      if (error.response && error.response.status === 429) {
+        return { success: false, error: 'Too many requests. Please wait a moment before trying again.' };
+      }
       const errorMsg = error.response?.data?.error || 'Invalid credentials. Please try again.';
       return { success: false, error: errorMsg };
     }

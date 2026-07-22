@@ -471,17 +471,28 @@ const Students = () => {
   // Helper to normalize class names for comparison (e.g. "Class 1" or "1" => "1")
   const normalizeClass = (cls) => {
     if (!cls) return '';
-    return cls.toString().toLowerCase().replace(/\s+/g, '').replace(/^class/, '');
+    return cls.toString().toLowerCase().replace(/\s+/g, '').replace(/^(class|grade)/, '');
+  };
+
+  const normalizeSection = (sec) => {
+    if (!sec) return '';
+    return sec.toString().toLowerCase().replace(/\s+/g, '').replace(/^section/, '');
   };
 
   // Filter students based on all 4 filter criteria (Name, Class, Section, Status)
   const uniqueSections = [...new Set(classSections.map(c => c.section))].filter(Boolean).sort();
+  const uniqueGrades = [...new Set(classSections.map(c => c.grade))].filter(Boolean).sort((a, b) => {
+    const na = parseInt(a, 10);
+    const nb = parseInt(b, 10);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a.localeCompare(b);
+  });
 
   const filtered = students.filter(s => {
     const nameStr = s.name || '';
     const matchesName = !search || nameStr.toLowerCase().includes(search.toLowerCase());
     const matchesClass = !selectedClass || normalizeClass(s.class) === normalizeClass(selectedClass);
-    const matchesSection = !selectedSection || s.section === selectedSection;
+    const matchesSection = !selectedSection || normalizeSection(s.section) === normalizeSection(selectedSection);
     const statusStr = s.status || '';
     const matchesStatus = !selectedStatus || statusStr.toUpperCase() === selectedStatus.toUpperCase();
     
@@ -527,8 +538,8 @@ const Students = () => {
             {/* Class Filter Dropdown */}
             <select className="input w-full text-xs sm:text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
               <option value="">Class All</option>
-              {classes.map(c => (
-                <option key={c.id} value={c.name}>{c.name}</option>
+              {uniqueGrades.map(grade => (
+                <option key={grade} value={grade}>Class {grade}</option>
               ))}
             </select>
 

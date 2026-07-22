@@ -182,6 +182,7 @@ namespace EduVault.Api.Controllers
 
         [HttpGet("school-branding")]
         [AllowAnonymous]
+        [DisableRateLimiting]
         public async Task<IActionResult> GetSchoolBranding([FromQuery] string domain)
         {
             if (string.IsNullOrWhiteSpace(domain))
@@ -206,6 +207,7 @@ namespace EduVault.Api.Controllers
 
         [HttpGet("settings")]
         [AllowAnonymous]
+        [DisableRateLimiting]
         public async Task<IActionResult> GetPublicSettings()
         {
             const string CacheKey = "public_settings";

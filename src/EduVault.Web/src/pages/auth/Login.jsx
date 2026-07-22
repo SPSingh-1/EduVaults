@@ -11,6 +11,7 @@ const Login = () => {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [brandingTimeoutId, setBrandingTimeoutId] = useState(null);
 
   const [logo, setLogo] = useState('/logo.jpeg');
   const [orgName, setOrgName] = useState('EduVault');
@@ -137,8 +138,11 @@ const Login = () => {
     fetchGlobalBranding();
   }, []);
 
-  const handleEmailChange = async (val) => {
+  const handleEmailChange = (val) => {
     setEmail(val);
+    if (brandingTimeoutId) {
+      clearTimeout(brandingTimeoutId);
+    }
     if (!val) {
       resetToGlobal();
       return;
@@ -152,19 +156,22 @@ const Login = () => {
         return;
       }
       
-      try {
-        const res = await apiClient.get(`/auth/school-branding?domain=${domain}`);
-        if (res.data) {
-          setLogo(res.data.logoUrl || '/logo.jpeg');
-          setOrgName(res.data.name || 'EduVault');
-          if (res.data.themeColor) {
-            setThemeColor(res.data.themeColor);
-            applyTheme(res.data.themeColor);
+      const timeoutId = setTimeout(async () => {
+        try {
+          const res = await apiClient.get(`/auth/school-branding?domain=${domain}`);
+          if (res.data) {
+            setLogo(res.data.logoUrl || '/logo.jpeg');
+            setOrgName(res.data.name || 'EduVault');
+            if (res.data.themeColor) {
+              setThemeColor(res.data.themeColor);
+              applyTheme(res.data.themeColor);
+            }
           }
+        } catch (err) {
+          resetToGlobal();
         }
-      } catch (err) {
-        resetToGlobal();
-      }
+      }, 400);
+      setBrandingTimeoutId(timeoutId);
     } else {
       resetToGlobal();
     }

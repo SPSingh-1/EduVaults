@@ -1092,11 +1092,7 @@ export const Admission = () => {
       const idMatch = (a.studentId || '').toLowerCase().includes(q);
       if (!nameMatch && !idMatch) return false;
     }
-    if (selectedClass) {
-      const classStr = `${a.class || ''}`.toLowerCase();
-      const selStr = selectedClass.toLowerCase();
-      if (!classStr.includes(selStr)) return false;
-    }
+    if (selectedClass && a.classId !== selectedClass) return false;
     if (selectedStatus && (a.status || '').toLowerCase() !== selectedStatus.toLowerCase()) return false;
 
     if (dateFrom) {
@@ -1133,7 +1129,7 @@ export const Admission = () => {
             >
               <option value="">All Classes</option>
               {classesList.map(c => (
-                <option key={c.id} value={`Grade ${c.grade}`}>Grade {c.grade} - {c.section}</option>
+                <option key={c.id} value={c.id}>Class {c.grade} - {c.section}</option>
               ))}
             </select>
             <select
