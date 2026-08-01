@@ -17,7 +17,7 @@ const Notification = require('./models/Notification');
 const Remark = require('./models/Remark');
 const ChatMessage = require('./models/ChatMessage');
 const DocumentMetadata = require('./models/DocumentMetadata');
-const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const Homework = require('./models/Homework');
 const TeacherAttendance = require('./models/TeacherAttendance');
@@ -30,6 +30,17 @@ app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+
+// Apply global rate limiting to protect API endpoints
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // Limit each IP to 200 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+app.use('/api', apiLimiter);
 
 // Configure CORS securely
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5000,http://localhost:5265,http://localhost:3000').split(',');
