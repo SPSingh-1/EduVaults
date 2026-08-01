@@ -9,6 +9,21 @@ const Settings = () => {
   const [schools, setSchools] = useState([]);
   const [selectedScope, setSelectedScope] = useState('global'); // 'global' or schoolId
 
+  const safeUrl = (url) => {
+    if (!url || typeof url !== 'string') return '/logo.jpeg';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('data:image/')) {
+      return trimmed;
+    }
+    try {
+      const parsed = new URL(trimmed, window.location.origin);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return parsed.href;
+      }
+    } catch (e) {}
+    return '/logo.jpeg';
+  };
+
   // Global settings state
   const [globalSettings, setGlobalSettings] = useState(null);
   const [orgName, setOrgName] = useState('SuperAdmin Global');
@@ -527,7 +542,7 @@ const Settings = () => {
               <label className="block text-xs font-semibold text-gray-600 mb-2">Platform Logo</label>
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center bg-gray-50">
                 <img 
-                  src={encodeURI((logoUrl || '').replace(/javascript:/gi, ''))} 
+                  src={safeUrl(logoUrl)} 
                   alt="Platform Logo" 
                   className="w-20 h-20 rounded-full object-cover border border-gray-200 shadow-sm mb-3" 
                 />
@@ -593,7 +608,7 @@ const Settings = () => {
               <label className="block text-xs font-semibold text-gray-600 mb-2">School Logo</label>
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center bg-gray-50">
                 <img 
-                  src={encodeURI((schoolLogoUrl || '').replace(/javascript:/gi, ''))} 
+                  src={safeUrl(schoolLogoUrl)} 
                   alt="School Logo" 
                   className="w-20 h-20 rounded-full object-cover border border-gray-200 shadow-sm mb-3" 
                 />

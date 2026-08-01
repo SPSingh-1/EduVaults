@@ -15,6 +15,21 @@ const DateFilterInput = ({ label, value, onChange, className = '', style = {} })
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return val;
   };
+
+  const safeUrl = (url) => {
+    if (!url || typeof url !== 'string') return '/logo.jpeg';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('data:image/')) {
+      return trimmed;
+    }
+    try {
+      const parsed = new URL(trimmed, window.location.origin);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return parsed.href;
+      }
+    } catch (e) {}
+    return '/logo.jpeg';
+  };
   return (
     <div className="flex items-center gap-1.5 shrink-0">
       {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
@@ -586,7 +601,7 @@ const Schools = () => {
               {/* Logo / Branding Preview */}
               <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
                 <div className="w-14 h-14 rounded-2xl bg-white border border-gray-150 flex items-center justify-center overflow-hidden shrink-0">
-                  <img src={encodeURI(isEditing ? (editForm.logoUrl || '').replace(/javascript:/gi, '') : (selectedSchool.logoUrl || '').replace(/javascript:/gi, ''))} alt="Logo" className="w-full h-full object-cover" />
+                  <img src={safeUrl(isEditing ? editForm.logoUrl : selectedSchool.logoUrl)} alt="Logo" className="w-full h-full object-cover" />
                 </div>
                 <div className="min-w-0 flex-1 font-sans">
                   <div className="font-semibold text-primary truncate">
