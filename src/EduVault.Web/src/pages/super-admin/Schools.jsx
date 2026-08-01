@@ -586,7 +586,7 @@ const Schools = () => {
               {/* Logo / Branding Preview */}
               <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
                 <div className="w-14 h-14 rounded-2xl bg-white border border-gray-150 flex items-center justify-center overflow-hidden shrink-0">
-                  <img src={isEditing ? editForm.logoUrl : selectedSchool.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                  <img src={encodeURI(isEditing ? (editForm.logoUrl || '').replace(/javascript:/gi, '') : (selectedSchool.logoUrl || '').replace(/javascript:/gi, ''))} alt="Logo" className="w-full h-full object-cover" />
                 </div>
                 <div className="min-w-0 flex-1 font-sans">
                   <div className="font-semibold text-primary truncate">

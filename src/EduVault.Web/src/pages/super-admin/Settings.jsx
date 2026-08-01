@@ -527,7 +527,7 @@ const Settings = () => {
               <label className="block text-xs font-semibold text-gray-600 mb-2">Platform Logo</label>
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center bg-gray-50">
                 <img 
-                  src={logoUrl} 
+                  src={encodeURI((logoUrl || '').replace(/javascript:/gi, ''))} 
                   alt="Platform Logo" 
                   className="w-20 h-20 rounded-full object-cover border border-gray-200 shadow-sm mb-3" 
                 />
@@ -593,7 +593,7 @@ const Settings = () => {
               <label className="block text-xs font-semibold text-gray-600 mb-2">School Logo</label>
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center bg-gray-50">
                 <img 
-                  src={schoolLogoUrl} 
+                  src={encodeURI((schoolLogoUrl || '').replace(/javascript:/gi, ''))} 
                   alt="School Logo" 
                   className="w-20 h-20 rounded-full object-cover border border-gray-200 shadow-sm mb-3" 
                 />

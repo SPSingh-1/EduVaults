@@ -272,7 +272,7 @@ const Subscriptions = () => {
       studentCapacity: enterpriseConfig ? enterpriseConfig.studentCapacity : 'Unlimited',
       storageLimit: enterpriseConfig ? enterpriseConfig.storageLimit : '2 TB',
       monthlyPrice: enterpriseConfig ? enterpriseConfig.monthlyPrice : '$499/mo',
-      upgradeCharge: enterpriseConfig ? (parseFloat(enterpriseConfig.monthlyPrice.replace('$', '').replace('/mo', '')) || 499) : 499
+      upgradeCharge: enterpriseConfig ? (parseFloat(String(enterpriseConfig.monthlyPrice).replace(/\$/g, '').replace(/\/mo/gi, '').trim()) || 499) : 499
     });
 
     setShowApprovalModal(true);

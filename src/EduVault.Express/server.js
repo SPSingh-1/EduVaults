@@ -40,7 +40,7 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' }
 });
 
-app.use('/api', apiLimiter);
+app.use(apiLimiter);
 
 // Configure CORS securely
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5000,http://localhost:5265,http://localhost:3000').split(',');
@@ -659,14 +659,15 @@ app.get('/api/chat/history', authenticateToken, async (req, res) => {
     const { schoolId, id } = req.user;
     const { recipientId, isGroup } = req.query;
 
+    const cleanRecipientId = String(recipientId || '').trim();
     let filter = { schoolId };
     if (isGroup === 'true') {
-      filter.recipientId = recipientId;
+      filter.recipientId = cleanRecipientId;
       filter.isGroup = true;
     } else {
       filter.$or = [
-        { senderId: id, recipientId },
-        { senderId: recipientId, recipientId: id }
+        { senderId: id, recipientId: cleanRecipientId },
+        { senderId: cleanRecipientId, recipientId: id }
       ];
       filter.isGroup = false;
     }
@@ -782,7 +783,8 @@ app.get('/api/teacher-attendance', authenticateToken, async (req, res) => {
     if (!date) {
       return res.status(400).json({ error: 'Date query parameter is required' });
     }
-    const attendance = await TeacherAttendance.find({ schoolId, date });
+    const cleanDate = String(date || '').trim();
+    const attendance = await TeacherAttendance.find({ schoolId, date: cleanDate });
     res.json(attendance);
   } catch (error) {
     res.status(500).json({ error: error.message });
