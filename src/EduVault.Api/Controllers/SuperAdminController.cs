@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -77,7 +78,7 @@ namespace EduVault.Api.Controllers
                 }
             }
 
-            var schoolCode = $"SCH-{DateTime.UtcNow.Year}-{new Random().Next(1000, 9999)}";
+            var schoolCode = $"SCH-{DateTime.UtcNow.Year}-{RandomNumberGenerator.GetInt32(1000, 10000)}";
             var school = new School
             {
                 Name = request.SchoolName,

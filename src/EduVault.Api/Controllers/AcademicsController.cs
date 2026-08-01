@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
@@ -411,7 +412,7 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.Users.AddAsync(user);
 
             // Create Student Profile
-            var studentIdCode = $"STU-{DateTime.UtcNow.Year}-{new Random().Next(1000, 9999)}";
+            var studentIdCode = $"STU-{DateTime.UtcNow.Year}-{RandomNumberGenerator.GetInt32(1000, 10000)}";
             var student = new Student
             {
                 UserId = user.Id,
@@ -535,7 +536,7 @@ namespace EduVault.Api.Controllers
                 }
                 else
                 {
-                    dobSuffix = new Random().Next(10, 99).ToString();
+                    dobSuffix = RandomNumberGenerator.GetInt32(10, 100).ToString();
                 }
 
                 string baseEmail = $"{cleanName}{dobSuffix}@gmail.com";
@@ -579,7 +580,7 @@ namespace EduVault.Api.Controllers
                 var student = new Student
                 {
                     UserId = user.Id,
-                    StudentId = $"STU-{DateTime.UtcNow.Year}-{new Random().Next(1000, 9999)}",
+                    StudentId = $"STU-{DateTime.UtcNow.Year}-{RandomNumberGenerator.GetInt32(1000, 10000)}",
                     BloodGroup = sanitizedBlood,
                     GuardianName = sanitizedGName,
                     GuardianPhone = sanitizedGPhone,
@@ -932,7 +933,7 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.Users.AddAsync(user);
 
             // Create Teacher Profile
-            var employeeIdCode = $"T-{new Random().Next(1000, 9999)}";
+            var employeeIdCode = $"T-{RandomNumberGenerator.GetInt32(1000, 10000)}";
             var teacher = new Teacher
             {
                 UserId = user.Id,
@@ -1045,7 +1046,7 @@ namespace EduVault.Api.Controllers
                 };
                 await _context.Users.AddAsync(user);
 
-                var employeeIdCode = $"T-{new Random().Next(10000, 99999)}";
+                var employeeIdCode = $"T-{RandomNumberGenerator.GetInt32(10000, 100000)}";
                 var teacher = new Teacher
                 {
                     UserId = user.Id,
@@ -1133,7 +1134,7 @@ namespace EduVault.Api.Controllers
             var teacher = await _unitOfWork.Teachers.GetByIdAsync(id);
             if (teacher == null)
             {
-                teacher = new Teacher { UserId = id, EmployeeId = $"T-{new Random().Next(1000, 9999)}" };
+                teacher = new Teacher { UserId = id, EmployeeId = $"T-{RandomNumberGenerator.GetInt32(1000, 10000)}" };
                 await _unitOfWork.Teachers.AddAsync(teacher);
             }
             teacher.Department = request.Department;

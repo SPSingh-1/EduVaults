@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -108,7 +109,7 @@ namespace EduVault.Api.Controllers
             }
 
             // Create school
-            var schoolCode = $"SCH-{DateTime.UtcNow.Year}-{new Random().Next(1000, 9999)}";
+            var schoolCode = $"SCH-{DateTime.UtcNow.Year}-{RandomNumberGenerator.GetInt32(1000, 10000)}";
             var school = new School
             {
                 Name = request.SchoolName,
@@ -392,7 +393,7 @@ namespace EduVault.Api.Controllers
             var sanitizedPlanType = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(request.PlanType);
             var sanitizedPaymentId = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(request.RazorpayPaymentId);
 
-            var schoolCode = $"SCH-{DateTime.UtcNow.Year}-{new Random().Next(1000, 9999)}";
+            var schoolCode = $"SCH-{DateTime.UtcNow.Year}-{RandomNumberGenerator.GetInt32(1000, 10000)}";
             var school = new School
             {
                 Name = sanitizedSchoolName,
@@ -457,7 +458,7 @@ namespace EduVault.Api.Controllers
 
             var ticket = new SupportTicket
             {
-                TicketNumber = $"{(request.IsDemoRequest ? "DEM" : "INQ")}-{new Random().Next(1000, 9999)}",
+                TicketNumber = $"{(request.IsDemoRequest ? "DEM" : "INQ")}-{RandomNumberGenerator.GetInt32(1000, 10000)}",
                 Title = request.IsDemoRequest ? "Demo Request" : "Contact Inquiry",
                 SchoolName = "Landing Page Client",
                 Status = "OPEN",

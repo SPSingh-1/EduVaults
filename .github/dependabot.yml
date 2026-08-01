@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/src/EduVault.Web"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "npm"
+    directory: "/src/EduVault.Express"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "nuget"
+    directory: "/src/EduVault.Api"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10

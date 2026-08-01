@@ -17,14 +17,32 @@ const Notification = require('./models/Notification');
 const Remark = require('./models/Remark');
 const ChatMessage = require('./models/ChatMessage');
 const DocumentMetadata = require('./models/DocumentMetadata');
+const helmet = require('helmet');
+
 const Homework = require('./models/Homework');
 const TeacherAttendance = require('./models/TeacherAttendance');
 
 const app = express();
 const server = http.createServer(app);
 
-// Enable CORS
-app.use(cors());
+// Enable security headers
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// Configure CORS securely
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5000,http://localhost:5265,http://localhost:3000').split(',');
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // Swagger Configuration

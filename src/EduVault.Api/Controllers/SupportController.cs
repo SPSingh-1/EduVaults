@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -109,8 +110,7 @@ namespace EduVault.Api.Controllers
             var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
             var schoolName = school?.Name ?? "Unknown School";
 
-            var random = new Random();
-            var ticketNumber = $"TK-{random.Next(1000, 9999)}";
+            var ticketNumber = $"TK-{RandomNumberGenerator.GetInt32(1000, 10000)}";
 
             var ticket = new SupportTicket
             {
@@ -157,7 +157,7 @@ namespace EduVault.Api.Controllers
                 return NotFound(new { error = "User with this email not found." });
             }
 
-            const string tempPassword = "Temp123!";
+            var tempPassword = $"Tmp#{RandomNumberGenerator.GetInt32(100000, 999999)}!";
             user.PasswordHash = _authService.HashPassword(tempPassword);
             
             _unitOfWork.Users.Update(user);

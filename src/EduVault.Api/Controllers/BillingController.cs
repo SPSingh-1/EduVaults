@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Net.Http;
@@ -211,7 +212,7 @@ namespace EduVault.Api.Controllers
                     studentProfile = new Student
                     {
                         UserId = studentId,
-                        StudentId = $"STU-{DateTime.UtcNow.Year}-{new Random().Next(1000, 9999)}",
+                        StudentId = $"STU-{DateTime.UtcNow.Year}-{RandomNumberGenerator.GetInt32(1000, 10000)}",
                         Address = "Sample Address"
                     };
                     await _unitOfWork.Students.AddAsync(studentProfile);
