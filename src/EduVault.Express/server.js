@@ -18,6 +18,7 @@ const Remark = require('./models/Remark');
 const ChatMessage = require('./models/ChatMessage');
 const DocumentMetadata = require('./models/DocumentMetadata');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 
 const Homework = require('./models/Homework');
 const TeacherAttendance = require('./models/TeacherAttendance');

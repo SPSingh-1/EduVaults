@@ -2,10 +2,12 @@
   "name": "eduvault-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "EduVault Platform - Unified 3-Tier Multi-Service Runner",
+  "description": "EduVault Platform - Unified Multi-Service Runner & Express Production Entry",
   "scripts": {
-    "dev": "concurrently -n \"API,EXPRESS,WEB\" -c \"cyan,yellow,magenta\" \"dotnet run --project src/EduVault.Api/EduVault.Api.csproj\" \"npm run dev --prefix src/EduVault.Express\" \"npm run dev --prefix src/EduVault.Web\"",
-    "dev:local": "node dev.js",
+    "build": "cd src/EduVault.Express && npm install",
+    "start": "cd src/EduVault.Express && node server.js",
+    "dev": "node dev.js",
+    "dev:concurrent": "concurrently -n \"API,EXPRESS,WEB\" -c \"cyan,yellow,magenta\" \"dotnet run --project src/EduVault.Api/EduVault.Api.csproj\" \"npm run dev --prefix src/EduVault.Express\" \"npm run dev --prefix src/EduVault.Web\"",
     "dev:api": "dotnet run --project src/EduVault.Api/EduVault.Api.csproj",
     "dev:express": "npm run dev --prefix src/EduVault.Express",
     "dev:web": "npm run dev --prefix src/EduVault.Web"
