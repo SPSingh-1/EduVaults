@@ -5,7 +5,7 @@
   "description": "EduVault Platform - Unified 3-Tier Multi-Service Runner",
   "scripts": {
     "dev": "concurrently -n \"API,EXPRESS,WEB\" -c \"cyan,yellow,magenta\" \"dotnet run --project src/EduVault.Api/EduVault.Api.csproj\" \"npm run dev --prefix src/EduVault.Express\" \"npm run dev --prefix src/EduVault.Web\"",
-    "start": "node dev.js",
+    "dev:local": "node dev.js",
     "dev:api": "dotnet run --project src/EduVault.Api/EduVault.Api.csproj",
     "dev:express": "npm run dev --prefix src/EduVault.Express",
     "dev:web": "npm run dev --prefix src/EduVault.Web"
