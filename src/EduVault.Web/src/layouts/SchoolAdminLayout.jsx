@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar.jsx';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   LayoutDashboard, 
   UserPlus, 
@@ -11,30 +12,64 @@ import {
   BarChart3, 
   Megaphone, 
   HelpCircle,
-  Settings 
+  Settings,
+  DollarSign,
+  BookOpen
 } from 'lucide-react';
 
-const links = [
-  { icon: LayoutDashboard, label: 'Overview', path: '/school-admin/dashboard' },
-  { icon: UserPlus, label: 'Admission', path: '/school-admin/admission' },
-  { icon: Users, label: 'Students', path: '/school-admin/students' },
-  { icon: UserCheck, label: 'Teachers', path: '/school-admin/teachers' },
-  { icon: Building, label: 'Classes', path: '/school-admin/classes' },
-  { icon: Receipt, label: 'Fees', path: '/school-admin/fees' },
-  { icon: ClipboardList, label: 'Exams', path: '/school-admin/exams' },
-  { icon: BarChart3, label: 'Reports', path: '/school-admin/reports' },
-  { icon: Megaphone, label: 'Notices', path: '/school-admin/notices' },
-  { icon: HelpCircle, label: 'Support & Tickets', path: '/school-admin/tickets' },
-  { icon: Settings, label: 'Setup', path: '/school-admin/setup' },
-];
+const SchoolAdminLayout = () => {
+  const { user } = useAuth();
 
-const SchoolAdminLayout = () => (
-  <div className="flex">
-    <Sidebar links={links} role="schooladmin" />
-    <main className="main-content flex-1">
-      <Outlet />
-    </main>
-  </div>
-);
+  const baseLinks = [
+    { pageKey: 'schooladmin.dashboard', icon: LayoutDashboard, label: 'Overview', path: '/school-admin/dashboard' },
+    { pageKey: 'schooladmin.admission', icon: UserPlus, label: 'Admission', path: '/school-admin/admission' },
+    { pageKey: 'schooladmin.students', icon: Users, label: 'Students', path: '/school-admin/students' },
+    { pageKey: 'schooladmin.teachers', icon: UserCheck, label: 'Teachers', path: '/school-admin/teachers' },
+    { pageKey: 'schooladmin.classes', icon: Building, label: 'Classes', path: '/school-admin/classes' },
+    { pageKey: 'schooladmin.fees', icon: Receipt, label: 'Fees Overview', path: '/school-admin/fees' },
+    { pageKey: 'schooladmin.exams', icon: ClipboardList, label: 'Exams', path: '/school-admin/exams' },
+    { pageKey: 'schooladmin.reports', icon: BarChart3, label: 'Reports', path: '/school-admin/reports' },
+    { pageKey: 'schooladmin.notices', icon: Megaphone, label: 'Notices', path: '/school-admin/notices' },
+    { pageKey: 'schooladmin.tickets', icon: HelpCircle, label: 'Support & Tickets', path: '/school-admin/tickets' },
+    { pageKey: 'schooladmin.setup', icon: Settings, label: 'Setup', path: '/school-admin/setup' },
+  ];
+
+  // Conditional modules (granted by Super Admin)
+  if (user?.hasAccountModule) {
+    baseLinks.splice(4, 0, {
+      pageKey: 'schooladmin.account_managers',
+      icon: DollarSign,
+      label: 'Account Managers',
+      path: '/school-admin/account-managers'
+    });
+  }
+
+  if (user?.hasLibraryModule) {
+    baseLinks.splice(5, 0, {
+      pageKey: 'schooladmin.librarians',
+      icon: BookOpen,
+      label: 'Librarians',
+      path: '/school-admin/librarians'
+    });
+  }
+
+  // Filter links if user has RBAC permissions configured
+  const finalLinks = baseLinks.filter(link => {
+    if (user?.permissions && user.permissions.length > 0) {
+      const perm = user.permissions.find(p => p.pageKey === link.pageKey);
+      if (perm) return perm.canView;
+    }
+    return true;
+  });
+
+  return (
+    <div className="flex">
+      <Sidebar links={finalLinks} role="schooladmin" />
+      <main className="main-content flex-1">
+        <Outlet />
+      </main>
+    </div>
+  );
+};
 
 export default SchoolAdminLayout;

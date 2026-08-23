@@ -6,7 +6,24 @@ const TeacherAttendanceSchema = new mongoose.Schema({
   name: { type: String, required: true },
   employeeId: { type: String },
   date: { type: String, required: true }, // Format: YYYY-MM-DD
-  status: { type: String, enum: ['Present', 'Absent', 'On Leave', 'Late'], default: 'Present' },
+  status: { 
+    type: String, 
+    enum: ['Present', 'Absent', 'On Leave', 'Late', 'Single Punch', 'Half Day'], 
+    default: 'Present' 
+  },
+  punchInTime: { type: Date },
+  punchOutTime: { type: Date },
+  punchInLocation: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    address: { type: String }
+  },
+  punchOutLocation: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    address: { type: String }
+  },
+  workingHours: { type: Number, default: 0 },
   lateMinutes: { type: Number, default: 0 },
   remarks: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },

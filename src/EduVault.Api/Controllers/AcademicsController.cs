@@ -1196,13 +1196,20 @@ namespace EduVault.Api.Controllers
             var totalTeachers = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "teacher")).Count();
             var totalClasses = (await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId)).Count();
 
-            // Fetch pending fees
+            // Fetch pending fees & daily fee receipts
             var studentUsers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student");
             var studentIds = studentUsers.Select(u => u.Id).ToList();
             var invoices = await _unitOfWork.Invoices.GetAllAsync();
-            var pendingFees = invoices
-                .Where(i => studentIds.Contains(i.StudentId) && i.Status != "Paid")
+            var schoolInvoices = invoices.Where(i => studentIds.Contains(i.StudentId)).ToList();
+            var pendingFees = schoolInvoices
+                .Where(i => i.Status != "Paid")
                 .Sum(i => i.Amount);
+
+            var todayUtc = DateTime.UtcNow.Date;
+            var transactions = await _unitOfWork.Transactions.GetAllAsync();
+            var todayFeesCollected = transactions
+                .Where(t => t.TransactionDate.Date == todayUtc && t.Status == "success" && t.Invoice != null && studentIds.Contains(t.Invoice.StudentId))
+                .Sum(t => t.Amount);
 
             // Fetch recent admissions
             var recentAdmissions = studentUsers
@@ -1222,11 +1229,71 @@ namespace EduVault.Api.Controllers
             var pendingRequests = await _unitOfWork.UpgradeRequests.FindAsync(ur => ur.SchoolId == schoolId && ur.Status == "Pending");
             var pendingRequest = pendingRequests.FirstOrDefault();
 
+            // Calculate strictly today's student attendance
+            var todayLocal = DateTime.Today;
+            var schoolAttendances = (await _unitOfWork.Attendances.FindAsync(a => a.SchoolId == schoolId)).ToList();
+            var todayStudentsPresent = schoolAttendances.Count(a => a.Date.Date == todayLocal && (a.Status.Equals("Present", StringComparison.OrdinalIgnoreCase) || a.Status.Equals("Late", StringComparison.OrdinalIgnoreCase)));
+            var todayStudentsAbsent = schoolAttendances.Count(a => a.Date.Date == todayLocal && a.Status.Equals("Absent", StringComparison.OrdinalIgnoreCase));
+
+            // Calculate 7-Day Daily Attendance Trend
+            var dailyAttendanceTrend = new System.Collections.Generic.List<object>();
+            for (int i = 6; i >= 0; i--)
+            {
+                var d = todayLocal.AddDays(-i);
+                var dayRecords = schoolAttendances.Where(a => a.Date.Date == d).ToList();
+                var pCount = dayRecords.Count(a => a.Status.Equals("Present", StringComparison.OrdinalIgnoreCase) || a.Status.Equals("Late", StringComparison.OrdinalIgnoreCase));
+                var aCount = dayRecords.Count(a => a.Status.Equals("Absent", StringComparison.OrdinalIgnoreCase));
+                dailyAttendanceTrend.Add(new
+                {
+                    date = d.ToString("MMM dd"),
+                    day = d.ToString("ddd"),
+                    present = pCount,
+                    absent = aCount,
+                    total = dayRecords.Count
+                });
+            }
+
+            // Calculate 6-Month Real Enrollment Trend
+            var enrollmentTrend = new System.Collections.Generic.List<object>();
+            for (int i = 5; i >= 0; i--)
+            {
+                var targetMonth = todayLocal.AddMonths(-i);
+                var monthName = targetMonth.ToString("MMM");
+                var count = studentUsers.Count(u => u.CreatedAt.Year == targetMonth.Year && u.CreatedAt.Month == targetMonth.Month);
+                enrollmentTrend.Add(new
+                {
+                    month = monthName,
+                    admissions = count
+                });
+            }
+
+            // Calculate 6-Month Real Monthly Fee Collection Trend
+            var monthlyFeeTrend = new System.Collections.Generic.List<object>();
+            for (int i = 5; i >= 0; i--)
+            {
+                var targetMonth = todayLocal.AddMonths(-i);
+                var monthName = targetMonth.ToString("MMM");
+                var monthPaid = schoolInvoices
+                    .Where(inv => inv.Status == "Paid" && inv.IssueDate.Year == targetMonth.Year && inv.IssueDate.Month == targetMonth.Month)
+                    .Sum(inv => inv.Amount);
+                monthlyFeeTrend.Add(new
+                {
+                    month = monthName,
+                    collected = monthPaid
+                });
+            }
+
             return Ok(new
             {
                 totalStudents,
                 totalTeachers,
                 totalClasses,
+                todayStudentsPresent,
+                todayStudentsAbsent,
+                todayFeesCollected,
+                dailyAttendanceTrend,
+                enrollmentTrend,
+                monthlyFeeTrend,
                 pendingFees,
                 recentAdmissions,
                 subscriptionStatus = subscription?.Status ?? "pending",
@@ -1368,6 +1435,30 @@ namespace EduVault.Api.Controllers
                 }
             }
 
+            // Calculate today's attendance & 7-day attendance trend for teacher's assigned classes
+            var todayLocal = DateTime.Today;
+            var teacherAttendances = (await _unitOfWork.Attendances.FindAsync(a => enrolledStudentIds.Contains(a.StudentId))).ToList();
+            
+            var todayClassStudentsPresent = teacherAttendances.Count(a => a.Date.Date == todayLocal && (a.Status.Equals("Present", StringComparison.OrdinalIgnoreCase) || a.Status.Equals("Late", StringComparison.OrdinalIgnoreCase)));
+            var todayClassStudentsAbsent = teacherAttendances.Count(a => a.Date.Date == todayLocal && a.Status.Equals("Absent", StringComparison.OrdinalIgnoreCase));
+
+            var weeklyClassAttendanceTrend = new System.Collections.Generic.List<object>();
+            for (int i = 6; i >= 0; i--)
+            {
+                var d = todayLocal.AddDays(-i);
+                var dayRecs = teacherAttendances.Where(a => a.Date.Date == d).ToList();
+                var pCount = dayRecs.Count(a => a.Status.Equals("Present", StringComparison.OrdinalIgnoreCase) || a.Status.Equals("Late", StringComparison.OrdinalIgnoreCase));
+                var aCount = dayRecs.Count(a => a.Status.Equals("Absent", StringComparison.OrdinalIgnoreCase));
+                weeklyClassAttendanceTrend.Add(new
+                {
+                    date = d.ToString("MMM dd"),
+                    day = d.ToString("ddd"),
+                    present = pCount,
+                    absent = aCount,
+                    total = dayRecs.Count
+                });
+            }
+
             // Sort schedule by weekday order then period
             var orderedSchedule = scheduleList
                 .OrderBy(t => Array.IndexOf(dayOrder, t.DayOfWeek) < 0 ? 99 : Array.IndexOf(dayOrder, t.DayOfWeek))
@@ -1378,6 +1469,9 @@ namespace EduVault.Api.Controllers
             {
                 totalClasses,
                 totalStudents,
+                todayClassStudentsPresent,
+                todayClassStudentsAbsent,
+                weeklyClassAttendanceTrend,
                 pendingReviews,
                 myClassesToday,
                 classEnrollments,
@@ -2995,6 +3089,334 @@ namespace EduVault.Api.Controllers
 
             return Ok(new { success = true, sentCount });
         }
+
+        // ==========================================
+        // Account Manager & Librarian Registration
+        // ==========================================
+        [HttpPost("register-account-manager")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> RegisterAccountManager([FromBody] RegisterAccountManagerRequest request)
+        {
+            var schoolId = GetSchoolId();
+            var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+            if (school == null) return NotFound(new { error = "School not found" });
+
+            if (!school.HasAccountModule)
+            {
+                return BadRequest(new { error = "Account/HRM Module is not enabled for your school. Please contact Super Admin." });
+            }
+
+            var existingUser = (await _unitOfWork.Users.FindAsync(u => u.Email == request.Email)).FirstOrDefault();
+            if (existingUser != null)
+            {
+                return BadRequest(new { error = "User with this email already exists." });
+            }
+
+            var user = new User
+            {
+                SchoolId = schoolId,
+                Email = request.Email,
+                PasswordHash = _authService.HashPassword(request.Password),
+                Role = "accountmanager",
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                IsActive = true
+            };
+            await _unitOfWork.Users.AddAsync(user);
+
+            var accountManager = new AccountManager
+            {
+                UserId = user.Id,
+                SchoolId = schoolId,
+                EmployeeId = string.IsNullOrWhiteSpace(request.EmployeeId) ? $"ACC-{RandomNumberGenerator.GetInt32(1000, 9999)}" : request.EmployeeId,
+                Designation = string.IsNullOrWhiteSpace(request.Designation) ? "Account & Finance Manager" : request.Designation
+            };
+            await _unitOfWork.AccountManagers.AddAsync(accountManager);
+
+            await _unitOfWork.CompleteAsync();
+            return Ok(new { success = true, userId = user.Id, email = user.Email });
+        }
+
+        [HttpGet("account-managers")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> GetAccountManagers()
+        {
+            var schoolId = GetSchoolId();
+            var users = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "accountmanager");
+            var profiles = await _unitOfWork.AccountManagers.FindAsync(a => a.SchoolId == schoolId);
+
+            var list = users.Select(u => {
+                var p = profiles.FirstOrDefault(a => a.UserId == u.Id);
+                return new {
+                    u.Id,
+                    u.FirstName,
+                    u.LastName,
+                    u.Email,
+                    u.IsActive,
+                    u.CreatedAt,
+                    EmployeeId = p?.EmployeeId ?? "N/A",
+                    Designation = p?.Designation ?? "Account Manager"
+                };
+            });
+            return Ok(list);
+        }
+
+        [HttpPost("register-librarian")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> RegisterLibrarian([FromBody] RegisterLibrarianRequest request)
+        {
+            var schoolId = GetSchoolId();
+            var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+            if (school == null) return NotFound(new { error = "School not found" });
+
+            if (!school.HasLibraryModule)
+            {
+                return BadRequest(new { error = "Library Module is not enabled for your school. Please contact Super Admin." });
+            }
+
+            var existingUser = (await _unitOfWork.Users.FindAsync(u => u.Email == request.Email)).FirstOrDefault();
+            if (existingUser != null)
+            {
+                return BadRequest(new { error = "User with this email already exists." });
+            }
+
+            var user = new User
+            {
+                SchoolId = schoolId,
+                Email = request.Email,
+                PasswordHash = _authService.HashPassword(request.Password),
+                Role = "librarian",
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                IsActive = true
+            };
+            await _unitOfWork.Users.AddAsync(user);
+
+            // Also ensure default library settings exist for this school
+            var settings = (await _unitOfWork.LibrarySettings.FindAsync(s => s.SchoolId == schoolId)).FirstOrDefault();
+            if (settings == null)
+            {
+                var newSettings = new LibrarySettings
+                {
+                    SchoolId = schoolId,
+                    FinePerDay = 2.00m,
+                    MaxIssueDays = 14,
+                    MaxBooksPerMember = 3
+                };
+                await _unitOfWork.LibrarySettings.AddAsync(newSettings);
+            }
+
+            await _unitOfWork.CompleteAsync();
+            return Ok(new { success = true, userId = user.Id, email = user.Email });
+        }
+
+        [HttpGet("librarians")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> GetLibrarians()
+        {
+            var schoolId = GetSchoolId();
+            var users = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "librarian");
+            return Ok(users.Select(u => new {
+                u.Id,
+                u.FirstName,
+                u.LastName,
+                u.Email,
+                u.IsActive,
+                u.CreatedAt
+            }));
+        }
+
+        // ==========================================
+        // Teacher Leave Management (Self Apply)
+        // ==========================================
+        [HttpPost("leave/apply")]
+        [Authorize(Roles = "teacher")]
+        public async Task<IActionResult> ApplyLeave([FromBody] ApplyLeaveRequest request)
+        {
+            var schoolId = GetSchoolId();
+            var userId = GetUserId();
+
+            if (request.FromDate > request.ToDate)
+            {
+                return BadRequest(new { error = "From date cannot be after To date." });
+            }
+
+            decimal totalDays = 0;
+            if (request.DayType.Equals("HalfDay", StringComparison.OrdinalIgnoreCase))
+            {
+                totalDays = 0.5m;
+            }
+            else
+            {
+                totalDays = (decimal)(request.ToDate.Date - request.FromDate.Date).TotalDays + 1;
+            }
+
+            // Check current year quota
+            int year = request.FromDate.Year;
+            var quota = (await _unitOfWork.LeaveQuotas.FindAsync(q => q.SchoolId == schoolId && q.TeacherUserId == userId && q.AcademicYear == year)).FirstOrDefault();
+            if (quota == null)
+            {
+                // Auto create default quota
+                quota = new LeaveQuota
+                {
+                    SchoolId = schoolId,
+                    TeacherUserId = userId,
+                    AcademicYear = year,
+                    CasualLeaveAllotted = 12,
+                    SickLeaveAllotted = 10,
+                    EarnedLeaveAllotted = 15,
+                    MaternityLeaveAllotted = 90
+                };
+                await _unitOfWork.LeaveQuotas.AddAsync(quota);
+                await _unitOfWork.CompleteAsync();
+            }
+
+            var leave = new LeaveRequest
+            {
+                SchoolId = schoolId,
+                TeacherUserId = userId,
+                LeaveType = request.LeaveType.ToUpper(),
+                DayType = request.DayType,
+                HalfDaySession = request.HalfDaySession,
+                FromDate = request.FromDate,
+                ToDate = request.DayType.Equals("HalfDay", StringComparison.OrdinalIgnoreCase) ? request.FromDate : request.ToDate,
+                TotalDays = totalDays,
+                Reason = request.Reason,
+                Status = "Pending"
+            };
+
+            await _unitOfWork.LeaveRequests.AddAsync(leave);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true, message = "Leave request submitted successfully." });
+        }
+
+        [HttpGet("leave/my-leaves")]
+        [Authorize(Roles = "teacher")]
+        public async Task<IActionResult> GetMyLeaves()
+        {
+            var schoolId = GetSchoolId();
+            var userId = GetUserId();
+            var leaves = await _unitOfWork.LeaveRequests.FindAsync(l => l.SchoolId == schoolId && l.TeacherUserId == userId);
+            return Ok(leaves.OrderByDescending(l => l.AppliedAt));
+        }
+
+        [HttpGet("leave/my-balance")]
+        [Authorize(Roles = "teacher")]
+        public async Task<IActionResult> GetMyLeaveBalance()
+        {
+            var schoolId = GetSchoolId();
+            var userId = GetUserId();
+            int currentYear = DateTime.UtcNow.Year;
+
+            var quota = (await _unitOfWork.LeaveQuotas.FindAsync(q => q.SchoolId == schoolId && q.TeacherUserId == userId && q.AcademicYear == currentYear)).FirstOrDefault();
+            if (quota == null)
+            {
+                quota = new LeaveQuota
+                {
+                    SchoolId = schoolId,
+                    TeacherUserId = userId,
+                    AcademicYear = currentYear,
+                    CasualLeaveAllotted = 12,
+                    SickLeaveAllotted = 10,
+                    EarnedLeaveAllotted = 15,
+                    MaternityLeaveAllotted = 90
+                };
+                await _unitOfWork.LeaveQuotas.AddAsync(quota);
+                await _unitOfWork.CompleteAsync();
+            }
+
+            return Ok(new {
+                academicYear = quota.AcademicYear,
+                cl = new { allotted = quota.CasualLeaveAllotted, used = quota.CasualLeaveUsed, remaining = quota.CasualLeaveAllotted - quota.CasualLeaveUsed },
+                sl = new { allotted = quota.SickLeaveAllotted, used = quota.SickLeaveUsed, remaining = quota.SickLeaveAllotted - quota.SickLeaveUsed },
+                el = new { allotted = quota.EarnedLeaveAllotted, used = quota.EarnedLeaveUsed, remaining = quota.EarnedLeaveAllotted - quota.EarnedLeaveUsed },
+                ml = new { allotted = quota.MaternityLeaveAllotted, used = quota.MaternityLeaveUsed, remaining = quota.MaternityLeaveAllotted - quota.MaternityLeaveUsed }
+            });
+        }
+
+        // ==========================================
+        // Shared Library Books for Student / Teacher
+        // ==========================================
+        [HttpGet("my-library-books")]
+        [Authorize(Roles = "student,teacher")]
+        public async Task<IActionResult> GetMyLibraryBooks()
+        {
+            var schoolId = GetSchoolId();
+            var userId = GetUserId();
+
+            var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+            if (school == null || !school.HasLibraryModule)
+            {
+                return Ok(new { hasLibraryModule = false, books = new List<object>(), fineRate = 0 });
+            }
+
+            var settings = (await _unitOfWork.LibrarySettings.FindAsync(s => s.SchoolId == schoolId)).FirstOrDefault();
+            decimal finePerDay = settings?.FinePerDay ?? 2.00m;
+
+            var transactions = await _unitOfWork.LibraryTransactions.FindAsync(t => t.SchoolId == schoolId && t.MemberId == userId);
+            var books = await _unitOfWork.Books.FindAsync(b => b.SchoolId == schoolId);
+
+            var list = transactions.Select(t => {
+                var book = books.FirstOrDefault(b => b.Id == t.BookId);
+                int overdueDays = 0;
+                if (t.Status == "Issued" && DateTime.UtcNow.Date > t.DueDate.Date)
+                {
+                    overdueDays = (DateTime.UtcNow.Date - t.DueDate.Date).Days;
+                }
+                decimal currentFine = overdueDays > 0 ? overdueDays * finePerDay : t.FineAmount;
+
+                return new {
+                    t.Id,
+                    BookId = t.BookId,
+                    BookTitle = book?.Title ?? "Unknown Book",
+                    Author = book?.Author ?? "Unknown Author",
+                    Category = book?.Category ?? "General",
+                    t.IssueDate,
+                    t.DueDate,
+                    t.ReturnDate,
+                    Status = (t.Status == "Issued" && overdueDays > 0) ? "Overdue" : t.Status,
+                    OverdueDays = overdueDays,
+                    FineAmount = currentFine,
+                    t.FinePaid
+                };
+            }).OrderByDescending(t => t.IssueDate);
+
+            return Ok(new {
+                hasLibraryModule = true,
+                finePerDay = finePerDay,
+                books = list
+            });
+        }
+    }
+
+    public class RegisterAccountManagerRequest
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string? EmployeeId { get; set; }
+        public string? Designation { get; set; }
+    }
+
+    public class RegisterLibrarianRequest
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string? EmployeeId { get; set; }
+    }
+
+    public class ApplyLeaveRequest
+    {
+        public string LeaveType { get; set; } = "CL"; // CL, SL, EL, ML
+        public string DayType { get; set; } = "FullDay"; // FullDay, HalfDay
+        public string? HalfDaySession { get; set; } // Morning, Afternoon
+        public DateTime FromDate { get; set; }
+        public DateTime ToDate { get; set; }
+        public string Reason { get; set; } = string.Empty;
     }
 
     public class WhatsAppBroadcastRequest

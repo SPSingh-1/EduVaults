@@ -41,6 +41,23 @@ namespace EduVault.Infrastructure.Data
         public DbSet<UpgradeRequest> UpgradeRequests { get; set; }
         public DbSet<ReportApproval> ReportApprovals { get; set; }
 
+        // RBAC
+        public DbSet<PageDefinition> PageDefinitions { get; set; }
+        public DbSet<SchoolRolePermission> SchoolRolePermissions { get; set; }
+
+        // HRM / Account Module
+        public DbSet<AccountManager> AccountManagers { get; set; }
+        public DbSet<SalaryRule> SalaryRules { get; set; }
+        public DbSet<LeaveQuota> LeaveQuotas { get; set; }
+        public DbSet<LeaveRequest> LeaveRequests { get; set; }
+        public DbSet<SalaryRecord> SalaryRecords { get; set; }
+        public DbSet<Expense> Expenses { get; set; }
+
+        // Library Module
+        public DbSet<Book> Books { get; set; }
+        public DbSet<LibrarySettings> LibrarySettings { get; set; }
+        public DbSet<LibraryTransaction> LibraryTransactions { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -309,6 +326,113 @@ namespace EduVault.Infrastructure.Data
             modelBuilder.Entity<ReportApproval>()
                 .HasIndex(ra => new { ra.ClassId, ra.StudentId, ra.ExamType })
                 .IsUnique();
+
+            // RBAC: SchoolRolePermission
+            modelBuilder.Entity<SchoolRolePermission>()
+                .HasOne(p => p.School)
+                .WithMany()
+                .HasForeignKey(p => p.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SchoolRolePermission>()
+                .HasOne(p => p.PageDefinition)
+                .WithMany()
+                .HasForeignKey(p => p.PageDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SchoolRolePermission>()
+                .HasIndex(p => new { p.SchoolId, p.RoleName, p.PageDefinitionId })
+                .IsUnique();
+
+            // HRM: AccountManager (1-to-1 with User)
+            modelBuilder.Entity<AccountManager>()
+                .HasKey(am => am.UserId);
+
+            modelBuilder.Entity<AccountManager>()
+                .HasOne(am => am.User)
+                .WithMany()
+                .HasForeignKey(am => am.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<AccountManager>()
+                .HasOne(am => am.School)
+                .WithMany()
+                .HasForeignKey(am => am.SchoolId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // HRM: SalaryRule
+            modelBuilder.Entity<SalaryRule>()
+                .HasOne(sr => sr.School)
+                .WithMany()
+                .HasForeignKey(sr => sr.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // HRM: LeaveQuota
+            modelBuilder.Entity<LeaveQuota>()
+                .HasOne(lq => lq.School)
+                .WithMany()
+                .HasForeignKey(lq => lq.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<LeaveQuota>()
+                .HasIndex(lq => new { lq.SchoolId, lq.TeacherUserId, lq.AcademicYear })
+                .IsUnique();
+
+            // HRM: LeaveRequest
+            modelBuilder.Entity<LeaveRequest>()
+                .HasOne(lr => lr.School)
+                .WithMany()
+                .HasForeignKey(lr => lr.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // HRM: SalaryRecord
+            modelBuilder.Entity<SalaryRecord>()
+                .HasOne(sal => sal.School)
+                .WithMany()
+                .HasForeignKey(sal => sal.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SalaryRecord>()
+                .HasIndex(sal => new { sal.SchoolId, sal.TeacherUserId, sal.Month, sal.Year })
+                .IsUnique();
+
+            // HRM: Expense
+            modelBuilder.Entity<Expense>()
+                .HasOne(e => e.School)
+                .WithMany()
+                .HasForeignKey(e => e.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Library: Book
+            modelBuilder.Entity<Book>()
+                .HasOne(b => b.School)
+                .WithMany()
+                .HasForeignKey(b => b.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Library: LibrarySettings (1-per-school)
+            modelBuilder.Entity<LibrarySettings>()
+                .HasOne(ls => ls.School)
+                .WithMany()
+                .HasForeignKey(ls => ls.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<LibrarySettings>()
+                .HasIndex(ls => ls.SchoolId)
+                .IsUnique();
+
+            // Library: LibraryTransaction
+            modelBuilder.Entity<LibraryTransaction>()
+                .HasOne(lt => lt.Book)
+                .WithMany()
+                .HasForeignKey(lt => lt.BookId)
+                .OnDelete(DeleteBehavior.Restrict);  // don't cascade delete transactions when book deleted
+
+            modelBuilder.Entity<LibraryTransaction>()
+                .HasOne(lt => lt.School)
+                .WithMany()
+                .HasForeignKey(lt => lt.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

@@ -22,6 +22,32 @@ namespace EduVault.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("EduVault.Core.Entities.AccountManager", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Designation")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmployeeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("SchoolId");
+
+                    b.ToTable("AccountManagers");
+                });
+
             modelBuilder.Entity("EduVault.Core.Entities.Attendance", b =>
                 {
                     b.Property<Guid>("Id")
@@ -49,6 +75,55 @@ namespace EduVault.Infrastructure.Migrations
                     b.HasIndex("StudentId");
 
                     b.ToTable("Attendances");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.Book", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Author")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("AvailableCopies")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ISBN")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Publisher")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ShelfLocation")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TotalCopies")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId");
+
+                    b.ToTable("Books");
                 });
 
             modelBuilder.Entity("EduVault.Core.Entities.Capacity", b =>
@@ -320,6 +395,45 @@ namespace EduVault.Infrastructure.Migrations
                     b.ToTable("ExamTypes");
                 });
 
+            modelBuilder.Entity("EduVault.Core.Entities.Expense", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("VoucherNumber")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId");
+
+                    b.ToTable("Expenses");
+                });
+
             modelBuilder.Entity("EduVault.Core.Entities.FeeStructure", b =>
                 {
                     b.Property<Guid>("Id")
@@ -385,6 +499,223 @@ namespace EduVault.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("KnowledgeBaseCategories");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.LeaveQuota", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AcademicYear")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CasualLeaveAllotted")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("CasualLeaveUsed")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("EarnedLeaveAllotted")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("EarnedLeaveUsed")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("MaternityLeaveAllotted")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("MaternityLeaveUsed")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SickLeaveAllotted")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("SickLeaveUsed")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("TeacherUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "TeacherUserId", "AcademicYear")
+                        .IsUnique();
+
+                    b.ToTable("LeaveQuotas");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.LeaveRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AppliedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DayType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FromDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("HalfDaySession")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LeaveType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RejectionNote")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TeacherUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ToDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("TotalDays")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId");
+
+                    b.ToTable("LeaveRequests");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.LibrarySettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("FinePerDay")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("MaxBooksPerMember")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxIssueDays")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId")
+                        .IsUnique();
+
+                    b.ToTable("LibrarySettings");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.LibraryTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BookId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("FineAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("FinePaid")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("IssueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("MemberId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MemberName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MemberType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReturnDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("SchoolId");
+
+                    b.ToTable("LibraryTransactions");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.PageDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PageKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PageName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PageDefinitions");
                 });
 
             modelBuilder.Entity("EduVault.Core.Entities.PaymentTransaction", b =>
@@ -602,6 +933,130 @@ namespace EduVault.Infrastructure.Migrations
                     b.ToTable("Rooms");
                 });
 
+            modelBuilder.Entity("EduVault.Core.Entities.SalaryRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AbsentDays")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("BasicEarned")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("GrossSalary")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("HalfDays")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("LeaveDaysUsed")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("LwpDays")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("LwpDeduction")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("ManualAllowances")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("ManualDeductions")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("NetPay")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("PaidOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("PerDayRate")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("PresentDays")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("RuleBasedAllowances")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("RuleBasedDeductions")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TeacherUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TotalWorkingDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "TeacherUserId", "Month", "Year")
+                        .IsUnique();
+
+                    b.ToTable("SalaryRecords");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.SalaryRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CalculationMode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId");
+
+                    b.ToTable("SalaryRules");
+                });
+
             modelBuilder.Entity("EduVault.Core.Entities.School", b =>
                 {
                     b.Property<Guid>("Id")
@@ -633,6 +1088,12 @@ namespace EduVault.Infrastructure.Migrations
 
                     b.Property<string>("EmailDomain")
                         .HasColumnType("text");
+
+                    b.Property<bool>("HasAccountModule")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasLibraryModule")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LogoUrl")
                         .HasColumnType("text");
@@ -748,6 +1209,44 @@ namespace EduVault.Infrastructure.Migrations
                     b.HasIndex("SchoolId");
 
                     b.ToTable("SchoolPlanConfigurations");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.SchoolRolePermission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("CanCreate")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanEdit")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanView")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("PageDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PageDefinitionId");
+
+                    b.HasIndex("SchoolId", "RoleName", "PageDefinitionId")
+                        .IsUnique();
+
+                    b.ToTable("SchoolRolePermissions");
                 });
 
             modelBuilder.Entity("EduVault.Core.Entities.Section", b =>
@@ -1161,6 +1660,25 @@ namespace EduVault.Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("EduVault.Core.Entities.AccountManager", b =>
+                {
+                    b.HasOne("EduVault.Core.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("EduVault.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("EduVault.Core.Entities.Attendance", b =>
                 {
                     b.HasOne("EduVault.Core.Entities.Student", "Student")
@@ -1170,6 +1688,17 @@ namespace EduVault.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.Book", b =>
+                {
+                    b.HasOne("EduVault.Core.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
                 });
 
             modelBuilder.Entity("EduVault.Core.Entities.Capacity", b =>
@@ -1324,6 +1853,17 @@ namespace EduVault.Infrastructure.Migrations
                     b.Navigation("School");
                 });
 
+            modelBuilder.Entity("EduVault.Core.Entities.Expense", b =>
+                {
+                    b.HasOne("EduVault.Core.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+                });
+
             modelBuilder.Entity("EduVault.Core.Entities.FeeStructure", b =>
                 {
                     b.HasOne("EduVault.Core.Entities.School", "School")
@@ -1339,6 +1879,58 @@ namespace EduVault.Infrastructure.Migrations
                     b.Navigation("School");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.LeaveQuota", b =>
+                {
+                    b.HasOne("EduVault.Core.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.LeaveRequest", b =>
+                {
+                    b.HasOne("EduVault.Core.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.LibrarySettings", b =>
+                {
+                    b.HasOne("EduVault.Core.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.LibraryTransaction", b =>
+                {
+                    b.HasOne("EduVault.Core.Entities.Book", "Book")
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("EduVault.Core.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("School");
                 });
 
             modelBuilder.Entity("EduVault.Core.Entities.PaymentTransaction", b =>
@@ -1363,6 +1955,28 @@ namespace EduVault.Infrastructure.Migrations
                     b.Navigation("School");
                 });
 
+            modelBuilder.Entity("EduVault.Core.Entities.SalaryRecord", b =>
+                {
+                    b.HasOne("EduVault.Core.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.SalaryRule", b =>
+                {
+                    b.HasOne("EduVault.Core.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+                });
+
             modelBuilder.Entity("EduVault.Core.Entities.SchoolPlanConfiguration", b =>
                 {
                     b.HasOne("EduVault.Core.Entities.School", "School")
@@ -1370,6 +1984,25 @@ namespace EduVault.Infrastructure.Migrations
                         .HasForeignKey("SchoolId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("School");
+                });
+
+            modelBuilder.Entity("EduVault.Core.Entities.SchoolRolePermission", b =>
+                {
+                    b.HasOne("EduVault.Core.Entities.PageDefinition", "PageDefinition")
+                        .WithMany()
+                        .HasForeignKey("PageDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EduVault.Core.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PageDefinition");
 
                     b.Navigation("School");
                 });

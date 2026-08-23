@@ -38,8 +38,8 @@ const Students = () => {
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [search, setSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState(getTodayStr());
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Dropdown filter states
   const [selectedClass, setSelectedClass] = useState('');

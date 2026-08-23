@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
-import { apiClient } from '../../api/apiClient';
+import { apiClient, expressClient } from '../../api/apiClient';
 
 const loadSubScript = (src) => {
   return new Promise((resolve) => {
@@ -138,6 +138,79 @@ const Setup = () => {
   const [selectedAlertItem, setSelectedAlertItem] = useState(null);
   const [availableSubstitutes, setAvailableSubstitutes] = useState([]);
   const [selectedSubTeacherId, setSelectedSubTeacherId] = useState('');
+
+  // School Timing & GPS Geofence State
+  const [schoolSettings, setSchoolSettings] = useState({
+    latitude: 26.9124,
+    longitude: 75.7873,
+    address: '',
+    geofenceRadiusMeters: 300,
+    schoolStartTime: '08:00',
+    gracePeriodMinutes: 15,
+    minHalfDayHours: 4,
+    schoolEndTime: '14:00'
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [detectingGps, setDetectingGps] = useState(false);
+
+  const fetchSchoolSettings = async () => {
+    try {
+      const res = await expressClient.get('/school-settings');
+      if (res.data) {
+        setSchoolSettings({
+          latitude: res.data.latitude || 26.9124,
+          longitude: res.data.longitude || 75.7873,
+          address: res.data.address || '',
+          geofenceRadiusMeters: res.data.geofenceRadiusMeters || 300,
+          schoolStartTime: res.data.schoolStartTime || '08:00',
+          gracePeriodMinutes: res.data.gracePeriodMinutes || 15,
+          minHalfDayHours: res.data.minHalfDayHours || 4,
+          schoolEndTime: res.data.schoolEndTime || '14:00'
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load school settings:', err);
+    }
+  };
+
+  const handleDetectSchoolGps = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+    setDetectingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setSchoolSettings(prev => ({
+          ...prev,
+          latitude: parseFloat(pos.coords.latitude.toFixed(6)),
+          longitude: parseFloat(pos.coords.longitude.toFixed(6))
+        }));
+        setDetectingGps(false);
+        alert(`Location detected! Lat: ${pos.coords.latitude.toFixed(6)}, Lng: ${pos.coords.longitude.toFixed(6)}`);
+      },
+      (err) => {
+        setDetectingGps(false);
+        alert('Failed to detect GPS location: ' + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleSaveSchoolSettings = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setSavingSettings(true);
+    setError('');
+    setSuccess('');
+    try {
+      await expressClient.post('/school-settings', schoolSettings);
+      setSuccess('School timing & GPS geofence settings saved successfully!');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save school settings.');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const [loading, setLoading] = useState(false);
   const [loadingSec, setLoadingSec] = useState(false);
@@ -733,6 +806,7 @@ const Setup = () => {
     fetchActiveAlerts();
     fetchFeeSetupData();
     fetchSubscriptionInfo();
+    fetchSchoolSettings();
   }, []);
 
   useEffect(() => {
@@ -1187,6 +1261,158 @@ const Setup = () => {
         {/* Tab 1 Content */}
         {activeTab === 'infrastructure' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* School Timing & GPS Geofence Settings */}
+            {(() => {
+              const isAppModeEnabled = (schoolSettings.attendanceModes || ['app', 'biometric']).includes('app');
+              return (
+                <div className="card col-span-1 md:col-span-2 lg:col-span-3 bg-gradient-to-br from-white via-blue-50/20 to-indigo-50/20 border border-blue-100/80 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-gray-100">
+                    <div>
+                      <h3 className="font-display font-bold text-primary text-lg flex items-center gap-2">
+                        {isAppModeEnabled ? '⏰ School Timings & 📍 Geofence GPS Radius Setup' : '⏰ School Timings Setup'}
+                      </h3>
+                      <p className="text-gray-500 text-xs mt-0.5">
+                        {isAppModeEnabled 
+                          ? 'Configure official school operating hours, grace period, and 300m GPS radius for teacher punch-in / punch-out location validation.' 
+                          : 'Configure official school operating hours, grace period, and working hour thresholds for teacher attendance.'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isAppModeEnabled && (
+                        <button
+                          type="button"
+                          onClick={handleDetectSchoolGps}
+                          disabled={detectingGps}
+                          className="px-3.5 py-2 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all flex items-center gap-1.5 shadow-xs"
+                        >
+                          {detectingGps ? '📡 Locating...' : '📍 Auto-Detect Current GPS'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleSaveSchoolSettings}
+                        disabled={savingSettings}
+                        className="btn-primary text-xs py-2 px-5 rounded-xl font-bold flex items-center gap-1.5 shadow-md"
+                      >
+                        {savingSettings ? 'Saving...' : '💾 Save Settings'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">School Start Time *</label>
+                      <input
+                        type="time"
+                        value={schoolSettings.schoolStartTime}
+                        onChange={e => setSchoolSettings(s => ({ ...s, schoolStartTime: e.target.value }))}
+                        className="input text-xs font-semibold"
+                      />
+                      <span className="text-[10px] text-gray-400 mt-1 block">Official daily opening time</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Grace Period (Minutes) *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="60"
+                        value={schoolSettings.gracePeriodMinutes}
+                        onChange={e => setSchoolSettings(s => ({ ...s, gracePeriodMinutes: parseInt(e.target.value) || 0 }))}
+                        className="input text-xs font-semibold"
+                      />
+                      <span className="text-[10px] text-amber-600 font-bold mt-1 block">Late marked after {schoolSettings.schoolStartTime} + {schoolSettings.gracePeriodMinutes} mins</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Minimum Half-Day (Hours) *</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="12"
+                        step="0.5"
+                        value={schoolSettings.minHalfDayHours}
+                        onChange={e => setSchoolSettings(s => ({ ...s, minHalfDayHours: parseFloat(e.target.value) || 4 }))}
+                        className="input text-xs font-semibold"
+                      />
+                      <span className="text-[10px] text-gray-400 mt-1 block">Punches &lt; {schoolSettings.minHalfDayHours} hrs marked Half Day</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">School End Time *</label>
+                      <input
+                        type="time"
+                        value={schoolSettings.schoolEndTime}
+                        onChange={e => setSchoolSettings(s => ({ ...s, schoolEndTime: e.target.value }))}
+                        className="input text-xs font-semibold"
+                      />
+                      <span className="text-[10px] text-gray-400 mt-1 block">Punch-out window start</span>
+                    </div>
+
+                    {isAppModeEnabled && (
+                      <>
+                        <div className="lg:col-span-2">
+                          <label className="block text-xs font-bold text-gray-700 mb-1">School Campus Address</label>
+                          <input
+                            type="text"
+                            placeholder="Enter official school building address..."
+                            value={schoolSettings.address}
+                            onChange={e => setSchoolSettings(s => ({ ...s, address: e.target.value }))}
+                            className="input text-xs"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">GPS Latitude *</label>
+                          <input
+                            type="number"
+                            step="0.000001"
+                            value={schoolSettings.latitude}
+                            onChange={e => setSchoolSettings(s => ({ ...s, latitude: parseFloat(e.target.value) || 0 }))}
+                            className="input text-xs font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">GPS Longitude *</label>
+                          <input
+                            type="number"
+                            step="0.000001"
+                            value={schoolSettings.longitude}
+                            onChange={e => setSchoolSettings(s => ({ ...s, longitude: parseFloat(e.target.value) || 0 }))}
+                            className="input text-xs font-mono"
+                          />
+                        </div>
+
+                        <div className="lg:col-span-4 bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm shrink-0">
+                              🎯
+                            </div>
+                            <div>
+                              <span className="font-black text-emerald-950">300m Geofence Radius Active: </span>
+                              <span className="text-emerald-800">Teachers must be within <strong>{schoolSettings.geofenceRadiusMeters || 300} meters</strong> radius of coordinates ({schoolSettings.latitude}, {schoolSettings.longitude}) to punch in or out.</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="font-bold text-emerald-950 whitespace-nowrap">Radius (meters):</label>
+                            <input
+                              type="number"
+                              min="50"
+                              max="2000"
+                              value={schoolSettings.geofenceRadiusMeters}
+                              onChange={e => setSchoolSettings(s => ({ ...s, geofenceRadiusMeters: parseInt(e.target.value) || 300 }))}
+                              className="w-24 input text-xs py-1.5 px-2 text-center bg-white font-extrabold text-emerald-900 border border-emerald-300 rounded-lg focus:ring-emerald-500"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Section Management */}
             <div className="card flex flex-col h-[420px]">
               <h3 className="font-display font-bold text-primary text-lg mb-2 flex items-center gap-2">

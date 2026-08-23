@@ -46,6 +46,8 @@ const Settings = () => {
   const [schoolLogoUrl, setSchoolLogoUrl] = useState('/logo.jpeg');
   const [schoolEmailDomain, setSchoolEmailDomain] = useState('');
   const [schoolThemeColor, setSchoolThemeColor] = useState('#1a2744');
+  const [schoolAttendanceModes, setSchoolAttendanceModes] = useState(['app', 'biometric']);
+  const [schoolBiometricApiKey, setSchoolBiometricApiKey] = useState('');
 
   // Modals state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -231,8 +233,32 @@ const Settings = () => {
         setCustomProviderFromNumber(res.data.customProviderFromNumber || '');
         setTestPhoneNumber(''); // Reset test phone number on scope load
       }
+      const setRes = await expressClient.get(`/school-settings?schoolId=${schoolId}`);
+      if (setRes.data && setRes.data.attendanceModes) {
+        setSchoolAttendanceModes(setRes.data.attendanceModes);
+        setSchoolBiometricApiKey(setRes.data.biometricApiKey || '');
+      }
     } catch (err) {
       console.error('Error fetching credentials:', err);
+    }
+  };
+
+  const handleSaveAttendanceModes = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setSaveSuccess(false);
+    setSaveError('');
+    try {
+      if (!selectedScope || selectedScope === 'global') return;
+      await expressClient.post('/school-settings', {
+        schoolId: selectedScope,
+        attendanceModes: schoolAttendanceModes || ['app', 'biometric'],
+        biometricApiKey: schoolBiometricApiKey || ''
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } catch (err) {
+      console.error('Error saving attendance settings:', err);
+      setSaveError(err.response?.data?.error || 'Failed to save attendance settings.');
     }
   };
 
@@ -414,6 +440,16 @@ const Settings = () => {
           themeColor: schoolThemeColor
         };
         await apiClient.put(`/super/schools/${selectedScope}`, payload);
+
+        try {
+          await expressClient.post('/school-settings', {
+            schoolId: selectedScope,
+            attendanceModes: schoolAttendanceModes || ['app', 'biometric'],
+            biometricApiKey: schoolBiometricApiKey || ''
+          });
+        } catch (e) {
+          console.error('Failed to sync school attendance modes:', e);
+        }
 
         // Refresh schools list
         const schoolsRes = await apiClient.get('/super/schools');
@@ -678,11 +714,83 @@ const Settings = () => {
                 >
                   💬 WhatsApp Integration
                 </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="btn-primary text-xs py-2.5 px-6 font-bold flex items-center gap-1.5 ml-auto"
+                >
+                  💾 Save Configuration
+                </button>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* School Attendance Punching Modes Card */}
+      {selectedScope !== 'global' && (
+        <div className="card mb-6 bg-slate-50 border border-slate-200">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-display font-bold text-primary flex items-center gap-2">
+              ⚙️ School Attendance Punching Modes (Super Admin Only)
+            </h3>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Super Admin Control</span>
+          </div>
+          <p className="text-xs text-gray-500 mb-4">
+            Select allowed punching methods for <strong>{schoolName}</strong>:
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            {[
+              { id: 'app', label: '📱 App GPS Punching (300m Radius)', desc: 'Teachers punch via mobile app/browser within 300m geofence' },
+              { id: 'biometric', label: '☝️ Biometric Fingerprint Machine', desc: 'Hardware thumb device syncs attendance automatically' }
+            ].map(mode => {
+              const isChecked = schoolAttendanceModes.includes(mode.id);
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => {
+                    setSchoolAttendanceModes(prev =>
+                      prev.includes(mode.id) ? prev.filter(m => m !== mode.id) : [...prev, mode.id]
+                    );
+                  }}
+                  className={`p-4 rounded-xl border text-left transition-all ${
+                    isChecked
+                      ? 'bg-primary/10 border-primary text-primary font-bold shadow-2xs'
+                      : 'bg-white border-gray-200 text-gray-400 opacity-60'
+                  }`}
+                >
+                  <div className="text-xs font-bold">{mode.label}</div>
+                  <div className="text-[10px] font-normal opacity-75 mt-1">{mode.desc}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex-1 max-w-md">
+              {schoolAttendanceModes.includes('biometric') && (
+                <>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Biometric Hardware Device Secret Key</label>
+                  <input
+                    value={schoolBiometricApiKey}
+                    onChange={e => setSchoolBiometricApiKey(e.target.value)}
+                    placeholder="e.g. bio_secret_key_xxxx"
+                    className="input font-mono text-xs text-slate-800 bg-white"
+                  />
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleSaveAttendanceModes}
+              className="btn-primary text-xs py-2.5 px-6 font-bold shadow-md ml-auto"
+            >
+              💾 Save Attendance Settings
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Global settings section (Maintenance, Backup & Contact Info) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 relative">

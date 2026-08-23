@@ -6,12 +6,14 @@ import {
   CreditCard, 
   Settings, 
   LifeBuoy, 
-  Megaphone 
+  Megaphone,
+  ShieldCheck
 } from 'lucide-react';
 
 const superLinks = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/super-admin/dashboard' },
   { icon: School, label: 'Schools', path: '/super-admin/schools' },
+  { icon: ShieldCheck, label: 'Access Control (RBAC)', path: '/super-admin/access-control' },
   { icon: CreditCard, label: 'Subscriptions', path: '/super-admin/subscriptions' },
   { icon: Settings, label: 'Platform Settings', path: '/super-admin/settings' },
   { icon: LifeBuoy, label: 'Support & Help Desk', path: '/super-admin/support' },

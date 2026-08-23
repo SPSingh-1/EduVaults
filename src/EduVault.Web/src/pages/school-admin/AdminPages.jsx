@@ -297,8 +297,8 @@ export const Notices = () => {
   const [loading, setLoading] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState('all'); // 'all', 'school', 'system'
   const [sendWhatsApp, setSendWhatsApp] = useState(false);
-  const [dateFrom, setDateFrom] = useState(getTodayStr());
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [search, setSearch] = useState('');
   const [targetFilter, setTargetFilter] = useState('');
 
@@ -360,6 +360,16 @@ export const Notices = () => {
     }
   }, [noticesList]);
 
+  // Holiday Modal State
+  const [showHolidayModal, setShowHolidayModal] = useState(false);
+  const [holidayTitle, setHolidayTitle] = useState('');
+  const [holidayDate, setHolidayDate] = useState(getTodayStr());
+  const [holidayEndDate, setHolidayEndDate] = useState(getTodayStr());
+  const [holidayCategory, setHolidayCategory] = useState('FESTIVAL');
+  const [holidayDescription, setHolidayDescription] = useState('');
+  const [notifyHoliday, setNotifyHoliday] = useState(true);
+  const [savingHoliday, setSavingHoliday] = useState(false);
+
   const handlePostNotice = async (e) => {
     e.preventDefault();
     if (!title || !body) return;
@@ -389,10 +399,40 @@ export const Notices = () => {
     }
   };
 
+  const handleCreateHoliday = async (e) => {
+    e.preventDefault();
+    if (!holidayTitle || !holidayDate) return;
+    setSavingHoliday(true);
+    try {
+      await expressClient.post('/holidays', {
+        title: holidayTitle,
+        date: holidayDate,
+        endDate: holidayEndDate || holidayDate,
+        category: holidayCategory,
+        description: holidayDescription,
+        notifyUsers: notifyHoliday
+      });
+      alert(`🎉 Holiday "${holidayTitle}" declared successfully! Real-time notification broadcasted to all students.`);
+      setShowHolidayModal(false);
+      setHolidayTitle('');
+      setHolidayDescription('');
+      fetchNotices();
+    } catch (err) {
+      alert('Failed to declare holiday: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSavingHoliday(false);
+    }
+  };
+
   return (
     <div>
       <Topbar title="Notices & Announcements" actions={
-        <button onClick={() => setShowNew(true)} className="btn-primary">+ New Notice</button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowHolidayModal(true)} className="btn-outline text-xs py-2 px-3 flex items-center gap-1.5 border-purple-300 text-purple-700 hover:bg-purple-50">
+            🎉 Declare School Holiday
+          </button>
+          <button onClick={() => setShowNew(true)} className="btn-primary text-xs py-2 px-4">+ New Notice</button>
+        </div>
       } />
 
       <div className="grid grid-cols-3 gap-6">
@@ -552,6 +592,110 @@ export const Notices = () => {
           </form>
         </div>
       )}
+
+      {/* Declare School Holiday Modal */}
+      {showHolidayModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <form onSubmit={handleCreateHoliday} className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-purple-100">
+            <div className="bg-gradient-to-r from-purple-900 via-primary to-purple-900 text-white p-6">
+              <div className="flex justify-between items-center">
+                <h3 className="font-display font-bold text-xl flex items-center gap-2">
+                  🎉 Declare School Holiday
+                </h3>
+                <button type="button" onClick={() => setShowHolidayModal(false)} className="text-white/80 hover:text-white text-lg">✖</button>
+              </div>
+              <p className="text-xs text-purple-200 mt-1">
+                Announce an official holiday or vacation break. It will be posted to the student holiday calendar and broadcasted in real-time.
+              </p>
+            </div>
+
+            <div className="p-6 text-left space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Holiday Title *</label>
+                <input
+                  required
+                  placeholder="e.g. Diwali Vacation / Republic Day"
+                  value={holidayTitle}
+                  onChange={e => setHolidayTitle(e.target.value)}
+                  className="input text-xs font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Start Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={holidayDate}
+                    onChange={e => {
+                      setHolidayDate(e.target.value);
+                      if (!holidayEndDate || holidayEndDate < e.target.value) {
+                        setHolidayEndDate(e.target.value);
+                      }
+                    }}
+                    className="input text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">End Date (Optional)</label>
+                  <input
+                    type="date"
+                    value={holidayEndDate}
+                    onChange={e => setHolidayEndDate(e.target.value)}
+                    className="input text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Category *</label>
+                <select
+                  value={holidayCategory}
+                  onChange={e => setHolidayCategory(e.target.value)}
+                  className="input text-xs font-semibold"
+                >
+                  <option value="FESTIVAL">🎉 Festival Holiday</option>
+                  <option value="NATIONAL">🇮🇳 National Holiday</option>
+                  <option value="ACADEMIC">📚 Academic Break / Vacation</option>
+                  <option value="RESTRICTED">✝️ Restricted Holiday</option>
+                  <option value="EMERGENCY">🚨 Emergency Leave</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Description / Reason</label>
+                <textarea
+                  placeholder="Enter holiday details, school re-opening notes, homework guidelines..."
+                  value={holidayDescription}
+                  onChange={e => setHolidayDescription(e.target.value)}
+                  className="input text-xs h-20 resize-none"
+                />
+              </div>
+
+              <div className="bg-purple-50 p-3 rounded-xl border border-purple-200/60 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="notifyHolidayBroadcast"
+                  checked={notifyHoliday}
+                  onChange={e => setNotifyHoliday(e.target.checked)}
+                  className="rounded text-purple-600 focus:ring-purple-500 h-4 w-4 cursor-pointer"
+                />
+                <label htmlFor="notifyHolidayBroadcast" className="text-xs font-bold text-purple-900 cursor-pointer select-none">
+                  📢 Send instant real-time notification broadcast to all students & staff
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 px-6 pb-6 pt-2 border-t border-gray-100">
+              <button type="button" onClick={() => setShowHolidayModal(false)} className="btn-outline text-xs">Cancel</button>
+              <button type="submit" disabled={savingHoliday} className="btn-primary text-xs py-2.5 px-6 font-bold bg-purple-700 hover:bg-purple-800">
+                {savingHoliday ? 'Publishing...' : '📢 Declare & Broadcast Holiday'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };
@@ -571,8 +715,8 @@ export const Exams = () => {
   // Filter States
   const [filterClassId, setFilterClassId] = useState('');
   const [filterExamType, setFilterExamType] = useState('Semester Examination');
-  const [dateFrom, setDateFrom] = useState(getTodayStr());
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [search, setSearch] = useState('');
 
   const [modalError, setModalError] = useState('');
@@ -1063,8 +1207,8 @@ export const Exams = () => {
 export const Admission = () => {
   const [admissions, setAdmissions] = useState([]);
   const [classesList, setClassesList] = useState([]);
-  const [dateFrom, setDateFrom] = useState(getTodayStr());
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [search, setSearch] = useState('');

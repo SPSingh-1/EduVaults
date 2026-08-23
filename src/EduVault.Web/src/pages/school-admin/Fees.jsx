@@ -69,8 +69,8 @@ const Fees = () => {
   const [structures, setStructures] = useState([]);
   const [studentLedger, setStudentLedger] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [dateFrom, setDateFrom] = useState(getTodayStr());
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('invoices');

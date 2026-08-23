@@ -40,6 +40,23 @@ namespace EduVault.Infrastructure.Repositories
             PlatformPlans = new Repository<PlatformPlan>(_context);
             SchoolPlanConfigurations = new Repository<SchoolPlanConfiguration>(_context);
             UpgradeRequests = new Repository<UpgradeRequest>(_context);
+
+            // RBAC
+            PageDefinitions = new Repository<PageDefinition>(_context);
+            SchoolRolePermissions = new Repository<SchoolRolePermission>(_context);
+
+            // HRM / Account Module
+            AccountManagers = new Repository<AccountManager>(_context);
+            SalaryRules = new Repository<SalaryRule>(_context);
+            LeaveQuotas = new Repository<LeaveQuota>(_context);
+            LeaveRequests = new Repository<LeaveRequest>(_context);
+            SalaryRecords = new Repository<SalaryRecord>(_context);
+            Expenses = new Repository<Expense>(_context);
+
+            // Library Module
+            Books = new Repository<Book>(_context);
+            LibrarySettings = new Repository<LibrarySettings>(_context);
+            LibraryTransactions = new Repository<LibraryTransaction>(_context);
         }
 
         public IRepository<School> Schools { get; private set; }
@@ -69,6 +86,23 @@ namespace EduVault.Infrastructure.Repositories
         public IRepository<PlatformPlan> PlatformPlans { get; private set; }
         public IRepository<SchoolPlanConfiguration> SchoolPlanConfigurations { get; private set; }
         public IRepository<UpgradeRequest> UpgradeRequests { get; private set; }
+
+        // RBAC
+        public IRepository<PageDefinition> PageDefinitions { get; private set; }
+        public IRepository<SchoolRolePermission> SchoolRolePermissions { get; private set; }
+
+        // HRM / Account Module
+        public IRepository<AccountManager> AccountManagers { get; private set; }
+        public IRepository<SalaryRule> SalaryRules { get; private set; }
+        public IRepository<LeaveQuota> LeaveQuotas { get; private set; }
+        public IRepository<LeaveRequest> LeaveRequests { get; private set; }
+        public IRepository<SalaryRecord> SalaryRecords { get; private set; }
+        public IRepository<Expense> Expenses { get; private set; }
+
+        // Library Module
+        public IRepository<Book> Books { get; private set; }
+        public IRepository<LibrarySettings> LibrarySettings { get; private set; }
+        public IRepository<LibraryTransaction> LibraryTransactions { get; private set; }
 
         public async Task<int> CompleteAsync()
         {

@@ -4,6 +4,7 @@ import Sidebar from '../../components/layout/Sidebar';
 import Topbar from '../../components/layout/Topbar';
 import Loader from '../../components/common/Loader';
 import { apiClient, expressClient } from '../../api/apiClient';
+import { formatDateDDMMYYYY, formatDateRangeDDMMYYYY } from '../../utils/dateUtils';
 import { io } from 'socket.io-client';
 import { useNotifications } from '../../contexts/NotificationContext';
 import {
@@ -41,7 +42,8 @@ import {
   MapPin,
   HeartPulse,
   BookOpen,
-  ChevronDown
+  ChevronDown,
+  CalendarDays
 } from 'lucide-react';
 
 const getTodayStr = () => {
@@ -100,7 +102,7 @@ const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
               razorpaySignature: response.razorpay_signature || 'mock_signature',
               paymentProvider: 'razorpay'
             });
-            alert('Payment received and verified successfully!');
+            alert('Payment completed and verified successfully!');
             successCallback();
           } catch (err) {
             alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
@@ -110,42 +112,27 @@ const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
         },
         prefill: {
           name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`,
-          email: userProfile.email || '',
+          email: userProfile.email || 'student@eduvault.com',
+          contact: userProfile.phone || '9999999999'
         },
-        theme: { color: "#1a2744" }
-      };
-
-      if (isMock) {
-        if (window.confirm("Razorpay credentials not configured. Proceed with simulated payment?")) {
-          await options.handler({
-            razorpay_order_id: orderId,
-            razorpay_payment_id: `pay_mock_${Math.random().toString(36).substring(7)}`,
-            razorpay_signature: 'mock_signature'
-          });
-        } else {
-          setLoader(false);
+        theme: {
+          color: "#1a2744"
         }
-      } else {
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (response) {
-          alert("Payment failed: " + response.error.description);
-        });
-        rzp.open();
-      }
-    }
-    else if (provider === 'cashless') {
-      // Cashless / bank instructions
-      const confirmMsg = `🏦 Cashless / Bank Transfer Instructions:\n\n${instructions || 'Please transfer the fees to the school account.'}\n\nInvoice Amount: Rs. ${amount}\n\nHave you completed the bank transfer? Click OK to submit transaction for verification.`;
-      if (window.confirm(confirmMsg)) {
+      };
+      const rzp1 = new window.Razorpay(options);
+      rzp1.open();
+    } else if (provider === 'none') {
+      alert(`🏫 Offline / Cashless Instructions:\n\n${instructions || 'Please deposit fees at the school administration billing counter.'}`);
+      const txRef = window.prompt("Enter Cashless / Cheque Transaction Ref Number (Optional):");
+      if (txRef) {
         setLoader(true);
         try {
-          const txRef = `cashless_ref_${Math.random().toString(36).substring(7)}`;
           await apiClient.post('/billing/verify-payment', {
             invoiceId: invoiceId,
             paymentProvider: 'cashless',
             transactionReference: txRef
           });
-          alert('Bank transfer details submitted successfully! The school administration will verify your payment.');
+          alert('Cashless receipt logged! Pending admin verification.');
           successCallback();
         } catch (err) {
           alert('Failed to submit cashless transaction: ' + (err.response?.data?.error || err.message));
@@ -188,44 +175,49 @@ const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
 };
 
 
-const studentLinks = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/student/dashboard' },
-  { icon: Calendar, label: 'Daily Schedule', path: '/student/schedule' },
-  { icon: CheckSquare, label: 'Attendance', path: '/student/attendance' },
-  { icon: Trophy, label: 'Results', path: '/student/results' },
-  { icon: ClipboardList, label: 'Exam Timetable', path: '/student/exams' },
-  { icon: PenTool, label: 'Homework', path: '/student/homework' },
-  { icon: Wallet, label: 'Fees', path: '/student/fees' },
-  { icon: Megaphone, label: 'Notices', path: '/student/notices' },
-  { icon: User, label: 'Profile', path: '/student/profile' },
-];
+import { useAuth } from '../../contexts/AuthContext';
 
-const CustomStudentTooltip = ({ active, payload, label, isPercent, isCurrency }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white/95 backdrop-blur-sm border border-slate-100/80 p-3 rounded-2xl shadow-[0_12px_30px_-5px_rgba(0,0,0,0.08)] transition-all">
-        <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">{label || payload[0].name}</p>
-        {payload.map((item, index) => (
-          <div key={index} className="flex items-center gap-2 mt-0.5">
-            <span className="w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm shrink-0" style={{ backgroundColor: item.color || item.fill }} />
-            <span className="text-2xs text-slate-550 font-semibold">{item.name || 'Value'}:</span>
-            <span className="text-xs font-black text-slate-800 font-mono">
-              {isCurrency ? `Rs. ${item.value.toLocaleString()}` : isPercent ? `${item.value}%` : `${item.value}/100`}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
+export const StudentLayout = () => {
+  const { user } = useAuth();
+
+  const baseLinks = [
+    { pageKey: 'student.dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/student/dashboard' },
+    { pageKey: 'student.schedule', icon: Calendar, label: 'Daily Schedule', path: '/student/schedule' },
+    { pageKey: 'student.attendance', icon: CheckSquare, label: 'Attendance', path: '/student/attendance' },
+    { pageKey: 'student.homework', icon: PenTool, label: 'Homework', path: '/student/homework' },
+    { pageKey: 'student.syllabus', icon: BookOpen, label: 'Syllabus', path: '/student/syllabus' },
+    { pageKey: 'student.holidays', icon: CalendarDays, label: 'Holiday Calendar', path: '/student/holidays' },
+    { pageKey: 'student.fees', icon: Wallet, label: 'Fees', path: '/student/fees' },
+    { pageKey: 'student.exams', icon: ClipboardList, label: 'Exam Timetable', path: '/student/exams' },
+    { pageKey: 'student.results', icon: Trophy, label: 'Results', path: '/student/results' },
+    { pageKey: 'student.notices', icon: Megaphone, label: 'Notices', path: '/student/notices' },
+    { pageKey: 'student.profile', icon: User, label: 'Profile', path: '/student/profile' },
+  ];
+
+  if (user?.hasLibraryModule) {
+    baseLinks.splice(5, 0, {
+      pageKey: 'student.books',
+      icon: BookOpen,
+      label: 'My Library Books',
+      path: '/student/my-books'
+    });
   }
-  return null;
-};
 
-export const StudentLayout = () => (
-  <div className="flex">
-    <Sidebar links={studentLinks} role="student" />
-    <main className="main-content flex-1"><Outlet /></main>
-  </div>
-);
+  const finalLinks = baseLinks.filter(link => {
+    if (user?.permissions && user.permissions.length > 0) {
+      const perm = user.permissions.find(p => p.pageKey === link.pageKey);
+      if (perm) return perm.canView;
+    }
+    return true;
+  });
+
+  return (
+    <div className="flex">
+      <Sidebar links={finalLinks} role="student" />
+      <main className="main-content flex-1"><Outlet /></main>
+    </div>
+  );
+};
 
 // --- Student Dashboard ---
 export const StudentDashboard = () => {
@@ -384,6 +376,9 @@ export const StudentDashboard = () => {
     ? ((presentDays + lateDays) / totalDays * 100).toFixed(1) + '%'
     : '0.0%';
 
+  const todayStr = getTodayStr();
+  const todayAtt = attendanceList.find(a => a.date === todayStr);
+
   const pendingAmount = invoices.filter(i => i.status !== 'Paid').reduce((sum, i) => sum + i.amount, 0);
 
   const perfData = performance?.subjectsBreakdown?.map(s => ({
@@ -420,7 +415,7 @@ export const StudentDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="no-print">
-        <Topbar title="Student Dashboard Overview" subtitle={`Welcome back, ${profile?.firstName || 'Student'}. Here's your academic summary.`} />
+        <Topbar title="Student Dashboard Overview" subtitle={`Welcome back, ${profile?.firstName || 'Student'}. Here's your live academic summary.`} />
       </div>
 
       {/* Dashboard Sub-Tabs */}
@@ -446,6 +441,16 @@ export const StudentDashboard = () => {
             <span className="text-sm">📜</span>
             <span>Academic History</span>
           </button>
+          <button
+            onClick={() => setDashboardTab('holidays')}
+            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${dashboardTab === 'holidays'
+              ? 'bg-white text-primary shadow-sm border border-slate-200/30'
+              : 'text-gray-500 hover:text-gray-800 hover:bg-white/40'
+              }`}
+          >
+            <span className="text-sm">📅</span>
+            <span>Holiday Calendar</span>
+          </button>
         </div>
       </div>
 
@@ -453,7 +458,15 @@ export const StudentDashboard = () => {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Attendance', value: realAttendancePercent, sub: totalDays > 0 ? 'On Track' : 'No Records', icon: CheckSquare, color: 'text-blue-500', bgColor: 'bg-blue-50/50' },
+              { 
+                label: 'Attendance Rate', 
+                value: realAttendancePercent, 
+                sub: todayAtt ? `Today: ${todayAtt.status}` : (totalDays > 0 ? '● On Track' : 'No Records'), 
+                icon: CheckSquare, 
+                color: 'text-blue-500', 
+                bgColor: 'bg-blue-50/50',
+                subColor: todayAtt?.status === 'Absent' ? 'text-rose-500 font-bold' : todayAtt?.status === 'Present' ? 'text-emerald-600 font-bold' : 'text-gray-500'
+              },
               { label: 'Semester GPA', value: performance?.areMarksPublished !== false ? (performance?.semesterGpa || '0.00') : '🔒 Locked', sub: performance?.areMarksPublished !== false ? 'Target: 4.00' : 'Awaiting Release', icon: Award, color: 'text-emerald-500', bgColor: 'bg-emerald-50/50' },
               {
                 label: 'Outstanding Fees',
@@ -480,7 +493,7 @@ export const StudentDashboard = () => {
                   <div className="space-y-1">
                     <div className="text-xs font-semibold text-gray-400">{s.label}</div>
                     <div className={`font-display text-2xl font-bold ${s.warn ? 'text-rose-600' : 'text-primary'}`}>{s.value}</div>
-                    <div className={`text-[10px] font-medium ${s.warn ? 'text-rose-500' : 'text-gray-400'}`}>{s.sub}</div>
+                    <div className={`text-[10px] font-medium ${s.subColor || (s.warn ? 'text-rose-500' : 'text-gray-400')}`}>{s.sub}</div>
                   </div>
                   <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${s.bgColor} shrink-0`}>
                     <s.icon className={`w-5.5 h-5.5 ${s.color} stroke-[1.75]`} />
@@ -758,7 +771,7 @@ export const StudentDashboard = () => {
             </div>
           </div>
         </>
-      ) : (
+      ) : dashboardTab === 'history' ? (
         <div className="space-y-6">
           {printingCardIndex !== null && (
             <style dangerouslySetInnerHTML={{
@@ -1022,6 +1035,8 @@ export const StudentDashboard = () => {
             </div>
           )}
         </div>
+      ) : (
+        <StudentHolidays />
       )}
     </div>
   );
@@ -1188,7 +1203,7 @@ export const StudentAttendance = () => {
               <div className="space-y-4">
                 <div>
                   <div className="text-xs text-gray-400 font-semibold uppercase">Date</div>
-                  <div className="text-sm font-semibold text-primary">{new Date(selectedRecord.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                  <div className="text-sm font-semibold text-primary">{formatDateDDMMYYYY(selectedRecord.date)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-1">Status</div>
@@ -1589,8 +1604,8 @@ export const StudentFees = () => {
     await executePaymentFlow(invoiceId, setLoading, fetchInvoicesAndStructures);
   };
 
-  const [dateFrom, setDateFrom] = useState(getTodayStr());
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
@@ -2186,6 +2201,8 @@ export const StudentHomework = () => {
   const [submittingId, setSubmittingId] = useState(null);
   const [selectedHomework, setSelectedHomework] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submissionFile, setSubmissionFile] = useState('');
+  const [submissionNotes, setSubmissionNotes] = useState('');
 
   const fetchHomeworks = async () => {
     try {
@@ -2197,7 +2214,7 @@ export const StudentHomework = () => {
       // Fetch homework assignments
       const homeworkRes = await expressClient.get('/homework');
       const studentClass = `${prof.class} - ${prof.section}`;
-      const filtered = homeworkRes.data.filter(h => h.className === studentClass);
+      const filtered = homeworkRes.data.filter(h => h.className === studentClass || h.className.includes(prof.class));
       setHomeworks(filtered);
     } catch (err) {
       console.error('Error loading student homework:', err);
@@ -2213,12 +2230,17 @@ export const StudentHomework = () => {
   const handleSubmitHomework = async (id) => {
     setSubmittingId(id);
     try {
-      await expressClient.put(`/homework/${id}/student-submit`);
+      await expressClient.post(`/homework/${id}/submit-file`, {
+        submissionFileUrl: submissionFile,
+        submissionNotes
+      });
       setSubmitSuccess(true);
       await fetchHomeworks();
       setTimeout(() => {
         setSubmitSuccess(false);
         setSelectedHomework(null);
+        setSubmissionFile('');
+        setSubmissionNotes('');
       }, 1500);
     } catch (err) {
       console.error('Error submitting homework:', err);
@@ -2236,13 +2258,13 @@ export const StudentHomework = () => {
     <div>
       <Topbar title="My Homework Assignments" subtitle="Academic Tasks › Homework" />
       <div className="card">
-        <p className="text-xs text-gray-400 mb-4">Complete and submit your tasks before their due dates.</p>
+        <p className="text-xs text-gray-400 mb-4">Complete and submit your tasks before their due dates with attached solution files (PDF / Image).</p>
         <div className="overflow-hidden border border-slate-100/80 rounded-xl bg-white shadow-3xs">
           <table className="w-full border-collapse">
             <thead className="bg-slate-50/50">
               <tr className="border-b border-slate-150">
                 <th className="table-th text-left">Assignment Details</th>
-                <th className="table-th text-left">Instructions</th>
+                <th className="table-th text-left">Instructions & Attachments</th>
                 <th className="table-th text-center">Due Date</th>
                 <th className="table-th text-center">Status</th>
                 <th className="table-th text-center">Action</th>
@@ -2259,11 +2281,21 @@ export const StudentHomework = () => {
                       <div className="font-semibold text-sm text-primary">{h.title}</div>
                       <div className="text-2xs text-gray-400 mt-0.5">{h.className}</div>
                     </td>
-                    <td className="table-td text-sm text-slate-650 max-w-xs truncate" title={h.instructions}>
-                      {h.instructions}
+                    <td className="table-td text-sm text-slate-650 max-w-xs">
+                      <div className="truncate">{h.instructions}</div>
+                      {h.attachmentUrl && (
+                        <a
+                          href={h.attachmentUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-2xs font-bold text-purple-600 hover:underline mt-1"
+                        >
+                          📎 View Reference PDF/Image
+                        </a>
+                      )}
                     </td>
                     <td className="table-td text-center text-sm font-semibold text-gray-500">
-                      📅 {new Date(h.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      📅 {formatDateDDMMYYYY(h.dueDate)}
                     </td>
                     <td className="table-td text-center">
                       <span className={`badge ${isSubmitted ? 'badge-success' : isClosed ? 'badge-gray' : 'badge-warning'}`}>
@@ -2282,7 +2314,7 @@ export const StudentHomework = () => {
                           onClick={() => setSelectedHomework(h)}
                           className="btn-primary text-2xs py-1.5 px-3 rounded-lg hover:scale-[1.03] active:scale-[0.97] transition-all cursor-pointer"
                         >
-                          📤 Submit
+                          📤 Submit Assignment PDF
                         </button>
                       )}
                     </td>
@@ -2305,8 +2337,8 @@ export const StudentHomework = () => {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transform transition-all">
             <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
               <div>
-                <h3 className="font-display font-bold text-base">📤 Submit Homework</h3>
-                <p className="text-blue-200 text-xxs">Ensure all tasks are finished before submitting.</p>
+                <h3 className="font-display font-bold text-base">📤 Submit Homework Assignment</h3>
+                <p className="text-blue-200 text-xxs">Attach your completed assignment PDF or Image solution.</p>
               </div>
               {!submitSuccess && (
                 <button
@@ -2326,7 +2358,7 @@ export const StudentHomework = () => {
                     🎉
                   </div>
                   <h4 className="font-display font-bold text-lg text-primary">Submission Successful!</h4>
-                  <p className="text-xs text-gray-500">Your homework has been submitted to the teacher.</p>
+                  <p className="text-xs text-gray-500">Your assignment PDF and solution notes have been submitted.</p>
                 </div>
               ) : (
                 <>
@@ -2345,8 +2377,42 @@ export const StudentHomework = () => {
                   <div className="flex justify-between items-center bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
                     <span className="font-medium">Due Date:</span>
                     <span className="font-bold">
-                      📅 {new Date(selectedHomework.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      📅 {formatDateDDMMYYYY(selectedHomework.dueDate)}
                     </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-2xs font-bold text-gray-700 uppercase mb-1">Attach Assignment PDF / Image Solution *</label>
+                      <input
+                        type="file"
+                        accept=".pdf,image/*"
+                        onChange={e => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (uploadEvent) => {
+                              setSubmissionFile(uploadEvent.target.result);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="input text-xs"
+                      />
+                      {submissionFile && (
+                        <div className="text-2xs text-green-600 font-bold mt-1">✓ Assignment File Ready for Upload</div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-2xs font-bold text-gray-700 uppercase mb-1">Submission Notes (Optional)</label>
+                      <textarea
+                        placeholder="Add any notes or comments for your teacher..."
+                        value={submissionNotes}
+                        onChange={e => setSubmissionNotes(e.target.value)}
+                        className="input text-xs h-16 resize-none"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
@@ -2362,14 +2428,14 @@ export const StudentHomework = () => {
                       type="button"
                       disabled={submittingId === selectedHomework._id}
                       onClick={() => handleSubmitHomework(selectedHomework._id)}
-                      className="btn-primary text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-1.5 shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                      className="btn-primary text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-1.5 shadow-md shadow-primary/10 hover:shadow-lg transition-all"
                     >
                       {submittingId === selectedHomework._id ? (
                         <>
                           <span className="animate-spin">⏳</span> Submitting...
                         </>
                       ) : (
-                        '📤 Confirm Submission'
+                        '📤 Confirm & Submit Solution'
                       )}
                     </button>
                   </div>
@@ -2580,8 +2646,8 @@ export const StudentSchedule = () => {
 export const StudentExams = () => {
   const [profile, setProfile] = useState(null);
   const [exams, setExams] = useState([]);
-  const [dateFrom, setDateFrom] = useState(getTodayStr());
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -2894,6 +2960,710 @@ export const StudentExams = () => {
     </div>
   );
 };
+
+
+// --- Student Holiday Calendar Component ---
+export const StudentHolidays = () => {
+  const [holidays, setHolidays] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedHoliday, setSelectedHoliday] = useState(null);
+  const [filterCategory, setFilterCategory] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const fetchHolidays = async () => {
+    setLoading(true);
+    try {
+      const res = await expressClient.get('/holidays');
+      setHolidays(res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch holidays:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHolidays();
+  }, []);
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(new Date(year, month - 1, 1));
+    setSelectedHoliday(null);
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(new Date(year, month + 1, 1));
+    setSelectedHoliday(null);
+  };
+
+  const firstDay = new Date(year, month, 1);
+  const firstDayOfWeek = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const calendarDays = [];
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    calendarDays.push({ padding: true, key: `pad-${i}` });
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const matchedHoliday = holidays.find(h => {
+      const hStart = h.date;
+      const hEnd = h.endDate || h.date;
+      return dateStr >= hStart && dateStr <= hEnd;
+    });
+    calendarDays.push({
+      padding: false,
+      day,
+      dateStr,
+      holiday: matchedHoliday,
+      key: `day-${day}`
+    });
+  }
+
+  const getCategoryBadge = (cat) => {
+    switch (cat) {
+      case 'NATIONAL':
+        return { bg: 'bg-orange-500/10 text-orange-700 border-orange-200', badge: '🇮🇳 National Holiday', dot: 'bg-orange-500' };
+      case 'FESTIVAL':
+        return { bg: 'bg-purple-500/10 text-purple-700 border-purple-200', badge: '🎉 Festival Holiday', dot: 'bg-purple-500' };
+      case 'ACADEMIC':
+        return { bg: 'bg-blue-500/10 text-blue-700 border-blue-200', badge: '📚 Academic Vacation', dot: 'bg-blue-500' };
+      case 'EMERGENCY':
+        return { bg: 'bg-rose-500/10 text-rose-700 border-rose-200', badge: '🚨 Emergency Leave', dot: 'bg-rose-500' };
+      case 'RESTRICTED':
+        return { bg: 'bg-amber-500/10 text-amber-700 border-amber-200', badge: '✝️ Restricted Holiday', dot: 'bg-amber-500' };
+      default:
+        return { bg: 'bg-emerald-500/10 text-emerald-700 border-emerald-200', badge: '🌴 School Holiday', dot: 'bg-emerald-500' };
+    }
+  };
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const filteredHolidays = holidays.filter(h => {
+    const matchesCategory = filterCategory === 'ALL' || h.category === filterCategory;
+    const matchesQuery = !searchQuery || h.title.toLowerCase().includes(searchQuery.toLowerCase()) || (h.description && h.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesCategory && matchesQuery;
+  });
+
+  const nextUpcomingHoliday = holidays.find(h => new Date(h.date) >= new Date(new Date().setHours(0,0,0,0)));
+
+  if (loading) {
+    return <Loader message="Accessing official school holiday calendar" />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <Topbar title="School Holiday Calendar" subtitle="View annual school holidays, festival vacations, and declared leave dates" />
+
+      {/* Next Upcoming Holiday Banner */}
+      {nextUpcomingHoliday && (
+        <div className="card bg-gradient-to-r from-slate-900 via-primary-dark to-slate-900 text-white p-6 shadow-xl rounded-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center text-3xl font-bold shadow-lg">
+              🎉
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                  Next School Holiday
+                </span>
+                <span className="text-xs text-slate-300 font-semibold">{formatDateDDMMYYYY(nextUpcomingHoliday.date)}</span>
+              </div>
+              <h3 className="text-xl font-extrabold text-white mt-1">{nextUpcomingHoliday.title}</h3>
+              <p className="text-xs text-slate-300/80 mt-0.5">{nextUpcomingHoliday.description || 'School will remain closed on this date.'}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedHoliday(nextUpcomingHoliday)}
+            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg transition-all whitespace-nowrap self-start md:self-center cursor-pointer"
+          >
+            🔍 View Holiday Details
+          </button>
+        </div>
+      )}
+
+      {/* Main Grid: Interactive Calendar & Side Detail Drawer */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left 2 Cols: Monthly Calendar View */}
+        <div className="lg:col-span-2 card bg-white shadow-sm border border-slate-200/80 rounded-2xl p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-bold font-display text-primary">
+                {monthNames[month]} {year}
+              </h2>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 font-bold text-slate-600 border border-slate-200">
+                {calendarDays.filter(d => !d.padding && d.holiday).length} Holidays This Month
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+              >
+                ◀ Prev Month
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentMonth(new Date())}
+                className="px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-all"
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+              >
+                Next Month ▶
+              </button>
+            </div>
+          </div>
+
+          {/* Days of Week Header */}
+          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+              <div key={d} className="py-2">{d}</div>
+            ))}
+          </div>
+
+          {/* Calendar Day Grid */}
+          <div className="grid grid-cols-7 gap-2">
+            {calendarDays.map((cell) => {
+              if (cell.padding) {
+                return <div key={cell.key} className="h-24 bg-slate-50/50 rounded-xl border border-dashed border-slate-100" />;
+              }
+
+              const isToday = cell.dateStr === getTodayStr();
+              const hasHoliday = !!cell.holiday;
+              const isSelected = selectedHoliday && (cell.holiday?._id === selectedHoliday._id || cell.dateStr === selectedHoliday.date);
+
+              const categoryStyle = hasHoliday ? getCategoryBadge(cell.holiday.category) : null;
+
+              return (
+                <button
+                  key={cell.key}
+                  type="button"
+                  onClick={() => {
+                    if (hasHoliday) {
+                      setSelectedHoliday(cell.holiday);
+                    }
+                  }}
+                  className={`h-24 p-2 rounded-xl border text-left transition-all relative flex flex-col justify-between ${
+                    isSelected
+                      ? 'ring-2 ring-primary ring-offset-2 border-primary shadow-md'
+                      : hasHoliday
+                      ? `${categoryStyle.bg} border-2 hover:scale-[1.02] shadow-2xs cursor-pointer`
+                      : isToday
+                      ? 'bg-blue-50/40 border-blue-300 hover:bg-blue-50'
+                      : 'bg-white border-slate-100 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className={`text-xs font-black ${
+                      isToday ? 'w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center' : 'text-slate-700'
+                    }`}>
+                      {cell.day}
+                    </span>
+                    {hasHoliday && (
+                      <span className={`w-2 h-2 rounded-full ${categoryStyle.dot}`} />
+                    )}
+                  </div>
+
+                  {hasHoliday ? (
+                    <div className="mt-1">
+                      <div className="text-[10px] font-black line-clamp-2 leading-tight">
+                        {cell.holiday.title}
+                      </div>
+                      <span className="text-[9px] font-semibold opacity-80 block truncate mt-0.5 text-primary">
+                        👉 Click for details
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-[9px] text-slate-300 font-medium">School Open</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right 1 Col: Selected Holiday Details Side Panel */}
+        <div className="space-y-6">
+          <div className="card bg-white border border-slate-200/80 shadow-sm rounded-2xl p-6 sticky top-6">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <h3 className="font-display font-bold text-primary text-md flex items-center gap-2">
+                <span>📌 Holiday Details</span>
+              </h3>
+              {selectedHoliday && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedHoliday(null)}
+                  className="text-xs font-semibold text-slate-400 hover:text-slate-700"
+                >
+                  Clear ✕
+                </button>
+              )}
+            </div>
+
+            {selectedHoliday ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-slate-900 text-white space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${getCategoryBadge(selectedHoliday.category).bg}`}>
+                      {getCategoryBadge(selectedHoliday.category).badge}
+                    </span>
+                    <span className="text-xs font-mono font-bold text-amber-300">
+                      {formatDateRangeDDMMYYYY(selectedHoliday.date, selectedHoliday.endDate)}
+                    </span>
+                  </div>
+                  <h4 className="text-lg font-extrabold text-white font-display pt-1">
+                    {selectedHoliday.title}
+                  </h4>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-bold text-[10px] uppercase block mb-1">Reason / Description</span>
+                    <p className="text-slate-700 font-medium bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed">
+                      {selectedHoliday.description || 'Official school holiday declared by administration.'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="text-slate-400 font-bold text-[10px] uppercase block mb-1">Re-opening Note</span>
+                    <p className="text-slate-600 font-semibold bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 text-emerald-900">
+                      ✅ Classes and regular school operations will resume on the next working day following this holiday.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-center gap-2 text-[11px] text-blue-800 font-medium">
+                    <span>📢 Real-time notification broadcast sent to all students & parents.</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="py-12 text-center text-slate-400">
+                <div className="text-4xl mb-2">📅</div>
+                <p className="text-xs font-bold text-slate-600">Click on any holiday date in calendar</p>
+                <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
+                  Click on any highlighted holiday cell to view details, duration, and official announcements.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Full Annual Holiday Directory Table */}
+      <div className="card bg-white border border-slate-200/80 shadow-sm rounded-2xl p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-100">
+          <div>
+            <h3 className="font-display font-bold text-primary text-base">Annual School Holidays Directory</h3>
+            <p className="text-xs text-slate-400">Complete list of declared holidays for the academic year</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search holiday name..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="input text-xs w-48"
+            />
+            <select
+              value={filterCategory}
+              onChange={e => setFilterCategory(e.target.value)}
+              className="input text-xs w-36"
+            >
+              <option value="ALL">All Categories</option>
+              <option value="NATIONAL">National Holidays</option>
+              <option value="FESTIVAL">Festival Holidays</option>
+              <option value="ACADEMIC">Academic Breaks</option>
+              <option value="RESTRICTED">Restricted Leave</option>
+              <option value="EMERGENCY">Emergency Leave</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                <th className="py-3 px-4">Date / Duration</th>
+                <th className="py-3 px-4">Holiday Title</th>
+                <th className="py-3 px-4">Category</th>
+                <th className="py-3 px-4">Description</th>
+                <th className="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium">
+              {filteredHolidays.map((h) => {
+                const catStyle = getCategoryBadge(h.category);
+                return (
+                  <tr key={h._id || h.date} className="hover:bg-slate-50/80 transition-all">
+                    <td className="py-3 px-4 font-mono font-bold text-slate-800">
+                      {formatDateRangeDDMMYYYY(h.date, h.endDate)}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-primary text-sm">{h.title}</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black border ${catStyle.bg}`}>
+                        {catStyle.badge}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-slate-600 max-w-xs truncate">{h.description || 'Official School Holiday'}</td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedHoliday(h)}
+                        className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold transition-all"
+                      >
+                        View Details ➔
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredHolidays.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="text-center py-8 text-slate-400 italic text-xs">
+                    No holidays match your current filter.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Student Class Syllabus Component ---
+export const StudentSyllabus = () => {
+  const [syllabi, setSyllabi] = useState([]);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('ALL');
+  const [previewFile, setPreviewFile] = useState(null);
+
+  const getStudentClassStr = (p) => {
+    if (!p) return '';
+    if (p.className) return p.className;
+    if (p.class) {
+      const cls = p.class.toString().startsWith('Class') ? p.class : `Class ${p.class}`;
+      return p.section ? `${cls} - ${p.section}` : cls;
+    }
+    return '';
+  };
+
+  const fetchSyllabi = async () => {
+    try {
+      const profRes = await apiClient.get('/academics/student/profile').catch(() => null);
+      const p = profRes?.data;
+      if (p) {
+        setProfile(p);
+      }
+      const studentClass = getStudentClassStr(p);
+      const queryUrl = studentClass ? `/syllabus?className=${encodeURIComponent(studentClass)}` : '/syllabus';
+      const res = await expressClient.get(queryUrl);
+      setSyllabi(res.data);
+    } catch (err) {
+      console.error('Error loading syllabus:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSyllabi();
+  }, []);
+
+  const uniqueSubjects = Array.from(new Set(syllabi.map(s => s.subject))).filter(Boolean);
+
+  const filteredSyllabi = syllabi.filter(s => {
+    const matchesSubject = selectedSubject === 'ALL' || s.subject === selectedSubject;
+    const matchesSearch = !searchQuery || s.title.toLowerCase().includes(searchQuery.toLowerCase()) || (s.description && s.description.toLowerCase().includes(searchQuery.toLowerCase())) || (s.teacherName && s.teacherName.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesSubject && matchesSearch;
+  });
+
+  if (loading) {
+    return <Loader message="Retrieving your class curriculum & subject syllabus" />;
+  }
+
+  const currentClassLabel = getStudentClassStr(profile) || 'My Class';
+
+  return (
+    <div className="space-y-6">
+      <Topbar title="Class Subject Syllabus" subtitle={`Curriculum & Course Outline › ${currentClassLabel}`} />
+
+      {/* Filter and Search Bar */}
+      <div className="card bg-white border border-slate-200/80 shadow-sm rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Filter Subject:</span>
+          <select
+            value={selectedSubject}
+            onChange={e => setSelectedSubject(e.target.value)}
+            className="input text-xs py-1.5 px-3 bg-white border border-slate-200 rounded-xl"
+          >
+            <option value="ALL">All Subjects ({syllabi.length})</option>
+            {uniqueSubjects.map(sub => (
+              <option key={sub} value={sub}>{sub}</option>
+            ))}
+          </select>
+        </div>
+
+        <input
+          type="text"
+          placeholder="Search by topic, subject or teacher..."
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="input text-xs py-1.5 px-3 w-full sm:w-64 border border-slate-200 rounded-xl"
+        />
+      </div>
+
+      {/* Syllabus Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredSyllabi.map((s, idx) => (
+          <div key={s._id || idx} className="card bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="px-3 py-1 rounded-full text-2xs font-extrabold bg-purple-50 text-purple-700 border border-purple-100 uppercase tracking-wider">
+                  📚 {s.subject}
+                </span>
+                <span className="text-3xs font-mono font-bold text-slate-400">
+                  {formatDateDDMMYYYY(s.createdAt)}
+                </span>
+              </div>
+
+              <h3 className="font-display font-extrabold text-primary text-base line-clamp-2 mb-2">
+                {s.title}
+              </h3>
+
+              <p className="text-xs text-slate-600 line-clamp-3 bg-slate-50 p-3 rounded-xl border border-slate-100 font-medium leading-relaxed">
+                {s.description || 'Official subject course curriculum and examination outline.'}
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <div className="text-2xs text-slate-400 font-semibold">
+                <span>Teacher: </span>
+                <span className="text-slate-700 font-bold">{s.teacherName || 'Faculty'}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPreviewFile(s)}
+                className="btn-primary text-xs py-1.5 px-3 rounded-xl flex items-center gap-1.5 font-bold shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+              >
+                👁️ View Syllabus
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {filteredSyllabi.length === 0 && (
+          <div className="col-span-full card text-center py-12 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+            <div className="text-4xl mb-2">📚</div>
+            <div className="font-semibold text-xs text-primary mb-1">No Syllabus Found</div>
+            <p className="text-2xs text-slate-400 max-w-xs mx-auto">
+              Your teachers have not uploaded syllabus documents for the selected filter yet.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Syllabus Viewer Modal */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+            <div className="bg-primary text-white p-4 px-6 flex justify-between items-center">
+              <div>
+                <span className="text-2xs font-extrabold text-blue-200 uppercase tracking-widest block">
+                  {previewFile.subject} • {previewFile.className}
+                </span>
+                <h3 className="font-display font-bold text-lg">{previewFile.title}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewFile(null)}
+                className="text-white hover:text-blue-200 text-xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 text-xs text-slate-700">
+                <span className="font-bold text-primary">Uploaded by:</span> {previewFile.teacherName} ({formatDateDDMMYYYY(previewFile.createdAt)})
+                {previewFile.description && <p className="mt-1 text-slate-600">{previewFile.description}</p>}
+              </div>
+
+              {previewFile.fileType === 'image' || previewFile.fileUrl?.startsWith('data:image/') || previewFile.fileUrl?.match(/\.(jpeg|jpg|png|webp|gif)$/i) ? (
+                <img src={previewFile.fileUrl} alt="Syllabus" className="w-full h-auto rounded-xl border border-slate-200 shadow-sm" />
+              ) : (
+                <iframe src={previewFile.fileUrl} title="Syllabus PDF" className="w-full h-[500px] rounded-xl border border-slate-200 shadow-sm" />
+              )}
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center px-6">
+              <a
+                href={previewFile.fileUrl}
+                download={`${previewFile.subject}_Syllabus`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-outline text-xs py-2 px-4 font-bold flex items-center gap-1.5"
+              >
+                📥 Download Original Document
+              </a>
+              <button
+                type="button"
+                onClick={() => setPreviewFile(null)}
+                className="btn-primary text-xs py-2 px-5 font-bold"
+              >
+                Close Viewer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ==========================================
+// Student Library (My Books & Fines)
+// ==========================================
+export const StudentLibrary = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLibrary = async () => {
+      try {
+        const res = await apiClient.get('/academics/my-library-books');
+        setData(res.data);
+      } catch (err) {
+        console.error('Failed to load library books:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLibrary();
+  }, []);
+
+  return (
+    <div className="space-y-6 text-left">
+      <Topbar title="My Library Books" subtitle="Track Borrowed Textbooks, Due Dates & Overdue Fines" />
+
+      {/* Hero Banner */}
+      <div className="bg-gradient-to-r from-cyan-950 via-teal-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="space-y-2">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-3">
+            <BookOpen className="w-8 h-8 text-cyan-400 shrink-0" />
+            My Borrowed Books
+          </h1>
+          <p className="text-sm text-cyan-200/90 max-w-xl">
+            Keep track of returned books, active borrowings, return due dates, and fine policies established by the school librarian.
+          </p>
+        </div>
+
+        {data && (
+          <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 text-center shrink-0">
+            <span className="text-3xs font-black uppercase tracking-widest text-cyan-300 block">Library Overdue Fine Policy</span>
+            <div className="text-xl font-black text-white font-mono mt-0.5">₹{data.finePerDay || 2} <span className="text-xs font-normal">/ day</span></div>
+          </div>
+        )}
+      </div>
+
+      {/* Books Table */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="p-5 sm:p-6 border-b border-slate-100">
+          <h2 className="text-base font-extrabold text-slate-900">
+            Issued Books & Return History ({data?.books?.length || 0})
+          </h2>
+        </div>
+
+        {loading ? (
+          <div className="py-20 text-center"><Loader /></div>
+        ) : !data || data.books?.length === 0 ? (
+          <div className="py-16 text-center text-slate-400 space-y-2">
+            <BookOpen className="w-12 h-12 mx-auto text-slate-300" />
+            <p className="text-sm font-semibold text-slate-600">No Books Currently Borrowed</p>
+            <p className="text-xs text-slate-400">Visit the school library to borrow books and study materials.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-3xs font-black text-slate-400 uppercase tracking-widest">
+                  <th className="py-3.5 px-6">BOOK TITLE & AUTHOR</th>
+                  <th className="py-3.5 px-4">CATEGORY</th>
+                  <th className="py-3.5 px-4">ISSUE DATE</th>
+                  <th className="py-3.5 px-4">DUE DATE</th>
+                  <th className="py-3.5 px-4">STATUS</th>
+                  <th className="py-3.5 px-4">FINE STATUS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm font-medium">
+                {data.books.map(b => (
+                  <tr key={b.id} className="hover:bg-slate-50/80 transition">
+                    <td className="py-4 px-6">
+                      <div className="font-bold text-slate-900">{b.bookTitle}</div>
+                      <div className="text-xs text-slate-500">by {b.author}</div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-2xs font-bold">
+                        {b.category}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-xs text-slate-600">
+                      {new Date(b.issueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="py-4 px-4 text-xs font-bold text-slate-800">
+                      {new Date(b.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`px-2.5 py-1 rounded-full text-3xs font-black uppercase tracking-wider border ${
+                        b.status === 'Returned'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : b.status === 'Overdue'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200 animate-pulse'
+                          : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                      }`}>
+                        {b.status} {b.overdueDays > 0 && `(${b.overdueDays}d overdue)`}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 font-mono">
+                      {b.fineAmount > 0 ? (
+                        <span className={`font-bold text-xs ${b.finePaid ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          ₹{b.fineAmount} {b.finePaid ? '(Paid)' : '(Unpaid Fine)'}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">No Fine</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 
 
 

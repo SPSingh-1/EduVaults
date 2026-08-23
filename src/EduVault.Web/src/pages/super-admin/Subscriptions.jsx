@@ -45,10 +45,10 @@ const Subscriptions = () => {
   const [loading, setLoading] = useState(true);
   
   // Date filter states
-  const [renewDateFrom, setRenewDateFrom] = useState(getTodayStr());
-  const [renewDateTo, setRenewDateTo] = useState(getTodayStr());
-  const [requestDateFrom, setRequestDateFrom] = useState(getTodayStr());
-  const [requestDateTo, setRequestDateTo] = useState(getTodayStr());
+  const [renewDateFrom, setRenewDateFrom] = useState('');
+  const [renewDateTo, setRenewDateTo] = useState('');
+  const [requestDateFrom, setRequestDateFrom] = useState('');
+  const [requestDateTo, setRequestDateTo] = useState('');
   
   // Tab state
   const [activeSubTab, setActiveSubTab] = useState('global'); // global, custom, requests

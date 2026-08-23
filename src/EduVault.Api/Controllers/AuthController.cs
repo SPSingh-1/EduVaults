@@ -66,6 +66,8 @@ namespace EduVault.Api.Controllers
             string logoUrl = string.Empty;
             string emailDomain = string.Empty;
             string themeColor = string.Empty;
+            bool hasAccountModule = false;
+            bool hasLibraryModule = false;
             if (user.SchoolId.HasValue)
             {
                 var school = await _unitOfWork.Schools.GetByIdAsync(user.SchoolId.Value);
@@ -73,6 +75,33 @@ namespace EduVault.Api.Controllers
                 logoUrl = school?.LogoUrl ?? string.Empty;
                 emailDomain = school?.EmailDomain ?? string.Empty;
                 themeColor = school?.ThemeColor ?? string.Empty;
+                hasAccountModule = school?.HasAccountModule ?? false;
+                hasLibraryModule = school?.HasLibraryModule ?? false;
+            }
+
+            // Build RBAC permissions for this user's role + school
+            var permissions = new System.Collections.Generic.List<EduVault.Core.DTOs.PagePermissionDto>();
+            var allPages = (await _unitOfWork.PageDefinitions.GetAllAsync()).Where(p => p.IsActive).ToList();
+            if (allPages.Any() && user.SchoolId.HasValue)
+            {
+                var savedPerms = (await _unitOfWork.SchoolRolePermissions.FindAsync(
+                    p => p.SchoolId == user.SchoolId.Value && p.RoleName == user.Role)).ToList();
+
+                permissions = allPages.Select(page =>
+                {
+                    var saved = savedPerms.FirstOrDefault(p => p.PageDefinitionId == page.Id);
+                    bool defaultView = IsDefaultVisibleForRole(user.Role, page.Module);
+                    return new EduVault.Core.DTOs.PagePermissionDto
+                    {
+                        PageKey   = page.PageKey,
+                        PageName  = page.PageName,
+                        Route     = page.Route,
+                        CanView   = saved?.CanView   ?? defaultView,
+                        CanCreate = saved?.CanCreate ?? defaultView,
+                        CanEdit   = saved?.CanEdit   ?? defaultView,
+                        CanDelete = saved?.CanDelete ?? defaultView
+                    };
+                }).Where(p => p.CanView).ToList(); // only return pages this user can see
             }
 
             var token = _authService.GenerateToken(user);
@@ -92,7 +121,10 @@ namespace EduVault.Api.Controllers
                     SchoolName = schoolName,
                     LogoUrl = logoUrl,
                     EmailDomain = emailDomain,
-                    ThemeColor = themeColor
+                    ThemeColor = themeColor,
+                    HasAccountModule = hasAccountModule,
+                    HasLibraryModule = hasLibraryModule,
+                    Permissions = permissions
                 }
             };
 
@@ -472,6 +504,15 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.CompleteAsync();
 
             return Ok(new { success = true, message = "Inquiry submitted successfully." });
+        }
+
+        private static bool IsDefaultVisibleForRole(string role, string module)
+        {
+            return (role == "schooladmin"    && module == "school_admin") ||
+                   (role == "teacher"        && module == "teacher")      ||
+                   (role == "student"        && module == "student")      ||
+                   (role == "accountmanager" && module == "account")      ||
+                   (role == "librarian"      && module == "library");
         }
     }
 

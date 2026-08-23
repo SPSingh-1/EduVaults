@@ -49,6 +49,8 @@ namespace EduVault.Api.Controllers
                     s.ThemeColor,
                     s.Address,
                     s.City,
+                    s.HasAccountModule,
+                    s.HasLibraryModule,
                     StudentsCount = students.Count(),
                     AdminEmail = adminUser?.Email,
                     AdminName = adminUser?.FirstName ?? "N/A",
@@ -220,6 +222,21 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.CompleteAsync();
 
             return Ok(school);
+        }
+
+        [HttpPut("schools/{id}/modules")]
+        public async Task<IActionResult> UpdateSchoolModules(Guid id, [FromBody] SchoolModulesInput input)
+        {
+            var school = await _unitOfWork.Schools.GetByIdAsync(id);
+            if (school == null)
+                return NotFound(new { error = "School not found" });
+
+            school.HasAccountModule = input.HasAccountModule;
+            school.HasLibraryModule = input.HasLibraryModule;
+            _unitOfWork.Schools.Update(school);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true, hasAccountModule = school.HasAccountModule, hasLibraryModule = school.HasLibraryModule });
         }
 
         [HttpGet("subscriptions")]
@@ -941,5 +958,11 @@ namespace EduVault.Api.Controllers
         public string Status { get; set; } = string.Empty;
         public string? AdminEmail { get; set; }
         public string? AdminPassword { get; set; }
+    }
+
+    public class SchoolModulesInput
+    {
+        public bool HasAccountModule { get; set; }
+        public bool HasLibraryModule { get; set; }
     }
 }

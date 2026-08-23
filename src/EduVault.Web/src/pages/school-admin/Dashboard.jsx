@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { useNavigate } from 'react-router-dom';
-import { apiClient } from '../../api/apiClient';
+import { apiClient, expressClient } from '../../api/apiClient';
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import Loader from '../../components/common/Loader';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
@@ -20,7 +21,7 @@ const generateMockPaymentId = () => {
   return `sub_pay_mock_${Math.random().toString(36).substring(7)}`;
 };
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label, mode }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white/95 backdrop-blur-sm border border-slate-100/80 p-3 rounded-2xl shadow-[0_12px_30px_-5px_rgba(0,0,0,0.08)] transition-all">
@@ -30,7 +31,7 @@ const CustomTooltip = ({ active, payload, label }) => {
             <span className="w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm shrink-0" style={{ backgroundColor: item.color || item.fill }} />
             <span className="text-2xs text-slate-500 font-semibold">{item.name}:</span>
             <span className="text-xs font-black text-slate-800">
-              {item.value} {item.value === 1 ? 'student' : 'students'}
+              {mode === 'revenue' ? `Rs. ${item.value.toLocaleString()}` : `${item.value} ${item.value === 1 ? 'record' : 'students'}`}
             </span>
           </div>
         ))}
@@ -44,14 +45,20 @@ const SchoolAdminDashboard = () => {
   const navigate = useNavigate();
   const [showOnboardChoice, setShowOnboardChoice] = useState(false);
   const [stats, setStats] = useState(null);
+  const [teacherSummary, setTeacherSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
+  const [chartMode, setChartMode] = useState('attendance'); // 'attendance', 'enrollment', 'revenue'
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await apiClient.get('/academics/stats');
+        const [res, tRes] = await Promise.all([
+          apiClient.get('/academics/stats'),
+          expressClient.get('/teacher-attendance/today-summary').catch(() => ({ data: { presentCount: 0 } }))
+        ]);
         setStats(res.data);
+        setTeacherSummary(tRes.data);
       } catch (err) {
         console.error('Error fetching school stats:', err);
       } finally {
@@ -64,7 +71,6 @@ const SchoolAdminDashboard = () => {
   const handlePaySubscription = async () => {
     setPaying(true);
     try {
-      // 1. Create order
       const orderRes = await apiClient.post('/billing/create-subscription-order');
       const { 
         orderId, 
@@ -73,9 +79,6 @@ const SchoolAdminDashboard = () => {
         keyId, 
         isMock, 
         paymentProvider, 
-        publishableKey, 
-        clientId, 
-        merchantId, 
         instructions 
       } = orderRes.data;
 
@@ -121,7 +124,6 @@ const SchoolAdminDashboard = () => {
                 paymentProvider: 'razorpay'
               });
               alert('Platform subscription payment successful! All features unlocked.');
-              // Refetch stats to update the dashboard banner
               const res = await apiClient.get('/academics/stats');
               setStats(res.data);
             } catch (err) {
@@ -134,9 +136,7 @@ const SchoolAdminDashboard = () => {
             name: userProfile.firstName || 'School Admin',
             email: userProfile.email || '',
           },
-          theme: {
-            color: "#1a2744"
-          }
+          theme: { color: "#1a2744" }
         };
 
         if (isMock) {
@@ -181,7 +181,6 @@ const SchoolAdminDashboard = () => {
         }
       }
       else {
-        // Stripe, PayPal, PhonePe simulations
         const providerName = provider === 'stripe' ? 'Stripe' : provider === 'paypal' ? 'PayPal' : provider === 'phonepe' ? 'PhonePe' : provider;
         const confirmMsg = `💳 Active Platform Gateway: ${providerName}\n\nAmount: Rs. ${amount}\n\nWould you like to proceed with the simulated checkout?`;
         
@@ -213,19 +212,17 @@ const SchoolAdminDashboard = () => {
     }
   };
 
-  // Mock enrollment trend data for visual enhancement
-  const enrollmentTrendData = [
-    { month: 'Jan', admissions: 5 },
-    { month: 'Feb', admissions: 12 },
-    { month: 'Mar', admissions: stats?.totalStudents ? Math.round(stats.totalStudents * 0.4) : 15 },
-    { month: 'Apr', admissions: stats?.totalStudents ? Math.round(stats.totalStudents * 0.6) : 22 },
-    { month: 'May', admissions: stats?.totalStudents ? Math.round(stats.totalStudents * 0.7) : 28 },
-    { month: 'Jun', admissions: stats?.totalStudents ?? 35 },
-  ];
-
   if (loading) {
     return <Loader message="Assembling school statistics & overview" />;
   }
+
+  const studentPresentPct = stats?.totalStudents > 0 
+    ? Math.round(((stats?.todayStudentsPresent ?? 0) / stats.totalStudents) * 100) 
+    : 0;
+
+  const staffPresentPct = stats?.totalTeachers > 0 
+    ? Math.round(((teacherSummary?.presentCount ?? 0) / stats.totalTeachers) * 100) 
+    : 0;
 
   return(
     <div className="space-y-6">
@@ -242,7 +239,7 @@ const SchoolAdminDashboard = () => {
             </span>
           )}
         </div>
-      } subtitle="Welcome back, Principal. Here is your school's performance today." actions={
+      } subtitle="Welcome back, Principal. Here is your school's live performance today." actions={
         <button onClick={() => setShowOnboardChoice(true)} className="btn-primary text-xs">
           <UserPlus className="w-3.5 h-3.5" />
           <span>Register User</span>
@@ -272,18 +269,50 @@ const SchoolAdminDashboard = () => {
         </div>
       )}
 
-      {/* Stats Cards */}
+      {/* Real-time Daily Varying School Action Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          {label:"Total Students",value: stats?.totalStudents ?? '0',sub:'Active enrollments',icon:Users,color:'text-blue-500',bgColor:'bg-blue-50/50'},
-          {label:'Total Teachers',value: stats?.totalTeachers ?? '0',sub:'Staff members',icon:UserCheck,color:'text-emerald-500',bgColor:'bg-emerald-50/50'},
-          {label:'Total Classes',value: stats?.totalClasses ?? '0',sub:'Sections defined',icon:Building,color:'text-violet-500',bgColor:'bg-violet-50/50'},
-          {label:'Pending Dues',value: stats?.pendingFees ? `Rs. ${stats.pendingFees.toLocaleString()}` : 'Rs. 0',sub:'OVERDUE',icon:CreditCard,color:'text-rose-500',bgColor:'bg-rose-50/50',subColor:'text-rose-500'},
+          {
+            label: "Today's Students Present",
+            value: `${stats?.todayStudentsPresent ?? 0} / ${stats?.totalStudents ?? 0}`,
+            sub: `${studentPresentPct}% Present Today (${stats?.todayStudentsAbsent ?? 0} Absent)`,
+            icon: Users,
+            color: 'text-emerald-600',
+            bgColor: 'bg-emerald-50/60',
+            subColor: 'text-emerald-600 font-bold'
+          },
+          {
+            label: "Today's Teachers Present",
+            value: `${teacherSummary?.presentCount ?? 0} / ${stats?.totalTeachers ?? 0}`,
+            sub: `${staffPresentPct}% Staff Attendance Today`,
+            icon: UserCheck,
+            color: 'text-purple-600',
+            bgColor: 'bg-purple-50/60',
+            subColor: 'text-purple-600 font-bold'
+          },
+          {
+            label: "Today's Fee Collections",
+            value: stats?.todayFeesCollected ? `Rs. ${stats.todayFeesCollected.toLocaleString()}` : 'Rs. 0',
+            sub: `Fee Receipts Collected Today`,
+            icon: CreditCard,
+            color: 'text-blue-600',
+            bgColor: 'bg-blue-50/60',
+            subColor: 'text-blue-600 font-bold'
+          },
+          {
+            label: "Overdue Pending Fees",
+            value: stats?.pendingFees ? `Rs. ${stats.pendingFees.toLocaleString()}` : 'Rs. 0',
+            sub: 'Outstanding Overdue Dues',
+            icon: Building,
+            color: 'text-rose-500',
+            bgColor: 'bg-rose-50/50',
+            subColor: 'text-rose-500 font-bold'
+          },
         ].map(s=>(
           <div key={s.label} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
             <div className="space-y-1">
               <div className="text-xs font-medium text-gray-400">{s.label}</div>
-              <div className="font-display text-2xl font-bold text-primary">{s.value}</div>
+              <div className="font-display text-xl font-bold text-primary">{s.value}</div>
               <div className={`text-xs mt-0.5 ${s.subColor||'text-gray-400'}`}>{s.sub}</div>
             </div>
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${s.bgColor}`}>
@@ -293,44 +322,79 @@ const SchoolAdminDashboard = () => {
         ))}
       </div>
 
-      {/* Main Grid: Graph and Action Panels */}
+      {/* Main Grid: Real Data Graph and Action Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="card lg:col-span-2 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
             <div>
-              <h3 className="font-display font-semibold text-primary text-sm m-0">Student Enrollment Trend</h3>
-              <p className="text-xs text-gray-400">Total active students registered over the academic months</p>
+              <h3 className="font-display font-semibold text-primary text-sm m-0">
+                {chartMode === 'attendance' ? '7-Day Daily Attendance Trend' : chartMode === 'enrollment' ? 'Student Enrollment Trend' : 'Monthly Fee Collection Trend'}
+              </h3>
+              <p className="text-xs text-gray-400">
+                {chartMode === 'attendance' ? 'Real-time daily presence vs absence counts' : chartMode === 'enrollment' ? 'Net new students registered per month' : 'Total fee receipts collected per month'}
+              </p>
             </div>
-            <select className="border border-gray-200 text-xs px-2.5 py-1.5 rounded-lg text-gray-500 outline-none bg-white">
-              <option>Academic Year 2023-24</option>
+            <select 
+              value={chartMode} 
+              onChange={e => setChartMode(e.target.value)} 
+              className="border border-gray-200 text-xs px-3 py-1.5 rounded-lg text-gray-700 outline-none bg-white font-semibold cursor-pointer shadow-xs hover:border-blue-300 transition-all"
+            >
+              <option value="attendance">🗓️ Last 7 Days Attendance (Daily)</option>
+              <option value="enrollment">🎒 Monthly Admissions Trend</option>
+              <option value="revenue">💳 Monthly Fee Collection</option>
             </select>
           </div>
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={enrollmentTrendData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="schoolEnrollmentTrendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.24}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="month" tick={{fontSize:10, fill:'#94a3b8'}} tickLine={false} axisLine={false} />
-                <YAxis tick={{fontSize:10, fill:'#94a3b8'}} tickLine={false} axisLine={false} />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }} transitionDuration={180} />
-                <Area 
-                  type="monotone" 
-                  name="Enrolled Students" 
-                  dataKey="admissions" 
-                  stroke="#6366f1" 
-                  strokeWidth={2.5} 
-                  fillOpacity={1} 
-                  fill="url(#schoolEnrollmentTrendGrad)" 
-                  dot={{ fill: '#6366f1', stroke: '#fff', strokeWidth: 1.5, r: 4 }}
-                  activeDot={{ fill: '#6366f1', stroke: '#fff', strokeWidth: 2, r: 6 }}
-                />
-              </AreaChart>
+              {chartMode === 'attendance' ? (
+                <AreaChart data={stats?.dailyAttendanceTrend || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="presentGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                    </linearGradient>
+                    <linearGradient id="absentGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="date" tick={{fontSize:10, fill:'#94a3b8'}} tickLine={false} axisLine={false} />
+                  <YAxis tick={{fontSize:10, fill:'#94a3b8'}} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip mode="attendance" />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }} transitionDuration={180} />
+                  <Area type="monotone" name="Present Students" dataKey="present" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#presentGrad)" dot={{ fill: '#10b981', stroke: '#fff', strokeWidth: 1.5, r: 4 }} activeDot={{ fill: '#10b981', stroke: '#fff', strokeWidth: 2, r: 6 }} />
+                  <Area type="monotone" name="Absent Students" dataKey="absent" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#absentGrad)" dot={{ fill: '#ef4444', stroke: '#fff', strokeWidth: 1.5, r: 3 }} activeDot={{ fill: '#ef4444', stroke: '#fff', strokeWidth: 2, r: 5 }} />
+                </AreaChart>
+              ) : chartMode === 'enrollment' ? (
+                <AreaChart data={stats?.enrollmentTrend || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="enrollmentGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="month" tick={{fontSize:10, fill:'#94a3b8'}} tickLine={false} axisLine={false} />
+                  <YAxis tick={{fontSize:10, fill:'#94a3b8'}} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip mode="enrollment" />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }} transitionDuration={180} />
+                  <Area type="monotone" name="Enrolled Students" dataKey="admissions" stroke="#6366f1" strokeWidth={2.5} fillOpacity={1} fill="url(#enrollmentGrad)" dot={{ fill: '#6366f1', stroke: '#fff', strokeWidth: 1.5, r: 4 }} activeDot={{ fill: '#6366f1', stroke: '#fff', strokeWidth: 2, r: 6 }} />
+                </AreaChart>
+              ) : (
+                <AreaChart data={stats?.monthlyFeeTrend || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="month" tick={{fontSize:10, fill:'#94a3b8'}} tickLine={false} axisLine={false} />
+                  <YAxis tick={{fontSize:10, fill:'#94a3b8'}} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip mode="revenue" />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }} transitionDuration={180} />
+                  <Area type="monotone" name="Fee Receipts (Rs.)" dataKey="collected" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#revenueGrad)" dot={{ fill: '#3b82f6', stroke: '#fff', strokeWidth: 1.5, r: 4 }} activeDot={{ fill: '#3b82f6', stroke: '#fff', strokeWidth: 2, r: 6 }} />
+                </AreaChart>
+              )}
             </ResponsiveContainer>
           </div>
         </div>
@@ -392,7 +456,7 @@ const SchoolAdminDashboard = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold text-primary truncate">{a.name}</div>
-                  <div className="text-[10px] text-gray-400">{new Date(a.createdAt).toLocaleDateString('en-GB')}</div>
+                  <div className="text-[10px] text-gray-400">{formatDateDDMMYYYY(a.createdAt)}</div>
                 </div>
                 <div className="text-xs text-gray-500 truncate">New Student enrolled: {a.email}</div>
               </div>

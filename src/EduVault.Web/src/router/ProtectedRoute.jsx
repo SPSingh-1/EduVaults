@@ -6,6 +6,8 @@ const roleRoutes = {
   schooladmin: '/school-admin/dashboard',
   teacher: '/teacher/dashboard',
   student: '/student/dashboard',
+  accountmanager: '/account/dashboard',
+  librarian: '/library/dashboard',
 };
 
 export const ProtectedRoute = ({ allowedRoles }) => {

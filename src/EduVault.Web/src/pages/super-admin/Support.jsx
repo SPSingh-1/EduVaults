@@ -47,8 +47,8 @@ const getTodayStr = () => {
 
 const Support = () => {
   const [tickets, setTickets] = useState([]);
-  const [dateFrom, setDateFrom] = useState(getTodayStr());
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categories, setCategories] = useState([]);

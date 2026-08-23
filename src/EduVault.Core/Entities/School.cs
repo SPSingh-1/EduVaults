@@ -17,6 +17,10 @@ namespace EduVault.Core.Entities
         public string? EmailDomain { get; set; }
         public string? ThemeColor { get; set; }
 
+        // Module permissions granted by Super Admin
+        public bool HasAccountModule { get; set; } = false;
+        public bool HasLibraryModule { get; set; } = false;
+
         public string? RazorpayKeyId { get; set; }
         public string? RazorpayKeySecret { get; set; }
         public string? TwilioAccountSid { get; set; }

@@ -22,6 +22,9 @@ const helmet = require('helmet');
 
 const Homework = require('./models/Homework');
 const TeacherAttendance = require('./models/TeacherAttendance');
+const SchoolSetting = require('./models/SchoolSetting');
+const Holiday = require('./models/Holiday');
+const Syllabus = require('./models/Syllabus');
 
 const app = express();
 const server = http.createServer(app);
@@ -757,23 +760,365 @@ app.get('/api/documents', authenticateToken, async (req, res) => {
 });
 
 // --- Teacher Attendance Endpoints ---
-/**
- * @openapi
- * /api/teacher-attendance:
- *   get:
- *     summary: Get teacher attendance for a specific date
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: date
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: List of teacher attendance records.
- */
+// --- Helper: Haversine Formula for Distance Calculation (meters) ---
+function getHaversineDistanceMeters(lat1, lon1, lat2, lon2) {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return 0;
+  const R = 6371000; // Radius of Earth in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+// --- School Settings & Attendance Modes Endpoints ---
+app.get('/api/school-settings', authenticateToken, async (req, res) => {
+  try {
+    const schoolId = req.query.schoolId || req.user.schoolId;
+    if (!schoolId) return res.status(400).json({ error: 'School ID missing in request' });
+    let setting = await SchoolSetting.findOne({ schoolId });
+    if (!setting) {
+      setting = new SchoolSetting({ schoolId });
+      await setting.save();
+    }
+    res.json(setting);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/school-settings', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'schooladmin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({ error: 'Unauthorized. Only admins can update school settings.' });
+    }
+    const schoolId = req.body.schoolId || req.user.schoolId;
+    const { latitude, longitude, address, geofenceRadiusMeters, schoolStartTime, gracePeriodMinutes, minHalfDayHours, schoolEndTime, attendanceModes, biometricApiKey } = req.body;
+    
+    let setting = await SchoolSetting.findOne({ schoolId });
+    if (!setting) {
+      setting = new SchoolSetting({ schoolId });
+    }
+    if (latitude != null) setting.latitude = parseFloat(latitude);
+    if (longitude != null) setting.longitude = parseFloat(longitude);
+    if (address != null) setting.address = String(address).trim();
+    if (geofenceRadiusMeters != null) setting.geofenceRadiusMeters = parseInt(geofenceRadiusMeters) || 300;
+    if (schoolStartTime != null) setting.schoolStartTime = String(schoolStartTime).trim();
+    if (gracePeriodMinutes != null) setting.gracePeriodMinutes = parseInt(gracePeriodMinutes) || 15;
+    if (minHalfDayHours != null) setting.minHalfDayHours = parseFloat(minHalfDayHours) || 4;
+    if (schoolEndTime != null) setting.schoolEndTime = String(schoolEndTime).trim();
+    if (Array.isArray(attendanceModes)) setting.attendanceModes = attendanceModes;
+    if (biometricApiKey != null) setting.biometricApiKey = String(biometricApiKey).trim();
+    setting.updatedAt = new Date();
+
+    await setting.save();
+    res.json(setting);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Biometric Hardware Push Webhook Endpoint (Thumb/Fingerprint Device Push SDK)
+app.post('/api/biometric/log', async (req, res) => {
+  try {
+    const { schoolId, biometricApiKey, employeeId, timestamp, punchType } = req.body;
+    if (!schoolId || !employeeId) {
+      return res.status(400).json({ error: 'schoolId and employeeId are required' });
+    }
+
+    const setting = await SchoolSetting.findOne({ schoolId });
+    if (!setting) {
+      return res.status(404).json({ error: 'School settings not configured' });
+    }
+
+    if (setting.biometricApiKey && setting.biometricApiKey !== biometricApiKey) {
+      return res.status(401).json({ error: 'Invalid biometric API key' });
+    }
+
+    if (!setting.attendanceModes.includes('biometric')) {
+      return res.status(403).json({ error: 'Biometric machine punching is disabled for this school' });
+    }
+
+    const punchTime = timestamp ? new Date(timestamp) : new Date();
+    const dateStr = punchTime.toISOString().split('T')[0];
+
+    let attendance = await TeacherAttendance.findOne({ schoolId, teacherId: employeeId, date: dateStr });
+    if (!attendance) {
+      attendance = new TeacherAttendance({
+        schoolId,
+        teacherId: employeeId,
+        teacherName: `Employee ${employeeId}`,
+        teacherEmail: '',
+        date: dateStr,
+        status: 'Single Punch',
+        punchInTime: punchTime,
+        punchInLocation: { latitude: setting.latitude, longitude: setting.longitude, address: 'Biometric Machine' }
+      });
+    } else if (punchType === 'OUT' || attendance.punchInTime) {
+      attendance.punchOutTime = punchTime;
+      attendance.punchOutLocation = { latitude: setting.latitude, longitude: setting.longitude, address: 'Biometric Machine' };
+      const diffMs = punchTime - new Date(attendance.punchInTime);
+      const diffHrs = parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2));
+      attendance.workingHours = Math.max(0, diffHrs);
+      attendance.status = diffHrs < setting.minHalfDayHours ? 'Half Day' : 'Present';
+    }
+
+    await attendance.save();
+    res.json({ success: true, message: 'Biometric punch logged successfully', attendance });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Teacher Attendance Endpoints ---
+
+// Get today's punch status for logged-in teacher + school settings
+app.get('/api/teacher-attendance/today', authenticateToken, async (req, res) => {
+  try {
+    const { schoolId, id: teacherId } = req.user;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    let setting = await SchoolSetting.findOne({ schoolId });
+    if (!setting) {
+      setting = new SchoolSetting({ schoolId });
+      await setting.save();
+    }
+
+    const attendance = await TeacherAttendance.findOne({ schoolId, teacherId, date: todayStr });
+    res.json({
+      todayDate: todayStr,
+      attendance: attendance || null,
+      schoolSetting: setting
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Teacher Self Punch-In
+app.post('/api/teacher-attendance/punch-in', authenticateToken, async (req, res) => {
+  try {
+    const { schoolId, id: teacherId, firstName, lastName, email } = req.user;
+    const { latitude, longitude, address } = req.body;
+
+    if (req.user.role !== 'teacher') {
+      return res.status(403).json({ error: 'Only teachers can punch in self attendance.' });
+    }
+
+    let setting = await SchoolSetting.findOne({ schoolId });
+    if (!setting) {
+      setting = new SchoolSetting({ schoolId });
+      await setting.save();
+    }
+
+    // Geofence Distance Validation (300 meters radius check)
+    const teacherLat = parseFloat(latitude);
+    const teacherLng = parseFloat(longitude);
+    if (isNaN(teacherLat) || isNaN(teacherLng)) {
+      return res.status(400).json({ error: 'Valid GPS latitude and longitude are required to punch in.' });
+    }
+
+    const distance = getHaversineDistanceMeters(setting.latitude, setting.longitude, teacherLat, teacherLng);
+    if (distance > setting.geofenceRadiusMeters) {
+      return res.status(400).json({ 
+        error: `You are outside school premises. Current distance is ${distance} meters. Minimum required is within ${setting.geofenceRadiusMeters} meters.`,
+        distance,
+        geofenceRadiusMeters: setting.geofenceRadiusMeters
+      });
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+
+    let attendance = await TeacherAttendance.findOne({ schoolId, teacherId, date: todayStr });
+    if (attendance && attendance.punchInTime) {
+      return res.status(400).json({ error: 'You have already punched in for today.' });
+    }
+
+    // Determine Late Status based on School Start Time & Grace Period
+    const [startH, startM] = (setting.schoolStartTime || '08:00').split(':').map(Number);
+    const startTimeMin = startH * 60 + startM;
+    const cutoffTimeMin = startTimeMin + (setting.gracePeriodMinutes || 15);
+
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    let status = 'Single Punch';
+    let lateMinutes = 0;
+    if (nowMin > cutoffTimeMin) {
+      status = 'Late';
+      lateMinutes = nowMin - startTimeMin;
+    }
+
+    const teacherName = `${firstName || ''} ${lastName || ''}`.trim() || email || 'Teacher';
+
+    if (!attendance) {
+      attendance = new TeacherAttendance({
+        schoolId,
+        teacherId,
+        name: teacherName,
+        date: todayStr,
+        status,
+        punchInTime: now,
+        punchInLocation: {
+          latitude: teacherLat,
+          longitude: teacherLng,
+          address: address || 'School Premises'
+        },
+        lateMinutes
+      });
+    } else {
+      attendance.status = status;
+      attendance.punchInTime = now;
+      attendance.punchInLocation = {
+        latitude: teacherLat,
+        longitude: teacherLng,
+        address: address || 'School Premises'
+      };
+      attendance.lateMinutes = lateMinutes;
+      attendance.updatedAt = now;
+    }
+
+    await attendance.save();
+    res.json({ success: true, attendance, distance });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Teacher Self Punch-Out
+app.post('/api/teacher-attendance/punch-out', authenticateToken, async (req, res) => {
+  try {
+    const { schoolId, id: teacherId } = req.user;
+    const { latitude, longitude, address } = req.body;
+
+    if (req.user.role !== 'teacher') {
+      return res.status(403).json({ error: 'Only teachers can punch out self attendance.' });
+    }
+
+    let setting = await SchoolSetting.findOne({ schoolId });
+    if (!setting) {
+      setting = new SchoolSetting({ schoolId });
+      await setting.save();
+    }
+
+    // Geofence Distance Validation
+    const teacherLat = parseFloat(latitude);
+    const teacherLng = parseFloat(longitude);
+    if (isNaN(teacherLat) || isNaN(teacherLng)) {
+      return res.status(400).json({ error: 'Valid GPS latitude and longitude are required to punch out.' });
+    }
+
+    const distance = getHaversineDistanceMeters(setting.latitude, setting.longitude, teacherLat, teacherLng);
+    if (distance > setting.geofenceRadiusMeters) {
+      return res.status(400).json({ 
+        error: `You are outside school premises. Current distance is ${distance} meters. Minimum required is within ${setting.geofenceRadiusMeters} meters.`,
+        distance,
+        geofenceRadiusMeters: setting.geofenceRadiusMeters
+      });
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+
+    const attendance = await TeacherAttendance.findOne({ schoolId, teacherId, date: todayStr });
+    if (!attendance || !attendance.punchInTime) {
+      return res.status(400).json({ error: 'No punch-in record found for today. You must punch in first.' });
+    }
+    if (attendance.punchOutTime) {
+      return res.status(400).json({ error: 'You have already punched out for today.' });
+    }
+
+    // Calculate Working Hours
+    const diffMs = now - new Date(attendance.punchInTime);
+    const workingHours = parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2));
+
+    // Determine Status (Half Day vs Late vs Present)
+    let status = attendance.status;
+    const minHours = setting.minHalfDayHours || 4;
+    if (workingHours < minHours) {
+      status = 'Half Day';
+    } else if (attendance.status === 'Single Punch') {
+      status = 'Present';
+    }
+
+    attendance.punchOutTime = now;
+    attendance.punchOutLocation = {
+      latitude: teacherLat,
+      longitude: teacherLng,
+      address: address || 'School Premises'
+    };
+    attendance.workingHours = workingHours;
+    attendance.status = status;
+    attendance.updatedAt = now;
+
+    await attendance.save();
+    res.json({ success: true, attendance, distance });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin / Teacher: Get Attendance History by Teacher ID
+app.get('/api/teacher-attendance/teacher/:teacherId', authenticateToken, async (req, res) => {
+  try {
+    const { schoolId, role, id: loggedUserId } = req.user;
+    const { teacherId } = req.params;
+
+    if (role === 'teacher' && loggedUserId !== teacherId) {
+      return res.status(403).json({ error: 'Unauthorized to view another teacher\'s attendance.' });
+    }
+
+    const records = await TeacherAttendance.find({ schoolId, teacherId }).sort({ date: -1 });
+
+    const totalPresent = records.filter(r => r.status === 'Present').length;
+    const totalAbsent = records.filter(r => r.status === 'Absent').length;
+    const totalLate = records.filter(r => r.status === 'Late').length;
+    const totalSinglePunch = records.filter(r => r.status === 'Single Punch').length;
+    const totalHalfDay = records.filter(r => r.status === 'Half Day').length;
+    const totalOnLeave = records.filter(r => r.status === 'On Leave').length;
+
+    res.json({
+      teacherId,
+      records,
+      stats: {
+        totalPresent,
+        totalAbsent,
+        totalLate,
+        totalSinglePunch,
+        totalHalfDay,
+        totalOnLeave,
+        totalRecords: records.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Today's summary for School Admin Dashboard (Strictly Today's Date)
+app.get('/api/teacher-attendance/today-summary', authenticateToken, async (req, res) => {
+  try {
+    const { schoolId } = req.user;
+    const now = new Date();
+    const localDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    // Strictly query today's local calendar date
+    const records = await TeacherAttendance.find({
+      schoolId,
+      date: localDateStr
+    });
+
+    const presentCount = records.filter(r => r.status !== 'Absent').length;
+    res.json({ date: localDateStr, totalPunched: records.length, presentCount });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Generic date filter endpoint (retained for backward compatibility)
 app.get('/api/teacher-attendance', authenticateToken, async (req, res) => {
   try {
     const { schoolId } = req.user;
@@ -781,44 +1126,17 @@ app.get('/api/teacher-attendance', authenticateToken, async (req, res) => {
     if (!schoolId) {
       return res.status(400).json({ error: 'School ID missing in token' });
     }
-    if (!date) {
-      return res.status(400).json({ error: 'Date query parameter is required' });
+    const filter = { schoolId };
+    if (date) {
+      filter.date = String(date).trim();
     }
-    const cleanDate = String(date || '').trim();
-    const attendance = await TeacherAttendance.find({ schoolId, date: cleanDate });
+    const attendance = await TeacherAttendance.find(filter).sort({ date: -1 }).limit(500);
     res.json(attendance);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-/**
- * @openapi
- * /api/teacher-attendance/submit:
- *   post:
- *     summary: Submit teacher attendance
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - date
- *               - attendance
- *             properties:
- *               date:
- *                 type: string
- *               attendance:
- *                 type: array
- *                 items:
- *                   type: object
- *     responses:
- *       200:
- *         description: Attendance saved successfully.
- */
 app.post('/api/teacher-attendance/submit', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'schooladmin') {
@@ -866,17 +1184,6 @@ app.post('/api/teacher-attendance/submit', authenticateToken, async (req, res) =
   }
 });
 
-/**
- * @openapi
- * /api/teacher-attendance/my-attendance:
- *   get:
- *     summary: Get self attendance history for logged-in teacher
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of attendance records for the teacher.
- */
 app.get('/api/teacher-attendance/my-attendance', authenticateToken, async (req, res) => {
   try {
     const teacherId = req.user.id;
@@ -885,6 +1192,250 @@ app.get('/api/teacher-attendance/my-attendance', authenticateToken, async (req, 
     }
     const attendance = await TeacherAttendance.find({ teacherId }).sort({ date: -1 }).limit(100);
     res.json(attendance);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- HOLIDAYS & ACADEMIC CALENDAR API ---
+app.get('/api/holidays', authenticateToken, async (req, res) => {
+  try {
+    const schoolId = req.user.schoolId;
+    let holidays = await Holiday.find({ schoolId }).sort({ date: 1 });
+
+    // Auto seed standard holidays if school has no records
+    if (holidays.length === 0) {
+      const defaultHolidays = [
+        { title: 'Republic Day', date: '2026-01-26', endDate: '2026-01-26', category: 'NATIONAL', description: 'National celebration of Republic Day of India.' },
+        { title: 'Maha Shivratri', date: '2026-02-15', endDate: '2026-02-15', category: 'FESTIVAL', description: 'School holiday on account of Maha Shivratri.' },
+        { title: 'Holi Festival', date: '2026-03-04', endDate: '2026-03-05', category: 'FESTIVAL', description: 'School closed for Holi festival celebrations.' },
+        { title: 'Eid-ul-Fitr', date: '2026-03-20', endDate: '2026-03-20', category: 'FESTIVAL', description: 'School holiday for Eid-ul-Fitr.' },
+        { title: 'Good Friday', date: '2026-04-03', endDate: '2026-04-03', category: 'RESTRICTED', description: 'School closed for Good Friday.' },
+        { title: 'Ambedkar Jayanti', date: '2026-04-14', endDate: '2026-04-14', category: 'NATIONAL', description: 'Commemoration of Dr. B.R. Ambedkar Jayanti.' },
+        { title: 'Summer Break', date: '2026-05-15', endDate: '2026-06-30', category: 'ACADEMIC', description: 'Annual summer vacation for all classes.' },
+        { title: 'Independence Day', date: '2026-08-15', endDate: '2026-08-15', category: 'NATIONAL', description: 'Flag hoisting ceremony at 8:00 AM followed by holiday.' },
+        { title: 'Raksha Bandhan', date: '2026-08-28', endDate: '2026-08-28', category: 'FESTIVAL', description: 'School closed for Raksha Bandhan festival.' },
+        { title: 'Janmashtami', date: '2026-09-04', endDate: '2026-09-04', category: 'FESTIVAL', description: 'School holiday on Sri Krishna Janmashtami.' },
+        { title: 'Gandhi Jayanti', date: '2026-10-02', endDate: '2026-10-02', category: 'NATIONAL', description: 'National Holiday in honor of Mahatma Gandhi.' },
+        { title: 'Dussehra Break', date: '2026-10-20', endDate: '2026-10-21', category: 'FESTIVAL', description: 'School closed for Vijayadashami Dussehra.' },
+        { title: 'Diwali Vacation', date: '2026-11-08', endDate: '2026-11-12', category: 'FESTIVAL', description: 'Deepawali and New Year festival holidays.' },
+        { title: 'Guru Nanak Jayanti', date: '2026-11-24', endDate: '2026-11-24', category: 'RESTRICTED', description: 'School holiday on Guru Nanak Jayanti.' },
+        { title: 'Christmas Vacation', date: '2026-12-25', endDate: '2026-12-31', category: 'FESTIVAL', description: 'Winter break and Christmas holidays.' }
+      ];
+
+      await Holiday.insertMany(defaultHolidays.map(h => ({ ...h, schoolId, createdBy: 'SYSTEM' })));
+      holidays = await Holiday.find({ schoolId }).sort({ date: 1 });
+    }
+
+    res.json(holidays);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/holidays', authenticateToken, async (req, res) => {
+  try {
+    const { title, date, endDate, category, description, notifyUsers } = req.body;
+    const schoolId = req.user.schoolId;
+
+    if (!title || !date) {
+      return res.status(400).json({ error: 'Title and Date are required.' });
+    }
+
+    const holiday = new Holiday({
+      schoolId,
+      title,
+      date,
+      endDate: endDate || date,
+      category: category || 'FESTIVAL',
+      description: description || '',
+      createdBy: req.user.id || req.user.sub
+    });
+
+    await holiday.save();
+
+    // Broadcast instant real-time notification to all students/teachers if requested
+    if (notifyUsers !== false) {
+      const dateRangeStr = endDate && endDate !== date ? `${date} to ${endDate}` : date;
+      const notifTitle = `📢 Holiday Announcement: ${title}`;
+      const notifBody = `School will remain closed on ${dateRangeStr} for ${title}. ${description || ''}`;
+
+      const notification = new Notification({
+        recipientId: 'ALL',
+        schoolId,
+        title: notifTitle,
+        body: notifBody,
+        type: 'EVENT',
+        senderName: req.user.firstName || 'School Management',
+        senderRole: req.user.role || 'schooladmin'
+      });
+
+      await notification.save();
+      io.to(schoolId).emit('notification', notification);
+    }
+
+    res.json({ success: true, holiday });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/holidays/:id', authenticateToken, async (req, res) => {
+  try {
+    await Holiday.findOneAndDelete({ _id: req.params.id, schoolId: req.user.schoolId });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- SYLLABUS API ---
+app.get('/api/syllabus', authenticateToken, async (req, res) => {
+  try {
+    const { schoolId } = req.user;
+    const { className, subject } = req.query;
+
+    // Purge any previously seeded dummy syllabus documents from database
+    await Syllabus.deleteMany({
+      teacherName: { $in: ['Dr. R. K. Sharma', 'Prof. Ananya Sen', 'Mrs. S. Verma'] }
+    });
+
+    const filter = { schoolId };
+    if (className) {
+      const cleanClass = className.replace(/^Class\s+/i, '').trim();
+      const escClean = cleanClass.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const escFull = className.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+      filter.$or = [
+        { className: new RegExp(escFull, 'i') },
+        { className: new RegExp(escClean, 'i') }
+      ];
+    }
+    if (subject) filter.subject = subject;
+
+    const syllabusList = await Syllabus.find(filter).sort({ createdAt: -1 });
+    res.json(syllabusList);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/syllabus', authenticateToken, async (req, res) => {
+  try {
+    const { schoolId, id: teacherId, firstName, lastName, role } = req.user;
+    if (role !== 'teacher' && role !== 'schooladmin') {
+      return res.status(403).json({ error: 'Only teachers and school admins can upload syllabus.' });
+    }
+    const { className, subject, title, fileUrl, fileType, description } = req.body;
+    if (!className || !subject || !title || !fileUrl) {
+      return res.status(400).json({ error: 'Class Name, Subject, Title, and File Attachment/URL are required.' });
+    }
+
+    const teacherName = `${firstName || ''} ${lastName || ''}`.trim() || 'Faculty Teacher';
+
+    const syllabus = new Syllabus({
+      schoolId,
+      teacherId,
+      teacherName,
+      className,
+      subject,
+      title,
+      fileUrl,
+      fileType: fileType || (fileUrl.startsWith('data:image/') || fileUrl.match(/\.(jpeg|jpg|png|webp|gif)$/i) ? 'image' : 'pdf'),
+      description: description || ''
+    });
+
+    await syllabus.save();
+    res.json({ success: true, syllabus });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/syllabus/:id', authenticateToken, async (req, res) => {
+  try {
+    await Syllabus.findOneAndDelete({ _id: req.params.id, schoolId: req.user.schoolId });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- HOMEWORK & STUDENT ASSIGNMENT SUBMISSION API ---
+app.get('/api/homework', authenticateToken, async (req, res) => {
+  try {
+    const { schoolId } = req.user;
+    const { className } = req.query;
+    const filter = { schoolId };
+    if (className) filter.className = className;
+    const homeworks = await Homework.find(filter).sort({ createdAt: -1 });
+    res.json(homeworks);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/homework', authenticateToken, async (req, res) => {
+  try {
+    const { schoolId, role } = req.user;
+    if (role !== 'teacher' && role !== 'schooladmin') {
+      return res.status(403).json({ error: 'Only teachers can assign homework.' });
+    }
+    const { title, className, subject, dueDate, instructions, attachmentUrl } = req.body;
+    if (!title || !className || !dueDate || !instructions) {
+      return res.status(400).json({ error: 'Title, Class, Due Date, and Instructions are required.' });
+    }
+
+    const homework = new Homework({
+      schoolId,
+      title,
+      className,
+      subject: subject || '',
+      dueDate,
+      instructions,
+      attachmentUrl: attachmentUrl || ''
+    });
+
+    await homework.save();
+    res.json({ success: true, homework });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/homework/:id/submit-file', authenticateToken, async (req, res) => {
+  try {
+    const { schoolId, id: studentId, firstName, lastName } = req.user;
+    const { submissionFileUrl, submissionNotes } = req.body;
+
+    const studentName = `${firstName || ''} ${lastName || ''}`.trim() || 'Student';
+
+    const homework = await Homework.findOne({ _id: req.params.id, schoolId });
+    if (!homework) {
+      return res.status(404).json({ error: 'Homework assignment not found.' });
+    }
+
+    if (!homework.submittedStudents.includes(studentId)) {
+      homework.submittedStudents.push(studentId);
+      homework.submittedCount = (homework.submittedCount || 0) + 1;
+    }
+
+    const existingIndex = homework.studentSubmissions.findIndex(s => s.studentId === studentId);
+    const submissionData = {
+      studentId,
+      studentName,
+      submissionFileUrl: submissionFileUrl || '',
+      submissionNotes: submissionNotes || '',
+      submittedAt: new Date()
+    };
+
+    if (existingIndex >= 0) {
+      homework.studentSubmissions[existingIndex] = submissionData;
+    } else {
+      homework.studentSubmissions.push(submissionData);
+    }
+
+    await homework.save();
+    res.json({ success: true, homework });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

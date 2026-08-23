@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import Loader from '../../components/common/Loader';
 
 const statusColor = {
@@ -47,8 +48,8 @@ const getTodayStr = () => {
 
 const Tickets = () => {
   const [tickets, setTickets] = useState([]);
-  const [dateFrom, setDateFrom] = useState(getTodayStr());
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [categories, setCategories] = useState([]);
@@ -244,7 +245,7 @@ const Tickets = () => {
                       </span>
                     </td>
                     <td className="table-td text-xs text-gray-400">
-                      {new Date(t.createdAt).toLocaleDateString('en-GB')}
+                      {formatDateDDMMYYYY(t.createdAt)}
                     </td>
                   </tr>
                 ))}

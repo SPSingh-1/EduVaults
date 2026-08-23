@@ -3,6 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import Topbar from '../../components/layout/Topbar';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../api/apiClient';
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import Loader from '../../components/common/Loader';
 import { 
   School, 
@@ -122,7 +123,7 @@ const SuperAdminDashboard = () => {
     const activityRows = stats?.recentActivity?.map(a => `
       <tr style="border-bottom: 1px solid #e2e8f0;">
         <td style="padding: 10px; font-weight: 600; color: #1e293b; text-align: left;">${a.name}</td>
-        <td style="padding: 10px; color: #64748b; text-align: left;">${new Date(a.createdAt).toLocaleDateString('en-GB')}</td>
+        <td style="padding: 10px; color: #64748b; text-align: left;">${formatDateDDMMYYYY(a.createdAt)}</td>
         <td style="padding: 10px; text-align: left;"><span style="padding: 3px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: ${a.status === 'Active' ? '#dcfce7; color: #15803d;' : a.status === 'Pending' ? '#fef9c3; color: #a16207;' : '#fee2e2; color: #b91c1c;'}">${a.status}</span></td>
       </tr>
     `).join('') || `<tr><td colspan="3" style="text-align: center; padding: 20px; color: #94a3b8;">No onboarding records found.</td></tr>`;
@@ -130,7 +131,7 @@ const SuperAdminDashboard = () => {
     printWindow.document.write(`
       <html>
         <head>
-          <title>EduFlow Platform Report - ${new Date().toLocaleDateString()}</title>
+          <title>EduFlow Platform Report - ${formatDateDDMMYYYY(new Date())}</title>
           <style>
             body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #1e293b; padding: 40px; margin: 0; line-height: 1.5; }
             .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
@@ -324,7 +325,7 @@ const SuperAdminDashboard = () => {
                   <div className="min-w-0">
                     <div className="text-xs font-semibold text-primary truncate">{a.name}</div>
                     <div className="text-[10px] text-gray-400 mt-0.5 font-light">Joined the platform ({a.status})</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5 font-medium">{new Date(a.createdAt).toLocaleDateString('en-GB')}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5 font-medium">{formatDateDDMMYYYY(a.createdAt)}</div>
                   </div>
                 </div>
               ))}

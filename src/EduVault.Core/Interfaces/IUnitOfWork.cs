@@ -33,6 +33,24 @@ namespace EduVault.Core.Interfaces
         IRepository<PlatformPlan> PlatformPlans { get; }
         IRepository<SchoolPlanConfiguration> SchoolPlanConfigurations { get; }
         IRepository<UpgradeRequest> UpgradeRequests { get; }
+
+        // RBAC
+        IRepository<PageDefinition> PageDefinitions { get; }
+        IRepository<SchoolRolePermission> SchoolRolePermissions { get; }
+
+        // HRM / Account Module
+        IRepository<AccountManager> AccountManagers { get; }
+        IRepository<SalaryRule> SalaryRules { get; }
+        IRepository<LeaveQuota> LeaveQuotas { get; }
+        IRepository<LeaveRequest> LeaveRequests { get; }
+        IRepository<SalaryRecord> SalaryRecords { get; }
+        IRepository<Expense> Expenses { get; }
+
+        // Library Module
+        IRepository<Book> Books { get; }
+        IRepository<LibrarySettings> LibrarySettings { get; }
+        IRepository<LibraryTransaction> LibraryTransactions { get; }
+
         Task<int> CompleteAsync();
     }
 }

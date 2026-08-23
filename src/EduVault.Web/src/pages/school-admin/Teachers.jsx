@@ -43,20 +43,37 @@ const Teachers = () => {
   // Tab state
   const [activeTab, setActiveTab] = useState('directory');
 
-  // Teacher Attendance States
-  const [selectedDate, setSelectedDate] = useState(getTodayStr());
-  const [attendanceLoading, setAttendanceLoading] = useState(false);
-  const [attendanceSubmitting, setAttendanceSubmitting] = useState(false);
-  const [attendanceSaved, setAttendanceSaved] = useState(false);
-  const [isEditingAttendance, setIsEditingAttendance] = useState(false);
-  const [attendanceSubmitted, setAttendanceSubmitted] = useState(false);
-  const [attendanceTeachers, setAttendanceTeachers] = useState([]);
+  // Teacher Attendance Inspection States
+  const [selectedInspectionTeacherId, setSelectedInspectionTeacherId] = useState('');
+  const [teacherAttendanceHistory, setTeacherAttendanceHistory] = useState([]);
+  const [teacherAttendanceStats, setTeacherAttendanceStats] = useState(null);
+  const [inspectionLoading, setInspectionLoading] = useState(false);
+  const [inspectionMonth, setInspectionMonth] = useState(new Date());
+  const [selectedInspectionDayRecord, setSelectedInspectionDayRecord] = useState(null);
+
+  const fetchTeacherInspectionData = async (tId) => {
+    if (!tId) {
+      setTeacherAttendanceHistory([]);
+      setTeacherAttendanceStats(null);
+      return;
+    }
+    setInspectionLoading(true);
+    try {
+      const res = await expressClient.get(`/teacher-attendance/teacher/${tId}`);
+      setTeacherAttendanceHistory(res.data.records || []);
+      setTeacherAttendanceStats(res.data.stats || null);
+    } catch (err) {
+      console.error('Failed to load teacher inspection history:', err);
+    } finally {
+      setInspectionLoading(false);
+    }
+  };
 
   // Dropdown filter states
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [dateFrom, setDateFrom] = useState(getTodayStr());
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Modals state
   const [showModal, setShowModal] = useState(false);
@@ -151,12 +168,16 @@ const Teachers = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'attendance') {
-      setAttendanceSaved(false);
-      setIsEditingAttendance(false);
-      fetchAttendance();
+    if (teachers.length > 0 && !selectedInspectionTeacherId) {
+      setSelectedInspectionTeacherId(teachers[0].id);
     }
-  }, [activeTab, selectedDate, teachers]);
+  }, [teachers]);
+
+  useEffect(() => {
+    if (activeTab === 'attendance' && selectedInspectionTeacherId) {
+      fetchTeacherInspectionData(selectedInspectionTeacherId);
+    }
+  }, [activeTab, selectedInspectionTeacherId]);
 
   const parseCSV = (text) => {
     const lines = text.split(/\r\n|\n/);
@@ -670,187 +691,239 @@ const Teachers = () => {
 
         {activeTab === 'attendance' && (
           <div>
-            {attendanceSubmitted && (
-              <div className="mb-4 bg-green-50 border border-green-200 rounded-xl px-5 py-3 text-sm text-green-700 flex items-center gap-2 font-medium">
-                ✅ Teacher attendance saved successfully for {selectedDate}!
-              </div>
-            )}
-
-            {/* Filters / Actions */}
-            <div className="flex flex-wrap items-end gap-4 mb-5 pb-4 border-b border-gray-100">
+            {/* Teacher Selection Bar */}
+            <div className="card mb-6 bg-gradient-to-r from-slate-900 via-primary to-slate-900 p-5 text-white flex flex-wrap items-center justify-between gap-4 shadow-lg rounded-2xl">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Attendance Date</label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={e => setSelectedDate(e.target.value)}
-                  className="input text-sm"
-                />
+                <h3 className="font-display font-bold text-lg flex items-center gap-2">
+                  👨‍🏫 Teacher Attendance Inspection Portal
+                </h3>
+                <p className="text-xs text-blue-200 mt-0.5">Select a faculty member from the directory to inspect their GPS punch-ins, working hours, and monthly attendance calendar.</p>
               </div>
 
-              {attendanceTeachers.length > 0 && (
-                <div className="flex gap-2 ml-auto">
-                  <button
-                    type="button"
-                    disabled={attendanceSaved && !isEditingAttendance}
-                    onClick={() => handleMarkAll('Present')}
-                    className={`px-3 py-2 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-all ${attendanceSaved && !isEditingAttendance ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    ✓ All Present
-                  </button>
-                  <button
-                    type="button"
-                    disabled={attendanceSaved && !isEditingAttendance}
-                    onClick={() => handleMarkAll('Absent')}
-                    className={`px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-all ${attendanceSaved && !isEditingAttendance ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    ✗ All Absent
-                  </button>
-                  <button
-                    type="button"
-                    disabled={attendanceSaved && !isEditingAttendance}
-                    onClick={() => handleMarkAll('On Leave')}
-                    className={`px-3 py-2 text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-all ${attendanceSaved && !isEditingAttendance ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    💼 All On Leave
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center gap-3 min-w-[280px]">
+                <label className="text-xs font-bold text-white uppercase whitespace-nowrap">Select Teacher:</label>
+                <select
+                  value={selectedInspectionTeacherId}
+                  onChange={e => setSelectedInspectionTeacherId(e.target.value)}
+                  className="input bg-white text-slate-900 text-xs font-bold py-2 px-3 rounded-xl shadow-md border-0 focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">— Select Teacher —</option>
+                  {teachers.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name || `${t.firstName} ${t.lastName}`} ({t.employeeId || 'ID N/A'})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* Summary Row */}
-            {attendanceTeachers.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 mb-5">
-                {[
-                  { label: 'Total Staff', value: attendanceTeachers.length, color: 'text-primary bg-primary/5' },
-                  { label: 'Present', value: attPresentCount, color: 'text-green-600 bg-green-50' },
-                  { label: 'Late', value: attLateCount, color: 'text-amber-600 bg-amber-50' },
-                  { label: 'Absent', value: attAbsentCount, color: 'text-red-500 bg-red-50' },
-                  { label: 'On Leave', value: attLeaveCount, color: 'text-orange-500 bg-orange-50/50' }
-                ].map(metric => (
-                  <div key={metric.label} className={`rounded-xl px-4 py-2.5 sm:p-3 ${metric.color} flex flex-row sm:flex-col justify-between sm:justify-center items-center gap-1`}>
-                    <div className="text-xs sm:text-[10px] font-bold uppercase tracking-wide opacity-85">{metric.label}</div>
-                    <div className="font-display text-sm sm:text-base font-bold">{metric.value}</div>
-                  </div>
-                ))}
+            {!selectedInspectionTeacherId ? (
+              <div className="card text-center py-16 text-gray-400">
+                <div className="text-4xl mb-3">👨‍🏫</div>
+                <div className="text-sm font-semibold">Select a teacher above to inspect their attendance history.</div>
               </div>
-            )}
-
-            {/* Attendance Table */}
-            {attendanceLoading ? (
-              <div className="text-center py-12 text-gray-400 text-sm">
-                <div className="animate-spin text-2xl mb-2">⏳</div>
-                Loading teacher attendance records...
-              </div>
-            ) : attendanceTeachers.length === 0 ? (
-              <div className="text-center py-12 text-gray-400 text-sm">
-                No teachers found in directory to mark attendance.
+            ) : inspectionLoading ? (
+              <div className="card text-center py-16 text-gray-400">
+                <div className="animate-spin text-3xl mb-3">⏳</div>
+                <div className="text-sm font-semibold">Loading teacher attendance history...</div>
               </div>
             ) : (
               <div>
-                <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
-                  <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
-                    <table className="w-full" style={{ minWidth: '750px', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr className="border-b border-gray-100">
-                          <th className="table-th text-left">Teacher Name</th>
-                          <th className="table-th text-left">Employee ID</th>
-                          <th className="table-th text-left">Department</th>
-                          <th className="table-th">Status</th>
-                          <th className="table-th">Remarks</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {attendanceTeachers.map(t => (
-                          <tr key={t.id} className={`border-b border-gray-50 hover:bg-gray-50 ${attendanceSaved && !isEditingAttendance ? 'opacity-85' : ''}`}>
-                            <td className="table-td">
-                              <div className="flex items-center gap-2">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${t.status === 'Absent' ? 'bg-red-100 text-red-600'
-                                  : t.status === 'Late' ? 'bg-amber-100 text-amber-700'
-                                    : t.status === 'On Leave' ? 'bg-orange-100 text-orange-700'
-                                      : 'bg-green-100 text-green-700'
-                                  }`}>
-                                  {t.name ? t.name.split(' ').map(n => n[0]).join('').slice(0, 2) : '?'}
-                                </div>
-                                <div className="font-semibold text-primary text-sm">{t.name}</div>
-                              </div>
-                            </td>
-                            <td className="table-td text-xs font-mono text-gray-500">{t.employeeId}</td>
-                            <td className="table-td text-sm text-gray-600">{t.department}</td>
-                            <td className="table-td">
-                              <div className="flex items-center justify-center gap-1.5">
-                                {[
-                                  { key: 'Present', activeClass: 'bg-green-500 text-white border-green-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-green-300 hover:text-green-600' },
-                                  { key: 'Late', activeClass: 'bg-amber-500 text-white border-amber-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600' },
-                                  { key: 'Absent', activeClass: 'bg-red-500 text-white border-red-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-red-300 hover:text-red-500' },
-                                  { key: 'On Leave', activeClass: 'bg-orange-500 text-white border-orange-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-orange-300 hover:text-orange-600' }
-                                ].map(({ key, activeClass, inactiveClass }) => (
-                                  <button
-                                    key={key}
-                                    type="button"
-                                    disabled={attendanceSaved && !isEditingAttendance}
-                                    onClick={() => handleSetAttendanceStatus(t.id, key)}
-                                    className={`px-2.5 py-1.5 rounded-lg text-2xs font-bold border transition-all min-w-[64px] ${t.status === key ? activeClass : inactiveClass
-                                      } ${attendanceSaved && !isEditingAttendance ? 'cursor-not-allowed opacity-60' : ''}`}
-                                  >
-                                    {key}
-                                  </button>
-                                ))}
-
-                                {t.status === 'Late' && (
-                                  <div className="flex items-center gap-1 ml-2">
-                                    <span className="text-[10px] text-amber-700 font-semibold whitespace-nowrap">Mins:</span>
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      max="120"
-                                      disabled={attendanceSaved && !isEditingAttendance}
-                                      value={t.lateMinutes || ''}
-                                      onChange={e => handleSetLateMinutes(t.id, e.target.value)}
-                                      placeholder="10"
-                                      className="w-12 border border-amber-200 bg-amber-50 rounded px-1.5 py-1 text-2xs text-center focus:outline-none focus:ring-1 focus:ring-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="table-td">
-                              <input
-                                disabled={attendanceSaved && !isEditingAttendance}
-                                value={t.remarks || ''}
-                                onChange={e => handleSetRemarks(t.id, e.target.value)}
-                                placeholder="Optional remark"
-                                className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/20 bg-gray-50 placeholder-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {/* Statistics Metric Cards */}
+                {teacherAttendanceStats && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+                    {[
+                      { label: 'Present Days', value: teacherAttendanceStats.totalPresent, color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: '✅' },
+                      { label: 'Late Days', value: teacherAttendanceStats.totalLate, color: 'text-amber-600 bg-amber-50 border-amber-100', icon: '⏱️' },
+                      { label: 'Single Punch', value: teacherAttendanceStats.totalSinglePunch, color: 'text-blue-600 bg-blue-50 border-blue-100', icon: '📍' },
+                      { label: 'Half Days', value: teacherAttendanceStats.totalHalfDay, color: 'text-purple-600 bg-purple-50 border-purple-100', icon: '🌓' },
+                      { label: 'Absent Days', value: teacherAttendanceStats.totalAbsent, color: 'text-rose-600 bg-rose-50 border-rose-100', icon: '❌' },
+                      { label: 'On Leave', value: teacherAttendanceStats.totalOnLeave, color: 'text-orange-600 bg-orange-50 border-orange-100', icon: '💼' }
+                    ].map(metric => (
+                      <div key={metric.label} className={`card p-3.5 border ${metric.color} flex items-center gap-3 shadow-2xs`}>
+                        <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-lg shadow-xs shrink-0">{metric.icon}</div>
+                        <div>
+                          <div className={`font-display text-xl font-bold ${metric.color.split(' ')[0]}`}>{metric.value}</div>
+                          <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{metric.label}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                )}
 
-                {/* Save / Update buttons */}
-                <div className="flex justify-end gap-3 mt-5">
-                  {attendanceSaved && !isEditingAttendance ? (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingAttendance(true)}
-                      className="px-6 py-2.5 rounded-xl font-bold text-xs border-2 border-primary text-primary bg-white hover:bg-primary/5 transition-all flex items-center gap-1.5"
-                    >
-                      ✏️ Edit Attendance
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleSaveAttendance}
-                      disabled={attendanceSubmitting}
-                      className="btn-primary text-xs px-6 py-2.5 rounded-xl font-bold"
-                    >
-                      {attendanceSubmitting ? '⏳ Saving...' : isEditingAttendance ? '🔄 Update Attendance' : '✔ Save Attendance'}
-                    </button>
-                  )}
-                </div>
+                {/* Monthly Calendar View */}
+                {(() => {
+                  const year = inspectionMonth.getFullYear();
+                  const month = inspectionMonth.getMonth();
+                  const firstDay = new Date(year, month, 1);
+                  const firstDayOfWeek = firstDay.getDay();
+                  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                  const monthNames = [
+                    'January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'
+                  ];
+
+                  const calendarDays = [];
+                  for (let i = 0; i < firstDayOfWeek; i++) {
+                    calendarDays.push({ padding: true, key: `pad-${i}` });
+                  }
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const record = teacherAttendanceHistory.find(a => a.date === dateStr);
+                    calendarDays.push({ padding: false, day, dateStr, record, key: `day-${day}` });
+                  }
+
+                  const getStatusBadgeColor = (status) => {
+                    if (status === 'Present') return 'bg-emerald-500 text-white';
+                    if (status === 'Late') return 'bg-amber-500 text-white';
+                    if (status === 'Single Punch') return 'bg-blue-500 text-white';
+                    if (status === 'Half Day') return 'bg-purple-500 text-white';
+                    if (status === 'Absent') return 'bg-rose-500 text-white';
+                    if (status === 'On Leave') return 'bg-orange-500 text-white';
+                    return 'bg-gray-100 text-gray-400';
+                  };
+
+                  return (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="card lg:col-span-2">
+                        <div className="flex items-center justify-between mb-6">
+                          <h3 className="font-display font-bold text-primary text-lg flex items-center gap-2">
+                            📅 {monthNames[month]} {year} Calendar
+                          </h3>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => { setInspectionMonth(new Date(year, month - 1, 1)); setSelectedInspectionDayRecord(null); }}
+                              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-xs font-bold"
+                            >
+                              ◀ Prev
+                            </button>
+                            <button
+                              onClick={() => { setInspectionMonth(new Date(year, month + 1, 1)); setSelectedInspectionDayRecord(null); }}
+                              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-xs font-bold"
+                            >
+                              Next ▶
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">
+                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="py-2">{d}</div>)}
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                          {calendarDays.map(item => {
+                            if (item.padding) {
+                              return <div key={item.key} className="h-16 bg-gray-50/30 rounded-xl border border-dashed border-gray-100" />;
+                            }
+                            const hasRecord = !!item.record;
+                            return (
+                              <button
+                                key={item.key}
+                                type="button"
+                                onClick={() => item.record && setSelectedInspectionDayRecord(item.record)}
+                                className={`h-16 rounded-xl border flex flex-col justify-between p-2 text-left relative transition-all ${
+                                  hasRecord
+                                    ? getStatusBadgeColor(item.record.status)
+                                    : 'border-gray-100 hover:bg-gray-50 text-gray-600'
+                                }`}
+                              >
+                                <span className="text-xs font-bold">{item.day}</span>
+                                {hasRecord && (
+                                  <span className="text-[9px] font-extrabold uppercase leading-none opacity-95 truncate max-w-full">
+                                    {item.record.status}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Day Details Drawer */}
+                      <div className="space-y-4">
+                        <div className="card bg-gray-50/50">
+                          <h3 className="font-display font-bold text-primary text-sm mb-4 flex items-center gap-2">
+                            ℹ️ Attendance Details Log
+                          </h3>
+                          {selectedInspectionDayRecord ? (
+                            <div className="space-y-3.5 text-xs">
+                              <div className="flex justify-between py-1.5 border-b border-gray-100">
+                                <span className="text-gray-400 font-semibold uppercase">Date</span>
+                                <span className="font-bold text-primary">{selectedInspectionDayRecord.date}</span>
+                              </div>
+                              <div className="flex justify-between py-1.5 border-b border-gray-100">
+                                <span className="text-gray-400 font-semibold uppercase">Status</span>
+                                <span className="font-extrabold text-primary">{selectedInspectionDayRecord.status}</span>
+                              </div>
+                              <div className="flex justify-between py-1.5 border-b border-gray-100">
+                                <span className="text-gray-400 font-semibold uppercase">Punch In Time</span>
+                                <span className="font-bold text-emerald-600">
+                                  {selectedInspectionDayRecord.punchInTime ? new Date(selectedInspectionDayRecord.punchInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between py-1.5 border-b border-gray-100">
+                                <span className="text-gray-400 font-semibold uppercase">Punch Out Time</span>
+                                <span className="font-bold text-purple-600">
+                                  {selectedInspectionDayRecord.punchOutTime ? new Date(selectedInspectionDayRecord.punchOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between py-1.5 border-b border-gray-100">
+                                <span className="text-gray-400 font-semibold uppercase">Worked Hours</span>
+                                <span className="font-bold text-blue-600">
+                                  {selectedInspectionDayRecord.workingHours ? `${selectedInspectionDayRecord.workingHours} hrs` : 'N/A'}
+                                </span>
+                              </div>
+                              {selectedInspectionDayRecord.status === 'Late' && (
+                                <div className="flex justify-between py-1.5 border-b border-gray-100">
+                                  <span className="text-gray-400 font-semibold uppercase">Minutes Late</span>
+                                  <span className="font-bold text-amber-600">{selectedInspectionDayRecord.lateMinutes} mins</span>
+                                </div>
+                              )}
+                              {selectedInspectionDayRecord.punchInLocation && (
+                                <div className="py-1.5 border-b border-gray-100">
+                                  <span className="text-gray-400 font-semibold uppercase block mb-1">GPS Location</span>
+                                  <span className="font-mono text-[10px] text-slate-700 bg-white p-2 rounded border border-gray-200 block">
+                                    📍 Lat: {selectedInspectionDayRecord.punchInLocation.latitude}, Lng: {selectedInspectionDayRecord.punchInLocation.longitude}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="py-1.5">
+                                <span className="text-gray-400 font-semibold uppercase block mb-1">Remarks</span>
+                                <p className="text-gray-600 bg-white p-2.5 rounded-lg border border-gray-100 italic leading-normal">
+                                  {selectedInspectionDayRecord.remarks || 'No remarks provided.'}
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400 italic text-2xs">
+                              Click on any marked date in the calendar to view full attendance remarks and GPS details.
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="card">
+                          <h3 className="font-display font-bold text-primary text-sm mb-3">Status Legend</h3>
+                          <div className="space-y-2">
+                            {[
+                              { label: 'Present', color: 'bg-emerald-500' },
+                              { label: 'Late', color: 'bg-amber-500' },
+                              { label: 'Single Punch', color: 'bg-blue-500' },
+                              { label: 'Half Day', color: 'bg-purple-500' },
+                              { label: 'Absent', color: 'bg-rose-500' },
+                              { label: 'On Leave', color: 'bg-orange-500' }
+                            ].map(item => (
+                              <div key={item.label} className="flex items-center gap-2 text-xs">
+                                <span className={`w-3 h-3 rounded-full ${item.color}`} />
+                                <span className="font-medium text-gray-600">{item.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
-import { apiClient } from '../../api/apiClient';
+import { apiClient, expressClient } from '../../api/apiClient';
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import Loader from '../../components/common/Loader';
 import { ArrowUpDown, ArrowUp, ArrowDown, X, Edit, Save } from 'lucide-react';
 
@@ -56,8 +57,8 @@ const Schools = () => {
   const location = useLocation();
   const [schools, setSchools] = useState([]);
   const [search, setSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState(getTodayStr());
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -227,9 +228,20 @@ const Schools = () => {
     }
   };
 
-  const handleViewDetails = (s) => {
+  const handleViewDetails = async (s) => {
     setSelectedSchool(s);
     setIsEditing(false);
+    let modes = ['app', 'biometric'];
+    let bioKey = '';
+    try {
+      const setRes = await expressClient.get(`/school-settings?schoolId=${s.id}`);
+      if (setRes.data && setRes.data.attendanceModes) {
+        modes = setRes.data.attendanceModes;
+        bioKey = setRes.data.biometricApiKey || '';
+      }
+    } catch (err) {
+      console.error('Failed to load school settings:', err);
+    }
     setEditForm({
       name: s.name || '',
       address: s.address || '',
@@ -240,7 +252,11 @@ const Schools = () => {
       adminPassword: '',
       logoUrl: s.logoUrl || '/logo.jpeg',
       emailDomain: s.emailDomain || '',
-      themeColor: s.themeColor || '#1a2744'
+      themeColor: s.themeColor || '#1a2744',
+      attendanceModes: modes,
+      biometricApiKey: bioKey,
+      hasAccountModule: s.hasAccountModule || false,
+      hasLibraryModule: s.hasLibraryModule || false
     });
     setEditError('');
   };
@@ -254,9 +270,28 @@ const Schools = () => {
     setEditLoading(true);
     try {
       const res = await apiClient.put(`/super/schools/${selectedSchool.id}`, editForm);
+      try {
+        await apiClient.put(`/super/schools/${selectedSchool.id}/modules`, {
+          hasAccountModule: editForm.hasAccountModule,
+          hasLibraryModule: editForm.hasLibraryModule
+        });
+      } catch (e) {
+        console.error('Failed to sync school modules:', e);
+      }
+      try {
+        await expressClient.post('/school-settings', {
+          schoolId: selectedSchool.id,
+          attendanceModes: editForm.attendanceModes || ['app', 'biometric'],
+          biometricApiKey: editForm.biometricApiKey || ''
+        });
+      } catch (e) {
+        console.error('Failed to sync school settings:', e);
+      }
       const updatedSchool = {
         ...selectedSchool,
         ...res.data,
+        hasAccountModule: editForm.hasAccountModule,
+        hasLibraryModule: editForm.hasLibraryModule,
         adminName: editForm.adminName,
         adminEmail: editForm.adminEmail
       };
@@ -440,7 +475,7 @@ const Schools = () => {
                     </td>
                     <td className="table-td font-medium">{s.studentsCount}</td>
                     <td className="table-td"><span className={statusColor[s.status] || 'badge-gray'}>{s.status}</span></td>
-                    <td className="table-td text-gray-500 font-sans">{new Date(s.createdAt).toLocaleDateString('en-GB')}</td>
+                    <td className="table-td text-gray-500 font-sans">{formatDateDDMMYYYY(s.createdAt)}</td>
                     <td className="table-td">
                       <div className="flex gap-2">
                         <button onClick={() => toggleStatus(s)} className="text-blue-600 hover:underline text-xs font-medium">
@@ -742,8 +777,126 @@ const Schools = () => {
                   </div>
                   <div>
                     <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Joined Date</div>
-                    <div className="text-xs font-bold text-primary mt-0.5">{new Date(selectedSchool.createdAt).toLocaleDateString('en-GB')}</div>
+                    <div className="text-xs font-bold text-primary mt-0.5">{formatDateDDMMYYYY(selectedSchool.createdAt)}</div>
                   </div>
+                </div>
+
+                {/* Attendance Modes Configuration */}
+                <div className="col-span-2 p-4 bg-slate-50 border border-slate-200 rounded-xl my-2">
+                  <label className="block text-xs font-bold text-primary mb-2 flex items-center justify-between">
+                    <span>⚙️ Allowed Attendance Punching Modes</span>
+                    <span className="text-[10px] text-gray-400 font-normal">Super Admin Control</span>
+                  </label>
+                  {isEditing ? (
+                    <div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {[
+                          { id: 'app', label: '📱 App GPS Punching', desc: '300m Geofence Radius' },
+                          { id: 'biometric', label: '☝️ Biometric Fingerprint Machine', desc: 'Thumb / Fingerprint Device' }
+                        ].map(mode => {
+                          const isChecked = (editForm.attendanceModes || []).includes(mode.id);
+                          return (
+                            <button
+                              key={mode.id}
+                              type="button"
+                              onClick={() => {
+                                setEditForm(p => {
+                                  const current = p.attendanceModes || ['app', 'biometric'];
+                                  const updated = current.includes(mode.id)
+                                    ? current.filter(m => m !== mode.id)
+                                    : [...current, mode.id];
+                                  return { ...p, attendanceModes: updated };
+                                });
+                              }}
+                              className={`p-3 rounded-xl border text-left transition-all ${
+                                isChecked
+                                  ? 'bg-primary/10 border-primary text-primary font-bold shadow-2xs'
+                                  : 'bg-white border-gray-200 text-gray-400 opacity-60'
+                              }`}
+                            >
+                              <div className="text-xs font-bold">{mode.label}</div>
+                              <div className="text-[10px] font-normal opacity-75 mt-0.5">{mode.desc}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {(editForm.attendanceModes || []).includes('biometric') && (
+                        <div className="mt-3 pt-3 border-t border-slate-200">
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">Biometric Hardware Device Secret Key</label>
+                          <input
+                            value={editForm.biometricApiKey || ''}
+                            onChange={e => setEditForm(p => ({ ...p, biometricApiKey: e.target.value }))}
+                            placeholder="e.g. bio_secret_key_xxxx"
+                            className="input font-mono text-xs text-slate-800 bg-white"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {(editForm.attendanceModes || ['app', 'biometric']).map(m => (
+                        <span key={m} className="px-3 py-1.5 rounded-lg text-2xs font-bold bg-white text-primary border border-slate-200 shadow-2xs">
+                          {m === 'app' ? '📱 App GPS Punching (300m Radius)' : '☝️ Biometric Fingerprint Machine'}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Module Permissions (Super Admin Grant) */}
+                <div className="col-span-2 p-4 bg-indigo-50/60 border border-indigo-200/80 rounded-xl my-2">
+                  <label className="block text-xs font-bold text-indigo-950 mb-2 flex items-center justify-between">
+                    <span>🛡️ Granted School Modules</span>
+                    <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">Super Admin Authority</span>
+                  </label>
+                  {isEditing ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setEditForm(p => ({ ...p, hasAccountModule: !p.hasAccountModule }))}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          editForm.hasAccountModule
+                            ? 'bg-purple-600 text-white font-bold shadow-md border-purple-600'
+                            : 'bg-white border-slate-200 text-slate-400 opacity-60'
+                        }`}
+                      >
+                        <div className="text-xs font-bold flex items-center justify-between">
+                          <span>💰 Account & HRM Module</span>
+                          <span>{editForm.hasAccountModule ? 'ENABLED' : 'DISABLED'}</span>
+                        </div>
+                        <div className={`text-[10px] mt-0.5 ${editForm.hasAccountModule ? 'text-purple-100' : 'text-slate-400'}`}>
+                          Enables Account Manager registration, salaries, leaves, and billing
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setEditForm(p => ({ ...p, hasLibraryModule: !p.hasLibraryModule }))}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          editForm.hasLibraryModule
+                            ? 'bg-cyan-600 text-white font-bold shadow-md border-cyan-600'
+                            : 'bg-white border-slate-200 text-slate-400 opacity-60'
+                        }`}
+                      >
+                        <div className="text-xs font-bold flex items-center justify-between">
+                          <span>📚 Library Management</span>
+                          <span>{editForm.hasLibraryModule ? 'ENABLED' : 'DISABLED'}</span>
+                        </div>
+                        <div className={`text-[10px] mt-0.5 ${editForm.hasLibraryModule ? 'text-cyan-100' : 'text-slate-400'}`}>
+                          Enables Librarian registration, book catalog, CSV import, and loans
+                        </div>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <span className={`px-3 py-1.5 rounded-lg text-2xs font-bold border ${selectedSchool.hasAccountModule ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                        💰 Account & HRM: {selectedSchool.hasAccountModule ? 'Enabled' : 'Disabled'}
+                      </span>
+                      <span className={`px-3 py-1.5 rounded-lg text-2xs font-bold border ${selectedSchool.hasLibraryModule ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                        📚 Library: {selectedSchool.hasLibraryModule ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Administrator Contact Details */}
