@@ -36,6 +36,8 @@ namespace EduVault.Core.DTOs
         public string PageKey { get; set; } = string.Empty;
         public string PageName { get; set; } = string.Empty;
         public string Route { get; set; } = string.Empty;
+        public string Icon { get; set; } = "Layers";
+        public int SortOrder { get; set; } = 1;
         public bool CanView { get; set; }
         public bool CanCreate { get; set; }
         public bool CanEdit { get; set; }

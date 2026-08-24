@@ -8,6 +8,22 @@ import { ArrowUpDown, ArrowUp, ArrowDown, X, Edit, Save } from 'lucide-react';
 
 const statusColor = { Active: 'badge-success', Pending: 'badge-warning', Suspended: 'badge-danger' };
 
+// Module-level helper — available to all components in this file
+const safeUrl = (url) => {
+  if (!url || typeof url !== 'string') return '/logo.jpeg';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('data:image/')) {
+    return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed, window.location.origin);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.href;
+    }
+  } catch (e) {}
+  return '/logo.jpeg';
+};
+
 const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
   const [focused, setFocused] = useState(false);
   const formatDisplay = (val) => {
@@ -17,20 +33,6 @@ const DateFilterInput = ({ label, value, onChange, className = '', style = {} })
     return val;
   };
 
-  const safeUrl = (url) => {
-    if (!url || typeof url !== 'string') return '/logo.jpeg';
-    const trimmed = url.trim();
-    if (trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('data:image/')) {
-      return trimmed;
-    }
-    try {
-      const parsed = new URL(trimmed, window.location.origin);
-      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-        return parsed.href;
-      }
-    } catch (e) {}
-    return '/logo.jpeg';
-  };
   return (
     <div className="flex items-center gap-1.5 shrink-0">
       {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
@@ -47,6 +49,7 @@ const DateFilterInput = ({ label, value, onChange, className = '', style = {} })
     </div>
   );
 };
+
 
 const getTodayStr = () => {
   const d = new Date();

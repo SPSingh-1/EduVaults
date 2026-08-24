@@ -32,10 +32,19 @@ namespace EduVault.Api.Controllers
             var schools = await _unitOfWork.Schools.GetAllAsync();
             var schoolList = new System.Collections.Generic.List<object>();
 
+            // Load student counts and admin users for ALL schools in two queries instead of
+            // two queries per school (the previous N+1 loop was the dominant latency cost).
+            var allStudents = await _unitOfWork.Users.FindAsync(u => u.Role == "student" && u.SchoolId != null);
+            var studentCounts = allStudents.GroupBy(u => u.SchoolId!.Value)
+                .ToDictionary(g => g.Key, g => g.Count());
+            var allAdmins = await _unitOfWork.Users.FindAsync(u => u.Role == "schooladmin" && u.SchoolId != null);
+            var adminBySchool = allAdmins.GroupBy(u => u.SchoolId!.Value)
+                .ToDictionary(g => g.Key, g => g.First());
+
             foreach (var s in schools)
             {
-                var students = await _unitOfWork.Users.FindAsync(u => u.SchoolId == s.Id && u.Role == "student");
-                var adminUser = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == s.Id && u.Role == "schooladmin")).FirstOrDefault();
+                var studentCount = studentCounts.TryGetValue(s.Id, out var sc) ? sc : 0;
+                var adminUser = adminBySchool.TryGetValue(s.Id, out var au) ? au : null;
                 schoolList.Add(new
                 {
                     s.Id,
@@ -51,7 +60,7 @@ namespace EduVault.Api.Controllers
                     s.City,
                     s.HasAccountModule,
                     s.HasLibraryModule,
-                    StudentsCount = students.Count(),
+                    StudentsCount = studentCount,
                     AdminEmail = adminUser?.Email,
                     AdminName = adminUser?.FirstName ?? "N/A",
                     AdminPhone = adminUser?.LastName ?? "N/A"

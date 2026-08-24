@@ -1191,111 +1191,105 @@ namespace EduVault.Api.Controllers
         public async Task<IActionResult> GetStats()
         {
             var schoolId = GetSchoolId();
-            
-            var totalStudents = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student")).Count();
-            var totalTeachers = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "teacher")).Count();
-            var totalClasses = (await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId)).Count();
-
-            // Fetch pending fees & daily fee receipts
-            var studentUsers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student");
-            var studentIds = studentUsers.Select(u => u.Id).ToList();
-            var invoices = await _unitOfWork.Invoices.GetAllAsync();
-            var schoolInvoices = invoices.Where(i => studentIds.Contains(i.StudentId)).ToList();
-            var pendingFees = schoolInvoices
-                .Where(i => i.Status != "Paid")
-                .Sum(i => i.Amount);
-
             var todayUtc = DateTime.UtcNow.Date;
-            var transactions = await _unitOfWork.Transactions.GetAllAsync();
-            var todayFeesCollected = transactions
-                .Where(t => t.TransactionDate.Date == todayUtc && t.Status == "success" && t.Invoice != null && studentIds.Contains(t.Invoice.StudentId))
-                .Sum(t => t.Amount);
+            var todayLocal = DateTime.UtcNow.Date; // UTC-kind: Local (DateTime.Today) breaks Postgres timestamptz queries and is inconsistent with UTC-stored dates
+            var sevenDaysAgo = todayLocal.AddDays(-6);
+            var sixMonthsAgo = todayLocal.AddMonths(-5);
 
-            // Fetch recent admissions
-            var recentAdmissions = studentUsers
-                .OrderByDescending(u => u.CreatedAt)
-                .Take(5)
-                .Select(u => new {
-                    Name = $"{u.FirstName} {u.LastName}",
-                    Email = u.Email,
-                    CreatedAt = u.CreatedAt
-                });
+            // Core counts — awaited sequentially: a single scoped DbContext cannot run
+            // multiple queries concurrently (Task.WhenAll here throws "A second operation
+            // was started on this context instance").
+            var totalStudents = await _context.Users.AsNoTracking().CountAsync(u => u.SchoolId == schoolId && u.Role == "student");
+            var totalTeachers = await _context.Users.AsNoTracking().CountAsync(u => u.SchoolId == schoolId && u.Role == "teacher");
+            var totalClasses  = await _context.Classes.AsNoTracking().CountAsync(c => c.SchoolId == schoolId);
+            var subscription  = await _context.Subscriptions.AsNoTracking().Where(s => s.SchoolId == schoolId).FirstOrDefaultAsync();
+            var pendingRequest = await _context.UpgradeRequests.AsNoTracking().Where(ur => ur.SchoolId == schoolId && ur.Status == "Pending").FirstOrDefaultAsync();
 
-            // Fetch subscription details
-            var subscriptions = await _unitOfWork.Subscriptions.FindAsync(s => s.SchoolId == schoolId);
-            var subscription = subscriptions.FirstOrDefault();
+            // Fetch studentIds (lightweight projection only)
+            var studentIds = await _context.Users.AsNoTracking()
+                .Where(u => u.SchoolId == schoolId && u.Role == "student")
+                .Select(u => u.Id).ToListAsync();
 
-            // Fetch pending upgrade request
-            var pendingRequests = await _unitOfWork.UpgradeRequests.FindAsync(ur => ur.SchoolId == schoolId && ur.Status == "Pending");
-            var pendingRequest = pendingRequests.FirstOrDefault();
+            // Fee aggregation at DB level
+            var pendingFees = studentIds.Any()
+                ? await _context.Invoices.AsNoTracking()
+                    .Where(i => studentIds.Contains(i.StudentId) && i.Status != "Paid")
+                    .SumAsync(i => (decimal?)i.Amount) ?? 0m
+                : 0m;
 
-            // Calculate strictly today's student attendance
-            var todayLocal = DateTime.Today;
-            var schoolAttendances = (await _unitOfWork.Attendances.FindAsync(a => a.SchoolId == schoolId)).ToList();
-            var todayStudentsPresent = schoolAttendances.Count(a => a.Date.Date == todayLocal && (a.Status.Equals("Present", StringComparison.OrdinalIgnoreCase) || a.Status.Equals("Late", StringComparison.OrdinalIgnoreCase)));
-            var todayStudentsAbsent = schoolAttendances.Count(a => a.Date.Date == todayLocal && a.Status.Equals("Absent", StringComparison.OrdinalIgnoreCase));
+            var todayFeesCollected = studentIds.Any()
+                ? await _context.Transactions.AsNoTracking()
+                    .Where(t => t.TransactionDate.Date == todayUtc && t.Status.ToLower() == "success"
+                        && t.Invoice != null && studentIds.Contains(t.Invoice.StudentId))
+                    .SumAsync(t => (decimal?)t.Amount) ?? 0m
+                : 0m;
 
-            // Calculate 7-Day Daily Attendance Trend
-            var dailyAttendanceTrend = new System.Collections.Generic.List<object>();
+            // Recent Admissions (top 5, DB-sorted)
+            var recentAdmissions = await _context.Users.AsNoTracking()
+                .Where(u => u.SchoolId == schoolId && u.Role == "student")
+                .OrderByDescending(u => u.CreatedAt).Take(5)
+                .Select(u => new { Name = u.FirstName + " " + u.LastName, u.Email, u.CreatedAt })
+                .ToListAsync();
+
+            // Attendance - only last 7 days window, not all records
+            var attendances = await _context.Attendances.AsNoTracking()
+                .Where(a => a.SchoolId == schoolId && a.Date >= sevenDaysAgo)
+                .Select(a => new { a.Date, a.Status }).ToListAsync();
+
+            var todayStudentsPresent = attendances.Count(a => a.Date.Date == todayLocal
+                && (a.Status.Equals("Present", StringComparison.OrdinalIgnoreCase) || a.Status.Equals("Late", StringComparison.OrdinalIgnoreCase)));
+            var todayStudentsAbsent = attendances.Count(a => a.Date.Date == todayLocal
+                && a.Status.Equals("Absent", StringComparison.OrdinalIgnoreCase));
+
+            var dailyAttendanceTrend = new List<object>();
             for (int i = 6; i >= 0; i--)
             {
                 var d = todayLocal.AddDays(-i);
-                var dayRecords = schoolAttendances.Where(a => a.Date.Date == d).ToList();
-                var pCount = dayRecords.Count(a => a.Status.Equals("Present", StringComparison.OrdinalIgnoreCase) || a.Status.Equals("Late", StringComparison.OrdinalIgnoreCase));
-                var aCount = dayRecords.Count(a => a.Status.Equals("Absent", StringComparison.OrdinalIgnoreCase));
+                var dayRecs = attendances.Where(a => a.Date.Date == d).ToList();
                 dailyAttendanceTrend.Add(new
                 {
-                    date = d.ToString("MMM dd"),
-                    day = d.ToString("ddd"),
-                    present = pCount,
-                    absent = aCount,
-                    total = dayRecords.Count
+                    date = d.ToString("MMM dd"), day = d.ToString("ddd"),
+                    present = dayRecs.Count(a => a.Status.Equals("Present", StringComparison.OrdinalIgnoreCase) || a.Status.Equals("Late", StringComparison.OrdinalIgnoreCase)),
+                    absent  = dayRecs.Count(a => a.Status.Equals("Absent", StringComparison.OrdinalIgnoreCase)),
+                    total   = dayRecs.Count
                 });
             }
 
-            // Calculate 6-Month Real Enrollment Trend
-            var enrollmentTrend = new System.Collections.Generic.List<object>();
+            // 6-Month Enrollment Trend (only 6-month window)
+            var enrollmentRaw = await _context.Users.AsNoTracking()
+                .Where(u => u.SchoolId == schoolId && u.Role == "student" && u.CreatedAt >= sixMonthsAgo)
+                .Select(u => new { u.CreatedAt.Year, u.CreatedAt.Month }).ToListAsync();
+
+            var enrollmentTrend = new List<object>();
             for (int i = 5; i >= 0; i--)
             {
-                var targetMonth = todayLocal.AddMonths(-i);
-                var monthName = targetMonth.ToString("MMM");
-                var count = studentUsers.Count(u => u.CreatedAt.Year == targetMonth.Year && u.CreatedAt.Month == targetMonth.Month);
-                enrollmentTrend.Add(new
-                {
-                    month = monthName,
-                    admissions = count
-                });
+                var tm = todayLocal.AddMonths(-i);
+                enrollmentTrend.Add(new { month = tm.ToString("MMM"), admissions = enrollmentRaw.Count(u => u.Year == tm.Year && u.Month == tm.Month) });
             }
 
-            // Calculate 6-Month Real Monthly Fee Collection Trend
-            var monthlyFeeTrend = new System.Collections.Generic.List<object>();
+            // 6-Month Fee Collection Trend (only 6-month window)
+            var feeRaw = studentIds.Any()
+                ? await _context.Invoices.AsNoTracking()
+                    .Where(i => studentIds.Contains(i.StudentId) && i.Status == "Paid" && i.IssueDate >= sixMonthsAgo)
+                    .Select(i => new { i.IssueDate.Year, i.IssueDate.Month, i.Amount }).ToListAsync()
+                : new List<dynamic>() as dynamic;
+
+            var monthlyFeeTrend = new List<object>();
             for (int i = 5; i >= 0; i--)
             {
-                var targetMonth = todayLocal.AddMonths(-i);
-                var monthName = targetMonth.ToString("MMM");
-                var monthPaid = schoolInvoices
-                    .Where(inv => inv.Status == "Paid" && inv.IssueDate.Year == targetMonth.Year && inv.IssueDate.Month == targetMonth.Month)
-                    .Sum(inv => inv.Amount);
-                monthlyFeeTrend.Add(new
-                {
-                    month = monthName,
-                    collected = monthPaid
-                });
+                var tm = todayLocal.AddMonths(-i);
+                var collected = feeRaw != null
+                    ? ((IEnumerable<dynamic>)feeRaw).Where(x => x.Year == tm.Year && x.Month == tm.Month).Sum(x => (decimal)x.Amount)
+                    : 0m;
+                monthlyFeeTrend.Add(new { month = tm.ToString("MMM"), collected });
             }
 
             return Ok(new
             {
-                totalStudents,
-                totalTeachers,
-                totalClasses,
-                todayStudentsPresent,
-                todayStudentsAbsent,
-                todayFeesCollected,
-                dailyAttendanceTrend,
-                enrollmentTrend,
-                monthlyFeeTrend,
-                pendingFees,
-                recentAdmissions,
+                totalStudents, totalTeachers, totalClasses,
+                todayStudentsPresent, todayStudentsAbsent, todayFeesCollected,
+                dailyAttendanceTrend, enrollmentTrend, monthlyFeeTrend,
+                pendingFees, recentAdmissions,
                 subscriptionStatus = subscription?.Status ?? "pending",
                 subscriptionAmount = subscription?.Amount ?? 49.00m,
                 subscriptionPlanType = subscription?.PlanType ?? "Standard",
@@ -1303,16 +1297,14 @@ namespace EduVault.Api.Controllers
                 subscriptionStartDate = subscription?.StartDate.ToString("MMM dd, yyyy"),
                 subscriptionEndDate = subscription?.EndDate.ToString("MMM dd, yyyy"),
                 pendingUpgradeRequest = pendingRequest != null ? new {
-                    pendingRequest.Id,
-                    pendingRequest.RequestedPlanType,
-                    pendingRequest.Requirements,
-                    pendingRequest.CreatedAt
+                    pendingRequest.Id, pendingRequest.RequestedPlanType,
+                    pendingRequest.Requirements, pendingRequest.CreatedAt
                 } : null
             });
         }
 
         [HttpGet("teacher/stats")]
-        [Authorize(Roles = "teacher")]
+        [Authorize(Roles = "teacher,Teacher,schooladmin,SchoolAdmin")]
         public async Task<IActionResult> GetTeacherStats()
         {
             var userId = GetUserId();
@@ -1436,7 +1428,7 @@ namespace EduVault.Api.Controllers
             }
 
             // Calculate today's attendance & 7-day attendance trend for teacher's assigned classes
-            var todayLocal = DateTime.Today;
+            var todayLocal = DateTime.UtcNow.Date; // UTC-kind: Local (DateTime.Today) breaks Postgres timestamptz queries and is inconsistent with UTC-stored dates
             var teacherAttendances = (await _unitOfWork.Attendances.FindAsync(a => enrolledStudentIds.Contains(a.StudentId))).ToList();
             
             var todayClassStudentsPresent = teacherAttendances.Count(a => a.Date.Date == todayLocal && (a.Status.Equals("Present", StringComparison.OrdinalIgnoreCase) || a.Status.Equals("Late", StringComparison.OrdinalIgnoreCase)));
@@ -1465,6 +1457,32 @@ namespace EduVault.Api.Controllers
                 .ThenBy(t => t.PeriodNumber)
                 .ToList();
 
+            // Configured Widgets & Graph Driver
+            var allDefinitions = (await _unitOfWork.DashboardWidgetDefinitions.GetAllAsync())
+                .Where(w => w.IsActive && (w.TargetRole == "teacher" || w.TargetRole == "all"))
+                .OrderBy(w => w.DisplayOrder)
+                .ToList();
+
+            var schoolWidgets = (await _unitOfWork.SchoolDashboardWidgets.FindAsync(
+                sw => sw.SchoolId == schoolId && sw.Role == "teacher")).ToList();
+
+            var configuredWidgets = allDefinitions.Select(d =>
+            {
+                var custom = schoolWidgets.FirstOrDefault(sw => sw.WidgetKey == d.WidgetKey);
+                return new
+                {
+                    widgetKey = d.WidgetKey,
+                    title = custom?.CustomTitle ?? d.DefaultTitle,
+                    metricSource = d.MetricSource,
+                    timeRange = custom?.TimeRange ?? d.DefaultTimeRange,
+                    chartType = !string.IsNullOrEmpty(custom?.ChartType) ? custom.ChartType : d.ChartType,
+                    colorTheme = d.ColorTheme,
+                    iconName = d.IconName,
+                    isEnabled = custom?.IsEnabled ?? true,
+                    displayOrder = custom?.DisplayOrder ?? d.DisplayOrder
+                };
+            }).OrderBy(w => w.displayOrder).ToList();
+
             return Ok(new
             {
                 totalClasses,
@@ -1477,7 +1495,8 @@ namespace EduVault.Api.Controllers
                 classEnrollments,
                 salary,
                 salaryHistory,
-                schedule = orderedSchedule
+                schedule = orderedSchedule,
+                configuredWidgets
             });
         }
 
@@ -2229,14 +2248,14 @@ namespace EduVault.Api.Controllers
         // --- Attendance & Student Profile API Endpoints ---
 
         [HttpGet("student/profile")]
-        [Authorize(Roles = "student")]
+        [Authorize(Roles = "student,Student,schooladmin,SchoolAdmin")]
         public async Task<IActionResult> GetStudentProfile()
         {
             var studentId = GetUserId();
             var schoolId = GetSchoolId();
 
             var user = await _unitOfWork.Users.GetByIdAsync(studentId);
-            if (user == null || user.SchoolId != schoolId || user.Role != "student")
+            if (user == null || user.SchoolId != schoolId || !user.Role.Equals("student", StringComparison.OrdinalIgnoreCase))
             {
                 return NotFound(new { error = "Student not found" });
             }
@@ -2249,6 +2268,32 @@ namespace EduVault.Api.Controllers
             {
                 classObj = await _unitOfWork.Classes.GetByIdAsync(enrollment.ClassId);
             }
+
+            // Configured Widgets & Graph Driver
+            var allDefinitions = (await _unitOfWork.DashboardWidgetDefinitions.GetAllAsync())
+                .Where(w => w.IsActive && (w.TargetRole == "student" || w.TargetRole == "all"))
+                .OrderBy(w => w.DisplayOrder)
+                .ToList();
+
+            var schoolWidgets = (await _unitOfWork.SchoolDashboardWidgets.FindAsync(
+                sw => sw.SchoolId == schoolId && sw.Role == "student")).ToList();
+
+            var configuredWidgets = allDefinitions.Select(d =>
+            {
+                var custom = schoolWidgets.FirstOrDefault(sw => sw.WidgetKey == d.WidgetKey);
+                return new
+                {
+                    widgetKey = d.WidgetKey,
+                    title = custom?.CustomTitle ?? d.DefaultTitle,
+                    metricSource = d.MetricSource,
+                    timeRange = custom?.TimeRange ?? d.DefaultTimeRange,
+                    chartType = !string.IsNullOrEmpty(custom?.ChartType) ? custom.ChartType : d.ChartType,
+                    colorTheme = d.ColorTheme,
+                    iconName = d.IconName,
+                    isEnabled = custom?.IsEnabled ?? true,
+                    displayOrder = custom?.DisplayOrder ?? d.DisplayOrder
+                };
+            }).OrderBy(w => w.displayOrder).ToList();
 
             return Ok(new {
                 user.Id,
@@ -2270,7 +2315,8 @@ namespace EduVault.Api.Controllers
                 SchoolName = school?.Name ?? string.Empty,
                 SchoolWebsite = school?.Website ?? string.Empty,
                 SchoolAddress = school?.Address ?? string.Empty,
-                SchoolCity = school?.City ?? string.Empty
+                SchoolCity = school?.City ?? string.Empty,
+                ConfiguredWidgets = configuredWidgets
             });
         }
 
@@ -2321,9 +2367,18 @@ namespace EduVault.Api.Controllers
 
         [HttpGet("attendance/class/{classId}")]
         [Authorize(Roles = "teacher,schooladmin")]
-        public async Task<IActionResult> GetClassAttendance(Guid classId, [FromQuery] string date)
+        public async Task<IActionResult> GetClassAttendance(Guid classId, [FromQuery] string? date)
         {
             var schoolId = GetSchoolId();
+
+            // Ensure the requested class belongs to the caller's school (prevents reading
+            // another tenant's roster/attendance by supplying a foreign classId).
+            var classObj = await _unitOfWork.Classes.GetByIdAsync(classId);
+            if (classObj == null || classObj.SchoolId != schoolId)
+            {
+                return NotFound(new { error = "Class not found" });
+            }
+
             if (!DateTime.TryParse(date, out var parsedDate))
             {
                 parsedDate = DateTime.UtcNow;
@@ -2369,8 +2424,17 @@ namespace EduVault.Api.Controllers
             var schoolId = GetSchoolId();
             var studentsToNotify = new List<(Guid StudentId, string Status, string Remarks)>();
 
+            // Only accept attendance for students that actually belong to the caller's school
+            // (prevents cross-tenant writes and misdirected guardian notifications).
+            var requestedIds = request.Students.Select(s => s.StudentId).ToList();
+            var validStudentIds = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student" && requestedIds.Contains(u.Id)))
+                .Select(u => u.Id)
+                .ToHashSet();
+
             foreach (var studentAttendance in request.Students)
             {
+                if (!validStudentIds.Contains(studentAttendance.StudentId)) continue; // skip students from other schools
+
                 var targetDate = DateTime.SpecifyKind(request.Date.Date, DateTimeKind.Utc);
                 var existing = (await _context.Attendances
                     .Where(a => a.StudentId == studentAttendance.StudentId && a.Date.Date == targetDate)
@@ -2959,10 +3023,13 @@ namespace EduVault.Api.Controllers
             if (hasFail) return;
 
             // All exams passed! Promote.
-            var nextGrade = currentClass.Grade + 1;
+            // Grade is stored as a string; parse it numerically so "5" -> "6" (a naive
+            // string "+ 1" would produce "51" and never match the next grade's class).
+            if (!int.TryParse(currentClass.Grade?.Trim(), out var currentGradeNum)) return; // non-numeric grade: cannot auto-promote
+            var nextGradeNum = currentGradeNum + 1;
             var classesInSchool = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
-            var nextClassObj = classesInSchool.FirstOrDefault(c => c.Grade == nextGrade && c.Section.Equals(currentClass.Section, StringComparison.OrdinalIgnoreCase))
-                               ?? classesInSchool.FirstOrDefault(c => c.Grade == nextGrade);
+            var nextClassObj = classesInSchool.FirstOrDefault(c => int.TryParse(c.Grade?.Trim(), out var g) && g == nextGradeNum && c.Section.Equals(currentClass.Section, StringComparison.OrdinalIgnoreCase))
+                               ?? classesInSchool.FirstOrDefault(c => int.TryParse(c.Grade?.Trim(), out var g) && g == nextGradeNum);
 
             if (nextClassObj == null) return; // Next grade is not set up yet
 
@@ -3386,6 +3453,237 @@ namespace EduVault.Api.Controllers
                 hasLibraryModule = true,
                 finePerDay = finePerDay,
                 books = list
+            });
+        }
+
+        // =========================================================================
+        // DYNAMIC DASHBOARD CARDS & GRAPH DATA
+        // =========================================================================
+        [HttpGet("dashboard/dynamic-widgets")]
+        public async Task<IActionResult> GetDynamicDashboardWidgets()
+        {
+            var schoolId = GetSchoolId();
+            var role = User.FindFirst(ClaimTypes.Role)?.Value?.ToLower() ?? "schooladmin";
+
+            // 1. Fetch enabled widgets for this school & role
+            var allDefinitions = (await _unitOfWork.DashboardWidgetDefinitions.GetAllAsync())
+                .Where(w => w.IsActive && (string.IsNullOrEmpty(w.TargetRole) || w.TargetRole == role || w.TargetRole == "all"))
+                .OrderBy(w => w.DisplayOrder)
+                .ToList();
+
+            var schoolWidgets = (await _unitOfWork.SchoolDashboardWidgets.FindAsync(
+                sw => sw.SchoolId == schoolId && sw.Role == role)).ToList();
+
+            var activeWidgets = allDefinitions
+                .Select(d =>
+                {
+                    var custom = schoolWidgets.FirstOrDefault(sw => sw.WidgetKey == d.WidgetKey);
+                    return new
+                    {
+                        Definition = d,
+                        Custom = custom,
+                        IsEnabled = custom?.IsEnabled ?? true,
+                        Title = custom?.CustomTitle ?? d.DefaultTitle,
+                        TimeRange = custom?.TimeRange ?? d.DefaultTimeRange,
+                        DisplayOrder = custom?.DisplayOrder ?? d.DisplayOrder
+                    };
+                })
+                .Where(w => w.IsEnabled)
+                .OrderBy(w => w.DisplayOrder)
+                .ToList();
+
+            // 2. Pre-fetch live data for metrics
+            var today = DateTime.UtcNow.Date;
+            var startOfWeek = today.AddDays(-7);
+            var startOfMonth = new DateTime(today.Year, today.Month, 1);
+
+            // Students & Teachers count
+            var totalStudents = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student")).Count();
+            var totalTeachers = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "teacher")).Count();
+            var totalClasses = (await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId)).Count();
+
+            // Attendance today
+            var attendancesToday = (await _unitOfWork.Attendances.FindAsync(a => a.SchoolId == schoolId && a.Date.Date == today)).ToList();
+            var presentToday = attendancesToday.Count(a => a.Status == "Present" || a.Status == "Late");
+
+            // Weekly attendances
+            var attendancesWeekly = (await _unitOfWork.Attendances.FindAsync(a => a.SchoolId == schoolId && a.Date.Date >= startOfWeek)).ToList();
+            var weeklyDays = attendancesWeekly.GroupBy(a => a.Date.Date).Count();
+            var weeklyPresentCount = attendancesWeekly.Count(a => a.Status == "Present" || a.Status == "Late");
+            var weeklyAvg = (weeklyDays > 0 && totalStudents > 0) 
+                ? (int)Math.Round((double)weeklyPresentCount / (weeklyDays * totalStudents) * 100) 
+                : (totalStudents > 0 ? (int)Math.Round((double)presentToday / totalStudents * 100) : 0);
+
+            // Monthly Invoices / Fees
+            var invoices = await _context.Invoices
+                .Include(i => i.Student)
+                .ThenInclude(s => s.User)
+                .Where(i => i.Student != null && i.Student.User != null && i.Student.User.SchoolId == schoolId)
+                .ToListAsync();
+            var monthlyPaid = invoices.Where(i => i.Status == "Paid" && i.IssueDate >= startOfMonth).Sum(i => i.Amount);
+            var weeklyPaid = invoices.Where(i => i.Status == "Paid" && i.IssueDate >= startOfWeek).Sum(i => i.Amount);
+            var todayPaid = invoices.Where(i => i.Status == "Paid" && i.IssueDate.Date == today).Sum(i => i.Amount);
+            var pendingFees = invoices.Where(i => i.Status == "Pending" || i.Status == "Overdue").Sum(i => i.Amount);
+
+            // Salaries
+            var salaries = (await _unitOfWork.SalaryRecords.FindAsync(s => s.SchoolId == schoolId)).ToList();
+            var totalSalariesPaid = salaries.Where(s => s.Status == "Paid" && s.Month == today.Month && s.Year == today.Year).Sum(s => s.NetPay);
+
+            // Expenses
+            var expenses = (await _unitOfWork.Expenses.FindAsync(e => e.SchoolId == schoolId)).ToList();
+            var monthlyExpenses = expenses.Where(e => e.Date >= startOfMonth).Sum(e => e.Amount);
+
+            // Library
+            var books = (await _unitOfWork.Books.FindAsync(b => b.SchoolId == schoolId)).ToList();
+            var totalBookCopies = books.Sum(b => b.TotalCopies);
+            var availableBooks = books.Sum(b => b.AvailableCopies);
+            var libraryTransactions = (await _unitOfWork.LibraryTransactions.FindAsync(t => t.SchoolId == schoolId)).ToList();
+            var activeLoans = libraryTransactions.Count(t => t.Status == "Issued" || t.Status == "Overdue");
+            var overdueBooks = libraryTransactions.Count(t => t.Status == "Overdue");
+            var finesCollected = libraryTransactions.Where(t => t.FinePaid).Sum(t => t.FineAmount);
+
+            // Pending Leave Reviews
+            var pendingLeaves = (await _unitOfWork.LeaveRequests.FindAsync(l => l.SchoolId == schoolId && l.Status == "Pending")).Count();
+
+            // 3. Map computed data to widgets
+            var computedCards = new List<object>();
+            var computedCharts = new List<object>();
+
+            foreach (var item in activeWidgets)
+            {
+                var def = item.Definition;
+                var timeRange = item.TimeRange;
+                string value = "0";
+                string subText = "";
+
+                switch (def.MetricSource)
+                {
+                    case "StudentAttendance":
+                        if (timeRange == "Weekly")
+                        {
+                            value = $"{weeklyAvg}% Avg";
+                            subText = $"Avg across last 7 days ({totalStudents} students)";
+                        }
+                        else if (timeRange == "Monthly")
+                        {
+                            value = $"{weeklyAvg}%";
+                            subText = "Monthly average rate";
+                        }
+                        else
+                        {
+                            value = $"{presentToday} / {totalStudents}";
+                            subText = totalStudents > 0 ? $"{Math.Round((double)presentToday / totalStudents * 100)}% present today" : "No students";
+                        }
+                        break;
+
+                    case "TeacherAttendance":
+                        if (timeRange == "Weekly")
+                        {
+                            value = $"{totalTeachers} Faculty";
+                            subText = "Weekly active faculty";
+                        }
+                        else
+                        {
+                            value = $"{totalTeachers} Faculty";
+                            subText = "Total assigned teachers";
+                        }
+                        break;
+
+                    case "FeeCollection":
+                        if (timeRange == "Daily")
+                        {
+                            value = $"₹{todayPaid:N0}";
+                            subText = "Collected today";
+                        }
+                        else if (timeRange == "Weekly")
+                        {
+                            value = $"₹{weeklyPaid:N0}";
+                            subText = "Last 7 days collections";
+                        }
+                        else
+                        {
+                            value = $"₹{monthlyPaid:N0}";
+                            subText = $"Pending: ₹{pendingFees:N0}";
+                        }
+                        break;
+
+                    case "SalaryDisbursed":
+                        value = totalSalariesPaid > 0 ? $"₹{totalSalariesPaid:N0}" : "₹0";
+                        subText = "Disbursed for this month";
+                        break;
+
+                    case "ExpenseTotal":
+                        value = $"₹{monthlyExpenses:N0}";
+                        subText = "Operational outflow this month";
+                        break;
+
+                    case "LibraryLoans":
+                        if (def.WidgetKey.Contains("overdue"))
+                        {
+                            value = $"{overdueBooks}";
+                            subText = "Past return due date";
+                        }
+                        else if (def.WidgetKey.Contains("fine"))
+                        {
+                            value = $"₹{finesCollected:N0}";
+                            subText = "Total overdue fines";
+                        }
+                        else if (def.WidgetKey.Contains("active"))
+                        {
+                            value = $"{activeLoans}";
+                            subText = "Currently with members";
+                        }
+                        else
+                        {
+                            value = $"{totalBookCopies}";
+                            subText = $"{availableBooks} copies on shelf";
+                        }
+                        break;
+
+                    case "PendingReviews":
+                        value = $"{pendingLeaves}";
+                        subText = "Requires approval";
+                        break;
+
+                    case "ClassEnrollment":
+                    default:
+                        value = $"{totalClasses}";
+                        subText = $"{totalStudents} enrolled students";
+                        break;
+                }
+
+                if (def.ChartType != "None")
+                {
+                    computedCharts.Add(new
+                    {
+                        widgetKey = def.WidgetKey,
+                        title = item.Title,
+                        chartType = def.ChartType,
+                        colorTheme = def.ColorTheme,
+                        timeRange = timeRange,
+                        iconName = def.IconName
+                    });
+                }
+                else
+                {
+                    computedCards.Add(new
+                    {
+                        widgetKey = def.WidgetKey,
+                        title = item.Title,
+                        value = value,
+                        subText = subText,
+                        iconName = def.IconName,
+                        colorTheme = def.ColorTheme,
+                        timeRange = timeRange,
+                        displayOrder = item.DisplayOrder
+                    });
+                }
+            }
+
+            return Ok(new
+            {
+                cards = computedCards,
+                charts = computedCharts
             });
         }
     }

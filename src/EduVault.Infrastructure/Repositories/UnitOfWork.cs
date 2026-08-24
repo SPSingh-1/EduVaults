@@ -57,6 +57,10 @@ namespace EduVault.Infrastructure.Repositories
             Books = new Repository<Book>(_context);
             LibrarySettings = new Repository<LibrarySettings>(_context);
             LibraryTransactions = new Repository<LibraryTransaction>(_context);
+
+            // Dynamic Dashboard Widgets
+            DashboardWidgetDefinitions = new Repository<DashboardWidgetDefinition>(_context);
+            SchoolDashboardWidgets = new Repository<SchoolDashboardWidget>(_context);
         }
 
         public IRepository<School> Schools { get; private set; }
@@ -103,6 +107,10 @@ namespace EduVault.Infrastructure.Repositories
         public IRepository<Book> Books { get; private set; }
         public IRepository<LibrarySettings> LibrarySettings { get; private set; }
         public IRepository<LibraryTransaction> LibraryTransactions { get; private set; }
+
+        // Dynamic Dashboard Widgets
+        public IRepository<DashboardWidgetDefinition> DashboardWidgetDefinitions { get; private set; }
+        public IRepository<SchoolDashboardWidget> SchoolDashboardWidgets { get; private set; }
 
         public async Task<int> CompleteAsync()
         {

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { SidebarProvider } from './contexts/SidebarContext';
@@ -96,6 +96,12 @@ import {
   StudentLibrary
 } from './pages/student/StudentPages';
 
+const SchoolAdminRedirect = () => {
+  const location = useLocation();
+  const newPath = location.pathname.replace(/^\/school[\s_%20]+admin/i, '/school-admin');
+  return <Navigate to={newPath + location.search} replace />;
+};
+
 export default function App() {
   return (
     <AuthProvider>
@@ -103,13 +109,13 @@ export default function App() {
         <BrowserRouter>
           <SidebarProvider>
             <Routes>
-              {/* Public */}
+              {/* Public Routes */}
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/maintenance" element={<Maintenance />} />
               <Route path="/demo" element={<Demo />} />
+              <Route path="/maintenance" element={<Maintenance />} />
 
               {/* Super Admin */}
               <Route element={<ProtectedRoute allowedRoles={['superadmin']} />}>
@@ -117,10 +123,9 @@ export default function App() {
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<SuperAdminDashboard />} />
                   <Route path="schools" element={<Schools />} />
-                  <Route path="access-control" element={<AccessControl />} />
                   <Route path="subscriptions" element={<Subscriptions />} />
-                  <Route path="users" element={<Schools />} />
                   <Route path="settings" element={<Settings />} />
+                  <Route path="access-control" element={<AccessControl />} />
                   <Route path="support" element={<Support />} />
                   <Route path="notices" element={<SuperAdminNotices />} />
                 </Route>
@@ -146,6 +151,11 @@ export default function App() {
                   <Route path="profile" element={<SchoolAdminProfile />} />
                 </Route>
               </Route>
+
+              {/* Route Aliases for School Admin space variations (preserves subpath) */}
+              <Route path="/school admin/*" element={<SchoolAdminRedirect />} />
+              <Route path="/school_admin/*" element={<SchoolAdminRedirect />} />
+              <Route path="/school%20admin/*" element={<SchoolAdminRedirect />} />
 
               {/* Account Manager (HRM & Finances) */}
               <Route element={<ProtectedRoute allowedRoles={['accountmanager', 'schooladmin']} />}>

@@ -76,13 +76,19 @@ export const TeacherLayout = () => {
     });
   }
 
-  const finalLinks = baseLinks.filter(link => {
-    if (user?.permissions && user.permissions.length > 0) {
-      const perm = user.permissions.find(p => p.pageKey === link.pageKey);
-      if (perm) return perm.canView;
-    }
-    return true;
-  });
+  const hasDynamicPerms = user?.permissions && user.permissions.filter(p => p.canView && (p.route?.startsWith('/teacher') || p.pageKey?.startsWith('teacher'))).length > 0;
+
+  const finalLinks = hasDynamicPerms
+    ? user.permissions
+        .filter(p => p.canView && (p.route?.startsWith('/teacher') || p.pageKey?.startsWith('teacher')))
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        .map(p => ({
+          pageKey: p.pageKey,
+          icon: p.icon || 'Layers',
+          label: p.pageName,
+          path: p.route
+        }))
+    : baseLinks;
 
   return (
     <div className="flex">
@@ -128,22 +134,40 @@ export const TeacherDashboard = () => {
     ? Math.round(((stats?.todayClassStudentsPresent ?? 0) / stats.totalStudents) * 100)
     : 0;
 
+  const configuredWidgets = stats?.configuredWidgets || [];
+  const getWidgetInfo = (key, defaultTitle) => {
+    const found = configuredWidgets.find(w => w.widgetKey === key);
+    return {
+      isVisible: found ? found.isEnabled : true,
+      title: found?.title || defaultTitle,
+      timeRange: found?.timeRange || 'Daily'
+    };
+  };
+
+  const classesWidget = getWidgetInfo('card.teacher.assigned_classes', 'My Assigned Classes');
+  const attendanceWidget = getWidgetInfo('card.teacher.class_attendance', "Today's Student Attendance");
+  const reviewsWidget = getWidgetInfo('card.teacher.pending_reviews', 'Pending Reviews / Homework');
+  const salaryWidget = getWidgetInfo('card.teacher.salary_payout', 'Monthly Base Salary');
+
   return (
     <div className="space-y-6">
       <Topbar title="Teacher Dashboard" subtitle="Academic Year 2023-24 - Live Overview" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'My Classes', value: stats?.totalClasses ?? '0', sub: stats?.myClassesToday || 'No classes today', icon: Building, color: 'text-blue-500', bgColor: 'bg-blue-50/50' },
-          { label: "Today's Student Attendance", value: `${stats?.todayClassStudentsPresent ?? 0} / ${stats?.totalStudents ?? 0}`, sub: `${classAttendancePct}% Present Rate Today (${stats?.todayClassStudentsAbsent ?? 0} Absent)`, icon: Users, color: 'text-emerald-500', bgColor: 'bg-emerald-50/50' },
-          { label: 'Pending Reviews', value: stats?.pendingReviews ?? '0', sub: 'Requires submission', icon: ClipboardList, color: 'text-amber-500', bgColor: 'bg-amber-50/50' },
-          { label: 'Base Salary', value: stats?.salary ? `Rs. ${stats.salary.toLocaleString()}` : 'Rs. 55,000', sub: 'Direct deposit', icon: DollarSign, color: 'text-violet-500', bgColor: 'bg-violet-50/50' },
-        ].map(s => (
-          <div key={s.label} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
+          { key: 'classes', isVisible: classesWidget.isVisible, label: classesWidget.title, value: stats?.totalClasses ?? '0', sub: stats?.myClassesToday || 'No classes today', icon: Building, color: 'text-blue-500', bgColor: 'bg-blue-50/50', timeRange: classesWidget.timeRange },
+          { key: 'attendance', isVisible: attendanceWidget.isVisible, label: attendanceWidget.title, value: `${stats?.todayClassStudentsPresent ?? 0} / ${stats?.totalStudents ?? 0}`, sub: `${classAttendancePct}% Present Rate Today (${stats?.todayClassStudentsAbsent ?? 0} Absent)`, icon: Users, color: 'text-emerald-500', bgColor: 'bg-emerald-50/50', timeRange: attendanceWidget.timeRange },
+          { key: 'reviews', isVisible: reviewsWidget.isVisible, label: reviewsWidget.title, value: stats?.pendingReviews ?? '0', sub: 'Requires submission', icon: ClipboardList, color: 'text-amber-500', bgColor: 'bg-amber-50/50', timeRange: reviewsWidget.timeRange },
+          { key: 'salary', isVisible: salaryWidget.isVisible, label: salaryWidget.title, value: stats?.salary ? `Rs. ${stats.salary.toLocaleString()}` : 'Rs. 55,000', sub: 'Direct deposit', icon: DollarSign, color: 'text-violet-500', bgColor: 'bg-violet-50/50', timeRange: salaryWidget.timeRange },
+        ].filter(s => s.isVisible).map(s => (
+          <div key={s.key} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
             <div className="space-y-1">
               <div className="font-display text-xl font-bold text-primary">{s.value}</div>
               <div className="text-xs font-semibold text-gray-450">{s.label}</div>
-              <div className="text-2xs font-semibold text-blue-500">{s.sub}</div>
+              <div className="text-2xs font-semibold text-blue-500 flex items-center gap-1.5">
+                <span>{s.sub}</span>
+                <span className="text-[9px] font-bold bg-slate-100 px-1.5 py-0.2 rounded text-slate-500">{s.timeRange}</span>
+              </div>
             </div>
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${s.bgColor}`}>
               <s.icon className={`w-6 h-6 ${s.color} stroke-[1.75]`} />
@@ -1046,7 +1070,7 @@ export const TeacherStudents = () => {
 export const Attendance = () => {
   const [classes, setClasses] = useState([]);
   const [selectedClassId, setSelectedClassId] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10)); // default to today (empty caused a 400 on first load)
   const [students, setStudents] = useState([]);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);

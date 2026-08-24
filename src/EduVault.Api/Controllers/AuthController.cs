@@ -43,6 +43,48 @@ namespace EduVault.Api.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
+            // 1. Direct Environment Variable Authentication for Fixed SuperAdmin (.env ONLY - No DB required)
+            var envSuperAdminEmail = Environment.GetEnvironmentVariable("SUPERADMIN_EMAIL") ?? _configuration["SUPERADMIN_EMAIL"] ?? "superadmin@eduvault.com";
+            var envSuperAdminPassword = Environment.GetEnvironmentVariable("SUPERADMIN_PASSWORD") ?? _configuration["SUPERADMIN_PASSWORD"] ?? "Admin123!";
+
+            if (!string.IsNullOrWhiteSpace(envSuperAdminEmail) && 
+                string.Equals(request.Email?.Trim(), envSuperAdminEmail.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                if (request.Password != envSuperAdminPassword)
+                {
+                    return Unauthorized(new { error = "Invalid email or password" });
+                }
+
+                var superUser = new User
+                {
+                    Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                    Email = envSuperAdminEmail,
+                    FirstName = "EduVault",
+                    LastName = "SuperAdmin",
+                    Role = "superadmin",
+                    IsActive = true
+                };
+
+                var superAdminToken = _authService.GenerateToken(superUser);
+
+                return Ok(new LoginResponse
+                {
+                    Token = superAdminToken,
+                    User = new UserDto
+                    {
+                        Id = superUser.Id,
+                        Email = superUser.Email,
+                        Role = "superadmin",
+                        FirstName = "EduVault",
+                        LastName = "SuperAdmin",
+                        Avatar = "ES",
+                        Permissions = new System.Collections.Generic.List<PagePermissionDto>()
+                    }
+                });
+            }
+
+
+            // 2. Database Lookup for School Users (SchoolAdmin, Teacher, Student, AccountManager, Librarian)
             var userList = await _unitOfWork.Users.FindAsync(u => u.Email == request.Email);
             var user = userList.FirstOrDefault();
 
@@ -96,12 +138,14 @@ namespace EduVault.Api.Controllers
                         PageKey   = page.PageKey,
                         PageName  = page.PageName,
                         Route     = page.Route,
+                        Icon      = string.IsNullOrWhiteSpace(page.Icon) ? "Layers" : page.Icon,
+                        SortOrder = page.SortOrder,
                         CanView   = saved?.CanView   ?? defaultView,
                         CanCreate = saved?.CanCreate ?? defaultView,
                         CanEdit   = saved?.CanEdit   ?? defaultView,
                         CanDelete = saved?.CanDelete ?? defaultView
                     };
-                }).Where(p => p.CanView).ToList(); // only return pages this user can see
+                }).Where(p => p.CanView).OrderBy(p => p.SortOrder).ToList(); // only return pages this user can see sorted by order
             }
 
             var token = _authService.GenerateToken(user);
@@ -508,11 +552,14 @@ namespace EduVault.Api.Controllers
 
         private static bool IsDefaultVisibleForRole(string role, string module)
         {
-            return (role == "schooladmin"    && module == "school_admin") ||
-                   (role == "teacher"        && module == "teacher")      ||
-                   (role == "student"        && module == "student")      ||
-                   (role == "accountmanager" && module == "account")      ||
-                   (role == "librarian"      && module == "library");
+            if (string.IsNullOrEmpty(role) || string.IsNullOrEmpty(module)) return false;
+            var r = role.ToLower().Trim();
+            var m = module.ToLower().Trim();
+            return (r == "schooladmin"    && (m == "school_admin" || m == "schooladmin")) ||
+                   (r == "teacher"        && m == "teacher")                              ||
+                   (r == "student"        && m == "student")                              ||
+                   (r == "accountmanager" && (m == "account" || m == "hrm"))              ||
+                   (r == "librarian"      && (m == "library" || m == "librarian"));
         }
     }
 

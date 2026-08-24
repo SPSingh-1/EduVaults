@@ -2,10 +2,26 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSidebar } from '../../contexts/SidebarContext';
 import EduFlowLogo from '../common/Logo';
+import * as Icons from 'lucide-react';
 
-const NavLink = ({ icon: Icon, label, path, onClick }) => {
+const resolveIcon = (icon) => {
+  if (!icon) return Icons.Layers;
+  if (typeof icon === 'function' || (typeof icon === 'object' && icon !== null && icon.$$typeof)) {
+    return icon;
+  }
+  if (typeof icon === 'string') {
+    // Try exact or capitalized name in Lucide Icons
+    const match = Icons[icon] || Icons[icon.charAt(0).toUpperCase() + icon.slice(1)];
+    return match || Icons.Layers;
+  }
+  return Icons.Layers;
+};
+
+const NavLink = ({ icon, label, path, onClick }) => {
   const location = useLocation();
   const active = location.pathname === path || location.pathname.startsWith(path + '/');
+  const IconComponent = resolveIcon(icon);
+
   return (
     <div className={`sidebar-link group ${active ? 'active' : ''}`} onClick={onClick || (() => {})}>
       {/* Left indicator line */}
@@ -13,11 +29,7 @@ const NavLink = ({ icon: Icon, label, path, onClick }) => {
         <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-accent rounded-r-full shadow-[0_0_12px_rgba(212,160,23,0.5)]" />
       )}
       <span className={`flex items-center justify-center transition-all duration-300 ease-out shrink-0 ${active ? 'scale-115 text-accent' : 'text-blue-300/85 group-hover:scale-110 group-hover:text-white'}`}>
-        {typeof Icon === 'function' || (Icon && typeof Icon === 'object') ? (
-          <Icon className="w-4 h-4 stroke-[2]" />
-        ) : (
-          <span className="text-base">{Icon}</span>
-        )}
+        <IconComponent className="w-4 h-4 stroke-[2]" />
       </span>
       <span className="transition-all duration-300 ease-out">{label}</span>
     </div>
@@ -34,6 +46,8 @@ const Sidebar = ({ links, role }) => {
     schooladmin: 'School Admin',
     teacher: 'Teacher Portal',
     student: 'Student Portal',
+    accountmanager: 'Account & Finance',
+    librarian: 'Library Portal'
   };
 
   const displayName = user ? `${user.firstName} ${user.lastName}` : '';
@@ -48,6 +62,10 @@ const Sidebar = ({ links, role }) => {
       navigate('/teacher/profile');
     } else if (role === 'student') {
       navigate('/student/profile');
+    } else if (role === 'accountmanager') {
+      navigate('/account/profile');
+    } else if (role === 'librarian') {
+      navigate('/library/profile');
     }
   };
 
@@ -73,7 +91,7 @@ const Sidebar = ({ links, role }) => {
               ✕
             </button>
           </div>
-          <div className="mt-2 text-xs text-blue-300 font-medium px-1">{roleLabels[role]}</div>
+          <div className="mt-2 text-xs text-blue-300 font-medium px-1">{roleLabels[role] || 'EduVault'}</div>
         </div>
         <nav className="flex-1 py-4 space-y-0.5">
           {links.map((l) => (

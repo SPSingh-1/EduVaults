@@ -58,6 +58,10 @@ namespace EduVault.Infrastructure.Data
         public DbSet<LibrarySettings> LibrarySettings { get; set; }
         public DbSet<LibraryTransaction> LibraryTransactions { get; set; }
 
+        // Dynamic Dashboard Widgets & Charts
+        public DbSet<DashboardWidgetDefinition> DashboardWidgetDefinitions { get; set; }
+        public DbSet<SchoolDashboardWidget> SchoolDashboardWidgets { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -433,6 +437,21 @@ namespace EduVault.Infrastructure.Data
                 .WithMany()
                 .HasForeignKey(lt => lt.SchoolId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Dynamic Dashboard Widgets
+            modelBuilder.Entity<SchoolDashboardWidget>()
+                .HasOne(sdw => sdw.School)
+                .WithMany()
+                .HasForeignKey(sdw => sdw.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SchoolDashboardWidget>()
+                .HasIndex(sdw => new { sdw.SchoolId, sdw.Role, sdw.WidgetKey })
+                .IsUnique();
+
+            modelBuilder.Entity<DashboardWidgetDefinition>()
+                .HasIndex(dwd => dwd.WidgetKey)
+                .IsUnique();
         }
     }
 }

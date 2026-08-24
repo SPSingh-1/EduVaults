@@ -51,6 +51,10 @@ namespace EduVault.Core.Interfaces
         IRepository<LibrarySettings> LibrarySettings { get; }
         IRepository<LibraryTransaction> LibraryTransactions { get; }
 
+        // Dynamic Dashboard Widgets
+        IRepository<DashboardWidgetDefinition> DashboardWidgetDefinitions { get; }
+        IRepository<SchoolDashboardWidget> SchoolDashboardWidgets { get; }
+
         Task<int> CompleteAsync();
     }
 }

@@ -43,6 +43,12 @@ const Teachers = () => {
   // Tab state
   const [activeTab, setActiveTab] = useState('directory');
 
+  // Daily Attendance States
+  const [selectedDate, setSelectedDate] = useState(getTodayStr());
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceTeachers, setAttendanceTeachers] = useState([]);
+  const [attendanceSaved, setAttendanceSaved] = useState(false);
+
   // Teacher Attendance Inspection States
   const [selectedInspectionTeacherId, setSelectedInspectionTeacherId] = useState('');
   const [teacherAttendanceHistory, setTeacherAttendanceHistory] = useState([]);
