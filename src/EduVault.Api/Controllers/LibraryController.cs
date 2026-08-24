@@ -273,6 +273,8 @@ namespace EduVault.Api.Controllers
         // Bulk CSV Import for Books
         // ==========================================
         [HttpPost("books/import")]
+        [Consumes("multipart/form-data")]
+        [ApiExplorerSettings(IgnoreApi = true)] // excluded from Swagger: IFormFile [FromForm] breaks doc generation (endpoint still works at runtime)
         public async Task<IActionResult> ImportBooks([FromForm] IFormFile? file)
         {
             var schoolId = GetSchoolId();

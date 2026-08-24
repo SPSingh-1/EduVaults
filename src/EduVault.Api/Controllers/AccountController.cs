@@ -52,11 +52,13 @@ namespace EduVault.Api.Controllers
             int y = year ?? DateTime.UtcNow.Year;
             var sixMonthsAgo = DateTime.UtcNow.AddMonths(-5).Date;
 
-            // === CORE KPIs ===
+            // === CORE KPIs — awaited sequentially: a single scoped DbContext cannot run
+            // multiple queries concurrently (Task.WhenAll here throws "A second operation
+            // was started on this context instance"). ===
             var salaryForMonth = await _context.SalaryRecords.AsNoTracking()
                 .Where(s => s.SchoolId == schoolId && s.Month == m && s.Year == y)
                 .Select(s => new { s.NetPay, s.Status }).ToListAsync();
-            var pendingLeavesCount = await _context.LeaveRequests.AsNoTracking()
+            int pendingLeavesCount = await _context.LeaveRequests.AsNoTracking()
                 .CountAsync(l => l.SchoolId == schoolId && l.Status == "Pending");
             var expenses = await _context.Expenses.AsNoTracking()
                 .Where(e => e.SchoolId == schoolId && e.Date.Month == m && e.Date.Year == y)

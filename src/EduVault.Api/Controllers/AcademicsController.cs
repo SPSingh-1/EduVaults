@@ -1193,11 +1193,13 @@ namespace EduVault.Api.Controllers
         {
             var schoolId = GetSchoolId();
             var todayUtc = DateTime.UtcNow.Date;
-            var todayLocal = DateTime.Today;
+            var todayLocal = DateTime.UtcNow.Date; // UTC-kind: Local (DateTime.Today) breaks Postgres timestamptz queries and is inconsistent with UTC-stored dates
             var sevenDaysAgo = todayLocal.AddDays(-6);
             var sixMonthsAgo = todayLocal.AddMonths(-5);
 
-            // Run core counts at DB level (sequential awaits on single DbContext)
+            // Core counts — awaited sequentially: a single scoped DbContext cannot run
+            // multiple queries concurrently (Task.WhenAll here throws "A second operation
+            // was started on this context instance").
             var totalStudents = await _context.Users.AsNoTracking().CountAsync(u => u.SchoolId == schoolId && u.Role == "student");
             var totalTeachers = await _context.Users.AsNoTracking().CountAsync(u => u.SchoolId == schoolId && u.Role == "teacher");
             var totalClasses  = await _context.Classes.AsNoTracking().CountAsync(c => c.SchoolId == schoolId);
@@ -1222,7 +1224,6 @@ namespace EduVault.Api.Controllers
                         && t.Invoice != null && studentIds.Contains(t.Invoice.StudentId))
                     .SumAsync(t => (decimal?)t.Amount) ?? 0m
                 : 0m;
-
             // Recent Admissions (top 5, DB-sorted)
             var recentAdmissions = await _context.Users.AsNoTracking()
                 .Where(u => u.SchoolId == schoolId && u.Role == "student")
@@ -1448,7 +1449,7 @@ namespace EduVault.Api.Controllers
             }
 
             // Calculate today's attendance & 7-day attendance trend for teacher's assigned classes (7-day window only)
-            var todayLocal = DateTime.Today;
+            var todayLocal = DateTime.UtcNow.Date; // UTC-kind: Local (DateTime.Today) breaks Postgres timestamptz queries
             var sevenDaysAgo = todayLocal.AddDays(-6);
             var teacherAttendances = enrolledStudentIds.Any()
                 ? await _context.Attendances.AsNoTracking()
@@ -2440,9 +2441,18 @@ namespace EduVault.Api.Controllers
 
         [HttpGet("attendance/class/{classId}")]
         [Authorize(Roles = "teacher,schooladmin")]
-        public async Task<IActionResult> GetClassAttendance(Guid classId, [FromQuery] string date)
+        public async Task<IActionResult> GetClassAttendance(Guid classId, [FromQuery] string? date)
         {
             var schoolId = GetSchoolId();
+
+            // Ensure the requested class belongs to the caller's school (prevents reading
+            // another tenant's roster/attendance by supplying a foreign classId).
+            var classObj = await _unitOfWork.Classes.GetByIdAsync(classId);
+            if (classObj == null || classObj.SchoolId != schoolId)
+            {
+                return NotFound(new { error = "Class not found" });
+            }
+
             if (!DateTime.TryParse(date, out var parsedDate))
             {
                 parsedDate = DateTime.UtcNow;
@@ -2488,8 +2498,17 @@ namespace EduVault.Api.Controllers
             var schoolId = GetSchoolId();
             var studentsToNotify = new List<(Guid StudentId, string Status, string Remarks)>();
 
+            // Only accept attendance for students that actually belong to the caller's school
+            // (prevents cross-tenant writes and misdirected guardian notifications).
+            var requestedIds = request.Students.Select(s => s.StudentId).ToList();
+            var validStudentIds = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student" && requestedIds.Contains(u.Id)))
+                .Select(u => u.Id)
+                .ToHashSet();
+
             foreach (var studentAttendance in request.Students)
             {
+                if (!validStudentIds.Contains(studentAttendance.StudentId)) continue; // skip students from other schools
+
                 var targetDate = DateTime.SpecifyKind(request.Date.Date, DateTimeKind.Utc);
                 var existing = (await _context.Attendances
                     .Where(a => a.StudentId == studentAttendance.StudentId && a.Date.Date == targetDate)
@@ -3078,10 +3097,13 @@ namespace EduVault.Api.Controllers
             if (hasFail) return;
 
             // All exams passed! Promote.
-            var nextGrade = currentClass.Grade + 1;
+            // Grade is stored as a string; parse it numerically so "5" -> "6" (a naive
+            // string "+ 1" would produce "51" and never match the next grade's class).
+            if (!int.TryParse(currentClass.Grade?.Trim(), out var currentGradeNum)) return; // non-numeric grade: cannot auto-promote
+            var nextGradeNum = currentGradeNum + 1;
             var classesInSchool = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
-            var nextClassObj = classesInSchool.FirstOrDefault(c => c.Grade == nextGrade && c.Section.Equals(currentClass.Section, StringComparison.OrdinalIgnoreCase))
-                               ?? classesInSchool.FirstOrDefault(c => c.Grade == nextGrade);
+            var nextClassObj = classesInSchool.FirstOrDefault(c => int.TryParse(c.Grade?.Trim(), out var g) && g == nextGradeNum && c.Section.Equals(currentClass.Section, StringComparison.OrdinalIgnoreCase))
+                               ?? classesInSchool.FirstOrDefault(c => int.TryParse(c.Grade?.Trim(), out var g) && g == nextGradeNum);
 
             if (nextClassObj == null) return; // Next grade is not set up yet
 

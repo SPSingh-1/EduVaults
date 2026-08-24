@@ -79,6 +79,10 @@ namespace EduVault.Api.Controllers
         [Authorize(Roles = "schooladmin")]
         public async Task<IActionResult> CreateExam([FromBody] Exam exam)
         {
+            // Normalize incoming date to UTC — Postgres 'timestamp with time zone' rejects
+            // DateTimes with Unspecified/Local Kind (would otherwise surface as a 500).
+            exam.Date = DateTime.SpecifyKind(exam.Date, DateTimeKind.Utc);
+
             // 1. Same subject validation check (same class, subject, and exam cycle/type)
             var subjectConflict = (await _unitOfWork.Exams.FindAsync(e => 
                 e.ClassId == exam.ClassId && 
@@ -119,6 +123,9 @@ namespace EduVault.Api.Controllers
         {
             var existing = await _unitOfWork.Exams.GetByIdAsync(id);
             if (existing == null) return NotFound(new { error = "Exam not found" });
+
+            // Normalize incoming date to UTC (see CreateExam).
+            exam.Date = DateTime.SpecifyKind(exam.Date, DateTimeKind.Utc);
 
             // 1. Same subject validation check (ignoring this exam)
             var subjectConflict = (await _unitOfWork.Exams.FindAsync(e => 
@@ -656,10 +663,13 @@ namespace EduVault.Api.Controllers
             if (hasFail) return;
 
             // All exams passed! Promote.
-            var nextGrade = currentClass.Grade + 1;
+            // Grade is stored as a string; parse it numerically so "5" -> "6" (a naive
+            // string "+ 1" would produce "51" and never match the next grade's class).
+            if (!int.TryParse(currentClass.Grade?.Trim(), out var currentGradeNum)) return; // non-numeric grade: cannot auto-promote
+            var nextGradeNum = currentGradeNum + 1;
             var classesInSchool = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
-            var nextClassObj = classesInSchool.FirstOrDefault(c => c.Grade == nextGrade && c.Section.Equals(currentClass.Section, StringComparison.OrdinalIgnoreCase))
-                               ?? classesInSchool.FirstOrDefault(c => c.Grade == nextGrade);
+            var nextClassObj = classesInSchool.FirstOrDefault(c => int.TryParse(c.Grade?.Trim(), out var g) && g == nextGradeNum && c.Section.Equals(currentClass.Section, StringComparison.OrdinalIgnoreCase))
+                               ?? classesInSchool.FirstOrDefault(c => int.TryParse(c.Grade?.Trim(), out var g) && g == nextGradeNum);
 
             if (nextClassObj == null) return; // Next grade is not set up yet
 

@@ -1070,7 +1070,7 @@ export const TeacherStudents = () => {
 export const Attendance = () => {
   const [classes, setClasses] = useState([]);
   const [selectedClassId, setSelectedClassId] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10)); // default to today (empty caused a 400 on first load)
   const [students, setStudents] = useState([]);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);

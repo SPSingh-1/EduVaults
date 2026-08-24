@@ -35,18 +35,9 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Apply global rate limiting to protect API endpoints
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Limit each IP to 200 requests per windowMs
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests, please try again later.' }
-});
-
-app.use(apiLimiter);
-
-// Configure CORS securely
+// Configure CORS securely — MUST run before the rate limiter so that throttled (429)
+// responses still carry Access-Control-Allow-Origin headers; otherwise the browser
+// reports them as opaque "CORS blocked" errors instead of a clean 429.
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5000,http://localhost:5265,http://localhost:3000').split(',');
 app.use(cors({
   origin: (origin, callback) => {
@@ -58,6 +49,21 @@ app.use(cors({
   },
   credentials: true
 }));
+
+// Apply global rate limiting to protect API endpoints.
+// This is a multi-user SaaS: many users share one school/NAT public IP, and the SPA
+// polls notifications/data frequently, so the per-IP budget must be generous.
+// CORS preflight (OPTIONS) requests are skipped so they never consume the budget.
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX || '3000', 10), // per IP per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+app.use(apiLimiter);
 app.use(express.json());
 
 // Swagger Configuration
