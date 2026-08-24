@@ -70,7 +70,7 @@ namespace EduVault.Api.Controllers
         }
 
         [HttpPost("structures")]
-        [Authorize(Roles = "schooladmin")]
+        [Authorize(Roles = "schooladmin,accountmanager")]
         public async Task<IActionResult> CreateFeeStructure([FromBody] FeeStructure feeStructure)
         {
             feeStructure.SchoolId = GetSchoolId();
@@ -348,8 +348,14 @@ namespace EduVault.Api.Controllers
         [Authorize(Roles = "student")]
         public async Task<IActionResult> PayInvoice([FromBody] PayInvoiceRequest request)
         {
+            var studentId = GetUserId();
             var invoice = await _unitOfWork.Invoices.GetByIdAsync(request.InvoiceId);
             if (invoice == null) return NotFound(new { error = "Invoice not found" });
+
+            if (invoice.StudentId != studentId)
+            {
+                return Forbid();
+            }
 
             if (invoice.Status == "Paid") return BadRequest(new { error = "Invoice is already paid" });
 
@@ -408,7 +414,7 @@ namespace EduVault.Api.Controllers
         }
 
         [HttpPut("structures/{id}")]
-        [Authorize(Roles = "schooladmin")]
+        [Authorize(Roles = "schooladmin,accountmanager")]
         public async Task<IActionResult> UpdateFeeStructure(Guid id, [FromBody] FeeStructure model)
         {
             var schoolId = GetSchoolId();
@@ -439,7 +445,7 @@ namespace EduVault.Api.Controllers
         }
 
         [HttpDelete("structures/{id}")]
-        [Authorize(Roles = "schooladmin")]
+        [Authorize(Roles = "schooladmin,accountmanager")]
         public async Task<IActionResult> DeleteFeeStructure(Guid id)
         {
             var schoolId = GetSchoolId();
@@ -681,7 +687,7 @@ namespace EduVault.Api.Controllers
         }
 
         [HttpGet("student-ledger")]
-        [Authorize(Roles = "schooladmin")]
+        [Authorize(Roles = "schooladmin,accountmanager")]
         public async Task<IActionResult> GetStudentLedger()
         {
             var schoolId = GetSchoolId();
@@ -726,7 +732,7 @@ namespace EduVault.Api.Controllers
         }
 
         [HttpGet("transactions")]
-        [Authorize(Roles = "schooladmin,student")]
+        [Authorize(Roles = "schooladmin,accountmanager,student")]
         public async Task<IActionResult> GetTransactions()
         {
             var schoolId = GetSchoolId();

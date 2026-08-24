@@ -5,6 +5,7 @@ import { apiClient, expressClient } from '../../api/apiClient';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import Loader from '../../components/common/Loader';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import * as Icons from 'lucide-react';
 import { 
   Users, 
   UserCheck, 
@@ -16,6 +17,21 @@ import {
   ArrowUpRight, 
   Calendar 
 } from 'lucide-react';
+
+const resolveWidgetIcon = (iconName) => {
+  if (!iconName) return Icons.TrendingUp;
+  const match = Icons[iconName] || Icons[iconName.charAt(0).toUpperCase() + iconName.slice(1)];
+  return match || Icons.TrendingUp;
+};
+
+const colorMap = {
+  emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50/60', sub: 'text-emerald-600 font-bold' },
+  blue: { text: 'text-blue-600', bg: 'bg-blue-50/60', sub: 'text-blue-600 font-bold' },
+  purple: { text: 'text-purple-600', bg: 'bg-purple-50/60', sub: 'text-purple-600 font-bold' },
+  amber: { text: 'text-amber-600', bg: 'bg-amber-50/60', sub: 'text-amber-600 font-bold' },
+  rose: { text: 'text-rose-600', bg: 'bg-rose-50/60', sub: 'text-rose-600 font-bold' },
+  cyan: { text: 'text-cyan-600', bg: 'bg-cyan-50/60', sub: 'text-cyan-600 font-bold' }
+};
 
 const generateMockPaymentId = () => {
   return `sub_pay_mock_${Math.random().toString(36).substring(7)}`;
@@ -29,8 +45,8 @@ const CustomTooltip = ({ active, payload, label, mode }) => {
         {payload.map((item, index) => (
           <div key={index} className="flex items-center gap-2 mt-0.5">
             <span className="w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm shrink-0" style={{ backgroundColor: item.color || item.fill }} />
-            <span className="text-2xs text-slate-500 font-semibold">{item.name}:</span>
-            <span className="text-xs font-black text-slate-800">
+            <span className="text-2xs text-slate-550 font-semibold">{item.name}:</span>
+            <span className="text-xs font-black text-slate-800 font-mono">
               {mode === 'revenue' ? `Rs. ${item.value.toLocaleString()}` : `${item.value} ${item.value === 1 ? 'record' : 'students'}`}
             </span>
           </div>
@@ -43,22 +59,25 @@ const CustomTooltip = ({ active, payload, label, mode }) => {
 
 const SchoolAdminDashboard = () => {
   const navigate = useNavigate();
-  const [showOnboardChoice, setShowOnboardChoice] = useState(false);
   const [stats, setStats] = useState(null);
   const [teacherSummary, setTeacherSummary] = useState(null);
+  const [dynamicWidgets, setDynamicWidgets] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showOnboardChoice, setShowOnboardChoice] = useState(false);
   const [paying, setPaying] = useState(false);
   const [chartMode, setChartMode] = useState('attendance'); // 'attendance', 'enrollment', 'revenue'
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [res, tRes] = await Promise.all([
+        const [res, tRes, wRes] = await Promise.all([
           apiClient.get('/academics/stats'),
-          expressClient.get('/teacher-attendance/today-summary').catch(() => ({ data: { presentCount: 0 } }))
+          expressClient.get('/teacher-attendance/today-summary').catch(() => ({ data: { presentCount: 0 } })),
+          apiClient.get('/academics/dashboard/dynamic-widgets').catch(() => ({ data: null }))
         ]);
         setStats(res.data);
         setTeacherSummary(tRes.data);
+        if (wRes?.data) setDynamicWidgets(wRes.data);
       } catch (err) {
         console.error('Error fetching school stats:', err);
       } finally {
@@ -269,57 +288,53 @@ const SchoolAdminDashboard = () => {
         </div>
       )}
 
-      {/* Real-time Daily Varying School Action Metrics */}
+      {/* Dynamic / Real-time School Action Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
+        {(dynamicWidgets?.cards && dynamicWidgets.cards.length > 0 ? dynamicWidgets.cards : [
           {
-            label: "Today's Students Present",
+            title: "Today's Students Present",
             value: `${stats?.todayStudentsPresent ?? 0} / ${stats?.totalStudents ?? 0}`,
-            sub: `${studentPresentPct}% Present Today (${stats?.todayStudentsAbsent ?? 0} Absent)`,
-            icon: Users,
-            color: 'text-emerald-600',
-            bgColor: 'bg-emerald-50/60',
-            subColor: 'text-emerald-600 font-bold'
+            subText: `${studentPresentPct}% Present Today (${stats?.todayStudentsAbsent ?? 0} Absent)`,
+            iconName: 'Users',
+            colorTheme: 'emerald'
           },
           {
-            label: "Today's Teachers Present",
+            title: "Today's Teachers Present",
             value: `${teacherSummary?.presentCount ?? 0} / ${stats?.totalTeachers ?? 0}`,
-            sub: `${staffPresentPct}% Staff Attendance Today`,
-            icon: UserCheck,
-            color: 'text-purple-600',
-            bgColor: 'bg-purple-50/60',
-            subColor: 'text-purple-600 font-bold'
+            subText: `${staffPresentPct}% Staff Attendance Today`,
+            iconName: 'UserCheck',
+            colorTheme: 'purple'
           },
           {
-            label: "Today's Fee Collections",
+            title: "Today's Fee Collections",
             value: stats?.todayFeesCollected ? `Rs. ${stats.todayFeesCollected.toLocaleString()}` : 'Rs. 0',
-            sub: `Fee Receipts Collected Today`,
-            icon: CreditCard,
-            color: 'text-blue-600',
-            bgColor: 'bg-blue-50/60',
-            subColor: 'text-blue-600 font-bold'
+            subText: `Fee Receipts Collected Today`,
+            iconName: 'CreditCard',
+            colorTheme: 'blue'
           },
           {
-            label: "Overdue Pending Fees",
+            title: "Overdue Pending Fees",
             value: stats?.pendingFees ? `Rs. ${stats.pendingFees.toLocaleString()}` : 'Rs. 0',
-            sub: 'Outstanding Overdue Dues',
-            icon: Building,
-            color: 'text-rose-500',
-            bgColor: 'bg-rose-50/50',
-            subColor: 'text-rose-500 font-bold'
+            subText: 'Outstanding Overdue Dues',
+            iconName: 'Building',
+            colorTheme: 'rose'
           },
-        ].map(s=>(
-          <div key={s.label} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-gray-400">{s.label}</div>
-              <div className="font-display text-xl font-bold text-primary">{s.value}</div>
-              <div className={`text-xs mt-0.5 ${s.subColor||'text-gray-400'}`}>{s.sub}</div>
+        ]).map((s, idx) => {
+          const IconComp = resolveWidgetIcon(s.iconName);
+          const theme = colorMap[s.colorTheme] || colorMap.blue;
+          return (
+            <div key={s.widgetKey || s.title || idx} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-gray-500">{s.title}</div>
+                <div className="font-display text-xl font-bold text-primary font-mono">{s.value}</div>
+                <div className={`text-xs mt-0.5 ${theme.sub}`}>{s.subText || s.sub}</div>
+              </div>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${theme.bg}`}>
+                <IconComp className={`w-6 h-6 ${theme.text} stroke-[1.75]`} />
+              </div>
             </div>
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${s.bgColor}`}>
-              <s.icon className={`w-6 h-6 ${s.color} stroke-[1.75]`} />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Main Grid: Real Data Graph and Action Panels */}

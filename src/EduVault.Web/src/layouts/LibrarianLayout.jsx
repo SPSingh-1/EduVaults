@@ -22,13 +22,19 @@ const libraryLinks = [
 const LibrarianLayout = () => {
   const { user } = useAuth();
 
-  const finalLinks = libraryLinks.filter(link => {
-    if (user?.permissions && user.permissions.length > 0) {
-      const perm = user.permissions.find(p => p.pageKey === link.pageKey);
-      if (perm) return perm.canView;
-    }
-    return true;
-  });
+  const hasDynamicPerms = user?.permissions && user.permissions.filter(p => p.canView && (p.route?.startsWith('/library') || p.pageKey?.startsWith('library'))).length > 0;
+
+  const finalLinks = hasDynamicPerms
+    ? user.permissions
+        .filter(p => p.canView && (p.route?.startsWith('/library') || p.pageKey?.startsWith('library')))
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        .map(p => ({
+          pageKey: p.pageKey,
+          icon: p.icon || 'Layers',
+          label: p.pageName,
+          path: p.route
+        }))
+    : libraryLinks;
 
   return (
     <div className="flex">

@@ -6,21 +6,25 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using EduVault.Core.Entities;
 using EduVault.Core.Interfaces;
+using EduVault.Infrastructure.Data;
 
 namespace EduVault.Api.Controllers
 {
     [ApiController]
     [Route("api/account")]
-    [Authorize(Roles = "accountmanager,schooladmin")]
+    [Authorize(Roles = "accountmanager,AccountManager,schooladmin,SchoolAdmin")]
     public class AccountController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly EduVaultDbContext _context;
 
-        public AccountController(IUnitOfWork unitOfWork)
+        public AccountController(IUnitOfWork unitOfWork, EduVaultDbContext context)
         {
             _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         private Guid GetSchoolId()
@@ -46,35 +50,62 @@ namespace EduVault.Api.Controllers
             var schoolId = GetSchoolId();
             int m = month ?? DateTime.UtcNow.Month;
             int y = year ?? DateTime.UtcNow.Year;
+            var sixMonthsAgo = DateTime.UtcNow.AddMonths(-5).Date;
 
-            var salaryRecords = await _unitOfWork.SalaryRecords.FindAsync(s => s.SchoolId == schoolId && s.Month == m && s.Year == y);
-            decimal totalSalaryPaid = salaryRecords.Where(s => s.Status == "Paid").Sum(s => s.NetPay);
-            decimal pendingSalary = salaryRecords.Where(s => s.Status != "Paid").Sum(s => s.NetPay);
+            // === CORE KPIs ===
+            var salaryForMonth = await _context.SalaryRecords.AsNoTracking()
+                .Where(s => s.SchoolId == schoolId && s.Month == m && s.Year == y)
+                .Select(s => new { s.NetPay, s.Status }).ToListAsync();
+            var pendingLeavesCount = await _context.LeaveRequests.AsNoTracking()
+                .CountAsync(l => l.SchoolId == schoolId && l.Status == "Pending");
+            var expenses = await _context.Expenses.AsNoTracking()
+                .Where(e => e.SchoolId == schoolId && e.Date.Month == m && e.Date.Year == y)
+                .Select(e => new { e.Category, e.Amount })
+                .ToListAsync();
 
-            var leaveRequests = await _unitOfWork.LeaveRequests.FindAsync(l => l.SchoolId == schoolId);
-            int pendingLeavesCount = leaveRequests.Count(l => l.Status == "Pending");
+            decimal totalSalaryPaid = salaryForMonth.Where(s => s.Status == "Paid").Sum(s => s.NetPay);
+            decimal pendingSalary = salaryForMonth.Where(s => s.Status != "Paid").Sum(s => s.NetPay);
+            decimal totalExpenses = expenses.Sum(e => (decimal)e.Amount);
 
-            var expenses = await _unitOfWork.Expenses.FindAsync(e => e.SchoolId == schoolId && e.Date.Month == m && e.Date.Year == y);
-            decimal totalExpenses = expenses.Sum(e => e.Amount);
+            // Fee collections for selected month
+            var studentIds = await _context.Users.AsNoTracking()
+                .Where(u => u.SchoolId == schoolId && u.Role == "student").Select(u => u.Id).ToListAsync();
 
-            var schoolInvoices = await _unitOfWork.Invoices.FindAsync(i => i.FeeStructure != null && i.FeeStructure.SchoolId == schoolId);
-            var invoiceIds = schoolInvoices.Select(i => i.Id).ToList();
-            var transactions = await _unitOfWork.Transactions.FindAsync(t => invoiceIds.Contains(t.InvoiceId));
-            decimal totalFeeCollectedThisMonth = transactions
-                .Where(t => t.Status.Equals("success", StringComparison.OrdinalIgnoreCase) && t.TransactionDate.Month == m && t.TransactionDate.Year == y)
-                .Sum(t => t.Amount);
+            decimal totalFeeCollectedThisMonth = studentIds.Any()
+                ? await _context.Transactions.AsNoTracking()
+                    .Where(t => t.Status.ToLower() == "success" && t.TransactionDate.Month == m && t.TransactionDate.Year == y
+                        && t.Invoice != null && studentIds.Contains(t.Invoice.StudentId))
+                    .SumAsync(t => (decimal?)t.Amount) ?? 0m
+                : 0m;
 
-            // Last 6 months salary disbursement trend
+            // === 6-MONTH TREND DATA: load full window once — no per-month loop queries ===
+            var allSalary6Mo = await _context.SalaryRecords.AsNoTracking()
+                .Where(s => s.SchoolId == schoolId && s.Status == "Paid" && s.GeneratedAt >= sixMonthsAgo)
+                .Select(s => new { s.Month, s.Year, s.NetPay }).ToListAsync();
+
+            var allFees6Mo = studentIds.Any()
+                ? await _context.Transactions.AsNoTracking()
+                    .Where(t => t.Status.ToLower() == "success" && t.TransactionDate >= sixMonthsAgo
+                        && t.Invoice != null && studentIds.Contains(t.Invoice.StudentId))
+                    .Select(t => new { t.TransactionDate.Month, t.TransactionDate.Year, t.Amount }).ToListAsync()
+                : new List<dynamic>() as dynamic;
+
+            var allExp6Mo = await _context.Expenses.AsNoTracking()
+                .Where(e => e.SchoolId == schoolId && e.Date >= sixMonthsAgo)
+                .Select(e => new { e.Date.Month, e.Date.Year, e.Amount }).ToListAsync();
+
             var monthlySalaryTrend = new List<object>();
+            var monthlyFeeTrend = new List<object>();
+            var monthlyExpenseTrend = new List<object>();
+
             for (int i = 5; i >= 0; i--)
             {
                 var dt = DateTime.UtcNow.AddMonths(-i);
-                var monthSalaries = await _unitOfWork.SalaryRecords.FindAsync(s => s.SchoolId == schoolId && s.Month == dt.Month && s.Year == dt.Year && s.Status == "Paid");
-                monthlySalaryTrend.Add(new
-                {
-                    month = dt.ToString("MMM yyyy"),
-                    amount = monthSalaries.Sum(s => s.NetPay)
-                });
+                var label = dt.ToString("MMM yyyy");
+
+                monthlySalaryTrend.Add(new { month = label, amount = allSalary6Mo.Where(s => s.Month == dt.Month && s.Year == dt.Year).Sum(s => s.NetPay) });
+                monthlyFeeTrend.Add(new { month = label, amount = allFees6Mo != null ? ((IEnumerable<dynamic>)allFees6Mo).Where(t => t.Month == dt.Month && t.Year == dt.Year).Sum(t => (decimal)t.Amount) : 0m });
+                monthlyExpenseTrend.Add(new { month = label, amount = allExp6Mo.Where(e => e.Month == dt.Month && e.Year == dt.Year).Sum(e => e.Amount) });
             }
 
             // Expense categories breakdown
@@ -82,6 +113,32 @@ namespace EduVault.Api.Controllers
                 .GroupBy(e => string.IsNullOrWhiteSpace(e.Category) ? "Other" : e.Category)
                 .Select(g => new { name = g.Key, value = g.Sum(x => x.Amount) })
                 .ToList();
+
+            // Configured Widgets & Graph Driver
+            var allDefinitions = (await _unitOfWork.DashboardWidgetDefinitions.GetAllAsync())
+                .Where(w => w.IsActive && (w.TargetRole == "accountmanager" || w.TargetRole == "all"))
+                .OrderBy(w => w.DisplayOrder)
+                .ToList();
+
+            var schoolWidgets = (await _unitOfWork.SchoolDashboardWidgets.FindAsync(
+                sw => sw.SchoolId == schoolId && sw.Role == "accountmanager")).ToList();
+
+            var configuredWidgets = allDefinitions.Select(d =>
+            {
+                var custom = schoolWidgets.FirstOrDefault(sw => sw.WidgetKey == d.WidgetKey);
+                return new
+                {
+                    widgetKey = d.WidgetKey,
+                    title = custom?.CustomTitle ?? d.DefaultTitle,
+                    metricSource = d.MetricSource,
+                    timeRange = custom?.TimeRange ?? d.DefaultTimeRange,
+                    chartType = !string.IsNullOrEmpty(custom?.ChartType) ? custom.ChartType : d.ChartType,
+                    colorTheme = d.ColorTheme,
+                    iconName = d.IconName,
+                    isEnabled = custom?.IsEnabled ?? true,
+                    displayOrder = custom?.DisplayOrder ?? d.DisplayOrder
+                };
+            }).OrderBy(w => w.displayOrder).ToList();
 
             return Ok(new
             {
@@ -91,7 +148,10 @@ namespace EduVault.Api.Controllers
                 totalExpenses,
                 totalFeeCollectedThisMonth,
                 monthlySalaryTrend,
-                expenseCategories
+                monthlyFeeTrend,
+                monthlyExpenseTrend,
+                expenseCategories,
+                configuredWidgets
             });
         }
 

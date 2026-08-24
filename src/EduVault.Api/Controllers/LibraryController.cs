@@ -15,7 +15,7 @@ namespace EduVault.Api.Controllers
 {
     [ApiController]
     [Route("api/library")]
-    [Authorize(Roles = "librarian,schooladmin")]
+    [Authorize(Roles = "librarian,Librarian,schooladmin,SchoolAdmin")]
     public class LibraryController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -80,6 +80,32 @@ namespace EduVault.Api.Controllers
                 });
             }
 
+            // Configured Widgets & Graph Driver
+            var allDefinitions = (await _unitOfWork.DashboardWidgetDefinitions.GetAllAsync())
+                .Where(w => w.IsActive && (w.TargetRole == "librarian" || w.TargetRole == "all"))
+                .OrderBy(w => w.DisplayOrder)
+                .ToList();
+
+            var schoolWidgets = (await _unitOfWork.SchoolDashboardWidgets.FindAsync(
+                sw => sw.SchoolId == schoolId && sw.Role == "librarian")).ToList();
+
+            var configuredWidgets = allDefinitions.Select(d =>
+            {
+                var custom = schoolWidgets.FirstOrDefault(sw => sw.WidgetKey == d.WidgetKey);
+                return new
+                {
+                    widgetKey = d.WidgetKey,
+                    title = custom?.CustomTitle ?? d.DefaultTitle,
+                    metricSource = d.MetricSource,
+                    timeRange = custom?.TimeRange ?? d.DefaultTimeRange,
+                    chartType = !string.IsNullOrEmpty(custom?.ChartType) ? custom.ChartType : d.ChartType,
+                    colorTheme = d.ColorTheme,
+                    iconName = d.IconName,
+                    isEnabled = custom?.IsEnabled ?? true,
+                    displayOrder = custom?.DisplayOrder ?? d.DisplayOrder
+                };
+            }).OrderBy(w => w.displayOrder).ToList();
+
             return Ok(new
             {
                 totalBooks,
@@ -90,7 +116,8 @@ namespace EduVault.Api.Controllers
                 pendingFine,
                 finePerDay,
                 categoryBreakdown,
-                dailyIssuanceTrend
+                dailyIssuanceTrend,
+                configuredWidgets
             });
         }
 

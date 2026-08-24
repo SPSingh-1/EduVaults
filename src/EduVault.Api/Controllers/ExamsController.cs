@@ -269,12 +269,6 @@ namespace EduVault.Api.Controllers
 
             await _unitOfWork.CompleteAsync();
 
-            var schoolId = GetSchoolId();
-            foreach (var resultDto in request.Results)
-            {
-                await CheckAndAutoPromoteStudent(resultDto.StudentId, schoolId);
-            }
-
             return Ok(new { success = true });
         }
 
@@ -293,12 +287,6 @@ namespace EduVault.Api.Controllers
 
             await _unitOfWork.CompleteAsync();
 
-            var schoolId = GetSchoolId();
-            foreach (var result in results)
-            {
-                await CheckAndAutoPromoteStudent(result.StudentId, schoolId);
-            }
-
             return Ok(new { success = true });
         }
 
@@ -312,6 +300,13 @@ namespace EduVault.Api.Controllers
             exam.Status = "Completed";
             _unitOfWork.Exams.Update(exam);
             await _unitOfWork.CompleteAsync();
+
+            var schoolId = GetSchoolId();
+            var results = await _unitOfWork.ExamResults.FindAsync(r => r.ExamId == examId);
+            foreach (var result in results)
+            {
+                await CheckAndAutoPromoteStudent(result.StudentId, schoolId);
+            }
 
             return Ok(new { success = true });
         }
@@ -603,8 +598,6 @@ namespace EduVault.Api.Controllers
             }
 
             await _unitOfWork.CompleteAsync();
-
-            await CheckAndAutoPromoteStudent(studentId, schoolId);
 
             return Ok(new { success = true });
         }

@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from '../../components/layout/Sidebar';
 import Topbar from '../../components/layout/Topbar';
 import Loader from '../../components/common/Loader';
@@ -51,6 +52,20 @@ const getTodayStr = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+
+const CustomStudentTooltip = ({ active, payload, label, isPercent }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur text-white px-3 py-2 rounded-xl shadow-lg border border-slate-700/50 text-xs">
+        <p className="font-semibold text-slate-200">{label || payload[0].payload?.subject || payload[0].name}</p>
+        <p className="text-blue-400 font-bold font-mono mt-0.5">
+          {payload[0].value} {isPercent ? '%' : 'Marks'}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 const loadScript = (src) => {
   return new Promise((resolve) => {
@@ -175,8 +190,6 @@ const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
 };
 
 
-import { useAuth } from '../../contexts/AuthContext';
-
 export const StudentLayout = () => {
   const { user } = useAuth();
 
@@ -203,13 +216,19 @@ export const StudentLayout = () => {
     });
   }
 
-  const finalLinks = baseLinks.filter(link => {
-    if (user?.permissions && user.permissions.length > 0) {
-      const perm = user.permissions.find(p => p.pageKey === link.pageKey);
-      if (perm) return perm.canView;
-    }
-    return true;
-  });
+  const hasDynamicPerms = user?.permissions && user.permissions.filter(p => p.canView && (p.route?.startsWith('/student') || p.pageKey?.startsWith('student'))).length > 0;
+
+  const finalLinks = hasDynamicPerms
+    ? user.permissions
+        .filter(p => p.canView && (p.route?.startsWith('/student') || p.pageKey?.startsWith('student')))
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        .map(p => ({
+          pageKey: p.pageKey,
+          icon: p.icon || 'Layers',
+          label: p.pageName,
+          path: p.route
+        }))
+    : baseLinks;
 
   return (
     <div className="flex">
@@ -316,11 +335,18 @@ export const StudentDashboard = () => {
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const profRes = await apiClient.get('/academics/student/profile').catch(() => null);
+        // Load all data in parallel for fast first paint
+        const [profRes, etRes, billRes, attRes, remarksRes] = await Promise.all([
+          apiClient.get('/academics/student/profile').catch(() => null),
+          apiClient.get('/academics/exam-types').catch(() => ({ data: [] })),
+          apiClient.get('/billing/invoices').catch(() => ({ data: [] })),
+          apiClient.get('/academics/attendance/my').catch(() => ({ data: [] })),
+          expressClient.get('/remarks').catch(() => ({ data: [] })),
+        ]);
+
         const activeEnrollDate = profRes?.data?.enrollDate;
         setProfile(profRes?.data || JSON.parse(localStorage.getItem('eduvault_user')));
 
-        const etRes = await apiClient.get('/academics/exam-types');
         if (etRes.data && etRes.data.length > 0) {
           const types = etRes.data.map(et => et.name || et.Name || (typeof et === 'string' ? et : ''));
           setExamTypes(types);
@@ -333,15 +359,11 @@ export const StudentDashboard = () => {
           setExamTypes(['Semester Examination', 'Final Examination', 'Quarterly Examination', 'Unit Examination']);
         }
 
-        const billRes = await apiClient.get('/billing/invoices');
         setInvoices(billRes.data);
 
-        const attRes = await apiClient.get('/academics/attendance/my');
-        const filteredAtt = attRes.data.filter(a => !activeEnrollDate || a.date >= activeEnrollDate.split('T')[0]);
+        const filteredAtt = (attRes.data || []).filter(a => !activeEnrollDate || a.date >= activeEnrollDate.split('T')[0]);
         setAttendanceList(filteredAtt);
 
-        // Fetch remarks
-        const remarksRes = await expressClient.get('/remarks');
         setRemarks(remarksRes.data);
       } catch (err) {
         console.error(err);
@@ -351,6 +373,7 @@ export const StudentDashboard = () => {
     };
     loadDashboardData();
   }, []);
+
 
   useEffect(() => {
     const fetchPerformance = async () => {
@@ -408,6 +431,21 @@ export const StudentDashboard = () => {
     { name: 'Class Highest', score: parseFloat(performance?.classHighest ?? 92.0), fill: '#10b981', colorGrad: 'classHighGrad' }
   ];
 
+  const studentConfiguredWidgets = profile?.configuredWidgets || profile?.ConfiguredWidgets || [];
+  const getStudentWidget = (key, defaultTitle) => {
+    const found = studentConfiguredWidgets.find(w => w.widgetKey === key);
+    return {
+      isVisible: found ? found.isEnabled : true,
+      title: found?.title || defaultTitle,
+      timeRange: found?.timeRange || 'Daily'
+    };
+  };
+
+  const attRateWidget = getStudentWidget('card.student.attendance_rate', 'Attendance Rate');
+  const gpaCardWidget = getStudentWidget('card.student.semester_gpa', 'Semester GPA');
+  const feesCardWidget = getStudentWidget('card.student.outstanding_fees', 'Outstanding Fees');
+  const rankCardWidget = getStudentWidget('card.student.class_rank', 'Rank');
+
   if (loading) {
     return <Loader message="Gathering your academic overview" />;
   }
@@ -459,22 +497,38 @@ export const StudentDashboard = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { 
-                label: 'Attendance Rate', 
+                key: 'attendance',
+                isVisible: attRateWidget.isVisible,
+                label: attRateWidget.title, 
                 value: realAttendancePercent, 
                 sub: todayAtt ? `Today: ${todayAtt.status}` : (totalDays > 0 ? '● On Track' : 'No Records'), 
                 icon: CheckSquare, 
                 color: 'text-blue-500', 
                 bgColor: 'bg-blue-50/50',
+                timeRange: attRateWidget.timeRange,
                 subColor: todayAtt?.status === 'Absent' ? 'text-rose-500 font-bold' : todayAtt?.status === 'Present' ? 'text-emerald-600 font-bold' : 'text-gray-500'
               },
-              { label: 'Semester GPA', value: performance?.areMarksPublished !== false ? (performance?.semesterGpa || '0.00') : '🔒 Locked', sub: performance?.areMarksPublished !== false ? 'Target: 4.00' : 'Awaiting Release', icon: Award, color: 'text-emerald-500', bgColor: 'bg-emerald-50/50' },
+              { 
+                key: 'gpa',
+                isVisible: gpaCardWidget.isVisible,
+                label: gpaCardWidget.title, 
+                value: performance?.areMarksPublished !== false ? (performance?.semesterGpa || '0.00') : '🔒 Locked', 
+                sub: performance?.areMarksPublished !== false ? 'Target: 4.00' : 'Awaiting Release', 
+                icon: Award, 
+                color: 'text-emerald-500', 
+                bgColor: 'bg-emerald-50/50',
+                timeRange: gpaCardWidget.timeRange
+              },
               {
-                label: 'Outstanding Fees',
+                key: 'fees',
+                isVisible: feesCardWidget.isVisible,
+                label: feesCardWidget.title,
                 value: `Rs. ${pendingAmount.toLocaleString()}`,
                 sub: pendingAmount > 0 ? 'Due soon' : 'All Clear',
                 icon: CreditCard,
                 color: 'text-rose-500',
                 bgColor: 'bg-rose-50/50',
+                timeRange: feesCardWidget.timeRange,
                 warn: pendingAmount > 0,
                 action: pendingAmount > 0 ? (
                   <button
@@ -486,14 +540,27 @@ export const StudentDashboard = () => {
                   </button>
                 ) : null
               },
-              { label: 'Rank', value: performance?.areMarksPublished !== false ? (performance?.classRank || '1st / 1') : '🔒 Locked', sub: performance?.areMarksPublished !== false ? 'Top 15%' : 'Awaiting Release', icon: Trophy, color: 'text-violet-500', bgColor: 'bg-violet-50/50' },
-            ].map(s => (
-              <div key={s.label} className="stat-card flex flex-col justify-between min-h-[110px] hover:shadow-md transition-all">
+              { 
+                key: 'rank',
+                isVisible: rankCardWidget.isVisible,
+                label: rankCardWidget.title, 
+                value: performance?.areMarksPublished !== false ? (performance?.classRank || '1st / 1') : '🔒 Locked', 
+                sub: performance?.areMarksPublished !== false ? 'Top 15%' : 'Awaiting Release', 
+                icon: Trophy, 
+                color: 'text-violet-500', 
+                bgColor: 'bg-violet-50/50',
+                timeRange: rankCardWidget.timeRange
+              },
+            ].filter(s => s.isVisible).map(s => (
+              <div key={s.key} className="stat-card flex flex-col justify-between min-h-[110px] hover:shadow-md transition-all">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <div className="text-xs font-semibold text-gray-400">{s.label}</div>
                     <div className={`font-display text-2xl font-bold ${s.warn ? 'text-rose-600' : 'text-primary'}`}>{s.value}</div>
-                    <div className={`text-[10px] font-medium ${s.subColor || (s.warn ? 'text-rose-500' : 'text-gray-400')}`}>{s.sub}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[10px] font-medium ${s.subColor || (s.warn ? 'text-rose-500' : 'text-gray-400')}`}>{s.sub}</span>
+                      <span className="text-[9px] font-bold bg-slate-100 px-1.5 py-0.2 rounded text-slate-500">{s.timeRange}</span>
+                    </div>
                   </div>
                   <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${s.bgColor} shrink-0`}>
                     <s.icon className={`w-5.5 h-5.5 ${s.color} stroke-[1.75]`} />

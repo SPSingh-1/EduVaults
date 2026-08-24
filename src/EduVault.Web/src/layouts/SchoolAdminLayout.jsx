@@ -53,14 +53,20 @@ const SchoolAdminLayout = () => {
     });
   }
 
-  // Filter links if user has RBAC permissions configured
-  const finalLinks = baseLinks.filter(link => {
-    if (user?.permissions && user.permissions.length > 0) {
-      const perm = user.permissions.find(p => p.pageKey === link.pageKey);
-      if (perm) return perm.canView;
-    }
-    return true;
-  });
+  // Dynamic menus from Database RBAC permissions
+  const hasDynamicPerms = user?.permissions && user.permissions.filter(p => p.canView && (p.route?.startsWith('/school-admin') || p.pageKey?.startsWith('schooladmin'))).length > 0;
+
+  const finalLinks = hasDynamicPerms
+    ? user.permissions
+        .filter(p => p.canView && (p.route?.startsWith('/school-admin') || p.pageKey?.startsWith('schooladmin')))
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        .map(p => ({
+          pageKey: p.pageKey,
+          icon: p.icon || 'Layers',
+          label: p.pageName,
+          path: p.route
+        }))
+    : baseLinks;
 
   return (
     <div className="flex">
