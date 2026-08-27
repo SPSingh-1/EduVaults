@@ -484,24 +484,58 @@ const SchoolAdminDashboard = () => {
       </div>
 
       {showOnboardChoice && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
-            <h3 className="font-display font-bold text-primary text-lg mb-2">Register New User</h3>
-            <p className="text-gray-500 text-xs mb-6">Choose which type of user credentials you want to create and register for your school.</p>
-            <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/teachers?openAddModal=true'); }} className="flex flex-col items-center gap-3 p-5 border border-gray-100 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all text-center">
-                <span className="text-3xl">👩‍🏫</span>
-                <span className="text-sm font-semibold text-primary">Teacher</span>
-                <span className="text-2xs text-gray-400">Register faculty member</span>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6 animate-scale-up">
+            <h3 className="font-display font-bold text-primary text-lg mb-1">Register New User / Staff</h3>
+            <p className="text-gray-500 text-xs mb-5">Choose which type of user credentials or student admission you want to register for your school.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <button 
+                onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/students?openAddModal=true'); }} 
+                className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-blue-50/70 hover:border-blue-200 transition-all text-center group"
+              >
+                <span className="text-2xl group-hover:scale-110 transition-transform">🎒</span>
+                <span className="text-xs font-bold text-primary">Student</span>
+                <span className="text-[10px] text-gray-400">New admission</span>
               </button>
-              <button onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/students?openAddModal=true'); }} className="flex flex-col items-center gap-3 p-5 border border-gray-100 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all text-center">
-                <span className="text-3xl">🎒</span>
-                <span className="text-sm font-semibold text-primary">Student</span>
-                <span className="text-2xs text-gray-400">Register student record</span>
+
+              <button 
+                onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/teachers?openAddModal=true'); }} 
+                className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-emerald-50/70 hover:border-emerald-200 transition-all text-center group"
+              >
+                <span className="text-2xl group-hover:scale-110 transition-transform">👩‍🏫</span>
+                <span className="text-xs font-bold text-primary">Teacher</span>
+                <span className="text-[10px] text-gray-400">Faculty member</span>
+              </button>
+
+              <button 
+                onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/account-managers'); }} 
+                className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-amber-50/70 hover:border-amber-200 transition-all text-center group"
+              >
+                <span className="text-2xl group-hover:scale-110 transition-transform">💼</span>
+                <span className="text-xs font-bold text-primary">Account Manager</span>
+                <span className="text-[10px] text-gray-400">Finance & payroll</span>
+              </button>
+
+              <button 
+                onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/librarians'); }} 
+                className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-purple-50/70 hover:border-purple-200 transition-all text-center group"
+              >
+                <span className="text-2xl group-hover:scale-110 transition-transform">📚</span>
+                <span className="text-xs font-bold text-primary">Librarian</span>
+                <span className="text-[10px] text-gray-400">Library & catalog</span>
+              </button>
+
+              <button 
+                onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/receptionists'); }} 
+                className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-rose-50/70 hover:border-rose-200 transition-all text-center group col-span-2 sm:col-span-1"
+              >
+                <span className="text-2xl group-hover:scale-110 transition-transform">📞</span>
+                <span className="text-xs font-bold text-primary">Receptionist</span>
+                <span className="text-[10px] text-gray-400">Front desk & inquiry</span>
               </button>
             </div>
-            <div className="flex justify-end mt-6">
-              <button onClick={() => setShowOnboardChoice(false)} className="btn-outline text-xs">Cancel</button>
+            <div className="flex justify-end mt-6 pt-3 border-t border-gray-100">
+              <button onClick={() => setShowOnboardChoice(false)} className="btn-outline text-xs px-4 py-2">Close</button>
             </div>
           </div>
         </div>

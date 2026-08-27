@@ -359,12 +359,24 @@ namespace EduVault.Api.Controllers
 
             if (invoice.Status == "Paid") return BadRequest(new { error = "Invoice is already paid" });
 
+            decimal totalPayable = invoice.Amount + invoice.LateFineAmount;
+            decimal remainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount);
+
+            decimal payAmount = (request.Amount.HasValue && request.Amount.Value > 0) 
+                ? Math.Min(request.Amount.Value, remainingBalance) 
+                : remainingBalance;
+
+            if (payAmount <= 0)
+            {
+                return BadRequest(new { error = "Payment amount must be greater than zero." });
+            }
+
             // Create Transaction Record (Stripe/Payment Mock)
             var transaction = new PaymentTransaction
             {
                 InvoiceId = request.InvoiceId,
                 ReferenceNumber = $"TXN-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
-                Amount = invoice.Amount,
+                Amount = payAmount,
                 PaymentMethod = request.PaymentMethod,
                 TransactionDate = DateTime.UtcNow,
                 Status = "success"
@@ -373,7 +385,8 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.Transactions.AddAsync(transaction);
 
             // Update Invoice Status
-            invoice.Status = "Paid";
+            invoice.PaidAmount += payAmount;
+            invoice.Status = (invoice.PaidAmount >= totalPayable) ? "Paid" : "Partially Paid";
             _unitOfWork.Invoices.Update(invoice);
 
             await _unitOfWork.CompleteAsync();
@@ -381,7 +394,10 @@ namespace EduVault.Api.Controllers
             return Ok(new {
                 success = true,
                 referenceNumber = transaction.ReferenceNumber,
-                amount = transaction.Amount
+                amountPaid = transaction.Amount,
+                totalBilled = totalPayable,
+                remainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount),
+                status = invoice.Status
             });
         }
 
@@ -483,13 +499,24 @@ namespace EduVault.Api.Controllers
             // Get active payment provider
             string provider = school?.PaymentProvider?.ToLower() ?? "razorpay";
 
+            decimal totalPayable = invoice.Amount + invoice.LateFineAmount;
+            decimal remainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount);
+            decimal payAmount = (request.Amount.HasValue && request.Amount.Value > 0)
+                ? Math.Min(request.Amount.Value, remainingBalance)
+                : remainingBalance;
+
+            if (payAmount <= 0)
+            {
+                return BadRequest(new { error = "Payment amount must be greater than zero." });
+            }
+
             if (provider == "stripe")
             {
                 bool hasKeys = school != null && !string.IsNullOrWhiteSpace(school.StripePublishableKey);
                 return Ok(new {
                     paymentProvider = "stripe",
-                    publishableKey = school?.StripePublishableKey ?? "pk_mock_stripe_key",
-                    amount = (int)Math.Round(invoice.Amount * 100), // in cents
+                    publishableKey = school?.StripePublishableKey ?? "pk_test_mock_stripe_key",
+                    amount = payAmount,
                     currency = "INR",
                     orderId = $"stripe_order_{Guid.NewGuid().ToString().Substring(0, 8)}",
                     invoiceId = invoice.Id,
@@ -502,7 +529,7 @@ namespace EduVault.Api.Controllers
                 return Ok(new {
                     paymentProvider = "paypal",
                     clientId = school?.PayPalClientId ?? "paypal_mock_client_id",
-                    amount = invoice.Amount,
+                    amount = payAmount,
                     currency = "INR",
                     orderId = $"paypal_order_{Guid.NewGuid().ToString().Substring(0, 8)}",
                     invoiceId = invoice.Id,
@@ -515,7 +542,7 @@ namespace EduVault.Api.Controllers
                 return Ok(new {
                     paymentProvider = "phonepe",
                     merchantId = school?.PhonePeMerchantId ?? "phonepe_mock_merchant_id",
-                    amount = invoice.Amount,
+                    amount = payAmount,
                     currency = "INR",
                     orderId = $"phonepe_order_{Guid.NewGuid().ToString().Substring(0, 8)}",
                     invoiceId = invoice.Id,
@@ -527,7 +554,7 @@ namespace EduVault.Api.Controllers
                 return Ok(new {
                     paymentProvider = "cashless",
                     instructions = school?.CashlessInstructions ?? "Please contact school administration for cashless/bank transfer details.",
-                    amount = invoice.Amount,
+                    amount = payAmount,
                     currency = "INR",
                     orderId = $"cashless_order_{Guid.NewGuid().ToString().Substring(0, 8)}",
                     invoiceId = invoice.Id,
@@ -553,7 +580,7 @@ namespace EduVault.Api.Controllers
                     return Ok(new {
                         paymentProvider = "razorpay",
                         orderId = $"order_mock_{Guid.NewGuid().ToString().Substring(0, 8)}",
-                        amount = (int)Math.Round(invoice.Amount * 100),
+                        amount = (int)Math.Round(payAmount * 100),
                         currency = "INR",
                         keyId = keyId,
                         invoiceId = invoice.Id,
@@ -569,7 +596,7 @@ namespace EduVault.Api.Controllers
 
                     var orderRequest = new
                     {
-                        amount = (int)Math.Round(invoice.Amount * 100), // in paise
+                        amount = (int)Math.Round(payAmount * 100), // in paise
                         currency = "INR",
                         receipt = invoice.Id.ToString()
                     };
@@ -592,7 +619,7 @@ namespace EduVault.Api.Controllers
                     return Ok(new {
                         paymentProvider = "razorpay",
                         orderId = orderId,
-                        amount = (int)Math.Round(invoice.Amount * 100),
+                        amount = (int)Math.Round(payAmount * 100),
                         currency = "INR",
                         keyId = keyId,
                         invoiceId = invoice.Id,
@@ -614,6 +641,18 @@ namespace EduVault.Api.Controllers
             if (invoice == null) return NotFound(new { error = "Invoice not found" });
 
             if (invoice.Status == "Paid") return BadRequest(new { error = "Invoice is already paid" });
+
+            decimal totalPayable = invoice.Amount + invoice.LateFineAmount;
+            decimal remainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount);
+
+            decimal payAmount = (request.Amount.HasValue && request.Amount.Value > 0)
+                ? Math.Min(request.Amount.Value, remainingBalance)
+                : remainingBalance;
+
+            if (payAmount <= 0)
+            {
+                return BadRequest(new { error = "Payment amount must be greater than zero." });
+            }
 
             var user = await _unitOfWork.Users.GetByIdAsync(invoice.StudentId);
             var school = user != null ? await _unitOfWork.Schools.GetByIdAsync(user.SchoolId) : null;
@@ -669,7 +708,7 @@ namespace EduVault.Api.Controllers
             {
                 InvoiceId = request.InvoiceId,
                 ReferenceNumber = referenceNumber,
-                Amount = invoice.Amount,
+                Amount = payAmount,
                 PaymentMethod = paymentMethod,
                 TransactionDate = DateTime.UtcNow,
                 Status = "success"
@@ -678,12 +717,210 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.Transactions.AddAsync(transaction);
 
             // Update invoice
-            invoice.Status = "Paid";
+            invoice.PaidAmount += payAmount;
+            invoice.Status = (invoice.PaidAmount >= totalPayable) ? "Paid" : "Partially Paid";
             _unitOfWork.Invoices.Update(invoice);
 
             await _unitOfWork.CompleteAsync();
 
-            return Ok(new { success = true, referenceNumber = transaction.ReferenceNumber });
+            return Ok(new { 
+                success = true, 
+                referenceNumber = transaction.ReferenceNumber,
+                amountPaid = payAmount,
+                totalBilled = totalPayable,
+                remainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount),
+                status = invoice.Status
+            });
+        }
+
+        // =========================================================================
+        // FINANCIAL RULES & MASTER HUB (Account Manager & School Admin Primary Authority)
+        // =========================================================================
+
+        [HttpGet("rules/summary")]
+        [Authorize(Roles = "accountmanager,schooladmin")]
+        public async Task<IActionResult> GetFinancialRulesSummary()
+        {
+            var schoolId = GetSchoolId();
+
+            var structures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId);
+            var enrollments = await _unitOfWork.Enrollments.FindAsync(e => e.Status == "COMPARTMENT_PENDING");
+            var compartmentStudentIds = enrollments.Select(e => e.StudentId).Distinct().ToList();
+
+            var compartmentStudents = new List<object>();
+            foreach (var stuId in compartmentStudentIds)
+            {
+                var user = await _unitOfWork.Users.GetByIdAsync(stuId);
+                var enroll = enrollments.FirstOrDefault(e => e.StudentId == stuId);
+                var classObj = enroll != null ? await _unitOfWork.Classes.GetByIdAsync(enroll.ClassId) : null;
+
+                if (user != null)
+                {
+                    compartmentStudents.Add(new
+                    {
+                        studentId = user.Id,
+                        studentName = $"{user.FirstName} {user.LastName}",
+                        email = user.Email,
+                        className = classObj != null ? $"Class {classObj.Grade} - {classObj.Section}" : "Unassigned",
+                        failedSubjectsCount = enroll?.FailedSubjectsCount ?? 1,
+                        status = enroll?.Status ?? "COMPARTMENT_PENDING",
+                        remark = enroll?.AcademicOutcomeRemark ?? "Eligible for Supplementary Examination"
+                    });
+                }
+            }
+
+            return Ok(new
+            {
+                feeStructures = structures.Select(fs => new
+                {
+                    fs.Id,
+                    fs.Name,
+                    fs.Grade,
+                    fs.Amount,
+                    fs.Frequency,
+                    fs.Installments,
+                    fs.FeeCategory,
+                    fs.LateFeePerDay,
+                    fs.GracePeriodDays,
+                    fs.IsCustomPaymentAllowed,
+                    fs.MinPartialPaymentAmount
+                }),
+                compartmentStudents,
+                totalCompartmentEligible = compartmentStudents.Count,
+                defaultGraceDays = structures.Any() ? structures.Max(s => s.GracePeriodDays) : 5,
+                defaultLateFeePerDay = structures.Any() ? structures.Max(s => s.LateFeePerDay) : 50.0m
+            });
+        }
+
+        [HttpPost("structures/supplementary")]
+        [Authorize(Roles = "accountmanager,schooladmin")]
+        public async Task<IActionResult> CreateSupplementaryFeeRule([FromBody] CreateSupplementaryFeeRequest request)
+        {
+            var schoolId = GetSchoolId();
+
+            if (string.IsNullOrWhiteSpace(request.Name)) request.Name = "Supplementary / Compartment Exam Fee";
+            if (request.AmountPerSubject <= 0) request.AmountPerSubject = 500.0m;
+
+            var feeStructure = new FeeStructure
+            {
+                SchoolId = schoolId,
+                Name = request.Name.Trim(),
+                Grade = request.Grade?.Trim() ?? "All Grades",
+                Amount = request.AmountPerSubject,
+                Frequency = "One-Time",
+                Installments = 1,
+                FeeCategory = "SupplementaryExam",
+                GracePeriodDays = request.GracePeriodDays,
+                LateFeePerDay = request.LateFeePerDay,
+                IsCustomPaymentAllowed = request.IsCustomPaymentAllowed,
+                Breakdown = $"₹{request.AmountPerSubject} per failed/compartment subject attempt."
+            };
+
+            await _unitOfWork.FeeStructures.AddAsync(feeStructure);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true, feeStructureId = feeStructure.Id, message = "Supplementary fee rule configured successfully." });
+        }
+
+        [HttpPost("assign-supplementary-fee")]
+        [Authorize(Roles = "accountmanager,schooladmin")]
+        public async Task<IActionResult> AssignSupplementaryFee([FromBody] AssignSupplementaryFeeRequest request)
+        {
+            var schoolId = GetSchoolId();
+
+            // Find Supplementary Fee Structure
+            FeeStructure? feeStructure = null;
+            if (request.FeeStructureId.HasValue)
+            {
+                feeStructure = await _unitOfWork.FeeStructures.GetByIdAsync(request.FeeStructureId.Value);
+            }
+            if (feeStructure == null)
+            {
+                var structures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId && fs.FeeCategory == "SupplementaryExam");
+                feeStructure = structures.FirstOrDefault();
+            }
+
+            decimal ratePerSubject = feeStructure?.Amount ?? (request.CustomAmount ?? 500.0m);
+            var feeStructId = feeStructure?.Id ?? Guid.NewGuid();
+
+            var targetStudentIds = new List<Guid>();
+            if (request.StudentId.HasValue)
+            {
+                targetStudentIds.Add(request.StudentId.Value);
+            }
+            else
+            {
+                var enrollments = await _unitOfWork.Enrollments.FindAsync(e => e.Status == "COMPARTMENT_PENDING");
+                targetStudentIds = enrollments.Select(e => e.StudentId).Distinct().ToList();
+            }
+
+            int countCreated = 0;
+            foreach (var stuId in targetStudentIds)
+            {
+                var enroll = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == stuId && e.Status == "COMPARTMENT_PENDING")).FirstOrDefault();
+                int failedSubjects = enroll?.FailedSubjectsCount ?? 1;
+                if (failedSubjects <= 0) failedSubjects = 1;
+
+                decimal invoiceAmount = request.CustomAmount.HasValue ? request.CustomAmount.Value : (ratePerSubject * failedSubjects);
+
+                var invoice = new StudentInvoice
+                {
+                    StudentId = stuId,
+                    FeeStructureId = feeStructure != null ? feeStructure.Id : Guid.Empty,
+                    Amount = invoiceAmount,
+                    PaidAmount = 0.0m,
+                    LateFineAmount = 0.0m,
+                    IssueDate = DateTime.UtcNow,
+                    DueDate = DateTime.UtcNow.AddDays(request.DueDays > 0 ? request.DueDays : 15),
+                    Status = "Pending"
+                };
+
+                await _unitOfWork.Invoices.AddAsync(invoice);
+                countCreated++;
+            }
+
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { 
+                success = true, 
+                assignedCount = countCreated, 
+                message = $"Successfully assigned Supplementary Exam Fee invoices to {countCreated} student(s)." 
+            });
+        }
+
+        [HttpPut("rules/late-fee")]
+        [Authorize(Roles = "accountmanager,schooladmin")]
+        public async Task<IActionResult> UpdateLateFeeRule([FromBody] LateFeeRuleRequest request)
+        {
+            var schoolId = GetSchoolId();
+
+            if (request.FeeStructureId.HasValue)
+            {
+                var feeStruct = await _unitOfWork.FeeStructures.GetByIdAsync(request.FeeStructureId.Value);
+                if (feeStruct != null && feeStruct.SchoolId == schoolId)
+                {
+                    feeStruct.GracePeriodDays = request.GracePeriodDays;
+                    feeStruct.LateFeePerDay = request.LateFeePerDay;
+                    _unitOfWork.FeeStructures.Update(feeStruct);
+                }
+            }
+            else
+            {
+                var allStructures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId);
+                foreach (var fs in allStructures)
+                {
+                    fs.GracePeriodDays = request.GracePeriodDays;
+                    fs.LateFeePerDay = request.LateFeePerDay;
+                    _unitOfWork.FeeStructures.Update(fs);
+                }
+            }
+
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { 
+                success = true, 
+                message = $"Late fee rules updated: {request.GracePeriodDays} days grace period, ₹{request.LateFeePerDay}/day late fine." 
+            });
         }
 
         [HttpGet("student-ledger")]
@@ -1121,17 +1358,20 @@ namespace EduVault.Api.Controllers
     public class PayInvoiceRequest
     {
         public Guid InvoiceId { get; set; }
+        public decimal? Amount { get; set; }
         public string PaymentMethod { get; set; } = "Visa";
     }
 
     public class CreateOrderRequest
     {
         public Guid InvoiceId { get; set; }
+        public decimal? Amount { get; set; }
     }
 
     public class VerifyPaymentRequest
     {
         public Guid InvoiceId { get; set; }
+        public decimal? Amount { get; set; }
         public string? RazorpayOrderId { get; set; }
         public string? RazorpayPaymentId { get; set; }
         public string? RazorpaySignature { get; set; }
@@ -1147,4 +1387,30 @@ namespace EduVault.Api.Controllers
         public string? PaymentProvider { get; set; }
         public string? TransactionReference { get; set; }
     }
+
+    public class CreateSupplementaryFeeRequest
+    {
+        public string Name { get; set; } = "Supplementary / Compartment Exam Fee";
+        public decimal AmountPerSubject { get; set; } = 500.0m;
+        public string Grade { get; set; } = "All Grades";
+        public int GracePeriodDays { get; set; } = 3;
+        public decimal LateFeePerDay { get; set; } = 50.0m;
+        public bool IsCustomPaymentAllowed { get; set; } = true;
+    }
+
+    public class AssignSupplementaryFeeRequest
+    {
+        public Guid? StudentId { get; set; }
+        public Guid? FeeStructureId { get; set; }
+        public decimal? CustomAmount { get; set; }
+        public int DueDays { get; set; } = 15;
+    }
+
+    public class LateFeeRuleRequest
+    {
+        public int GracePeriodDays { get; set; } = 5;
+        public decimal LateFeePerDay { get; set; } = 50.0m;
+        public Guid? FeeStructureId { get; set; }
+    }
 }
+

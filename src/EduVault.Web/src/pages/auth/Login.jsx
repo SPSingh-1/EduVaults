@@ -25,6 +25,7 @@ const Login = () => {
     student: '/student/dashboard',
     accountmanager: '/account/dashboard',
     librarian: '/library/dashboard',
+    receptionist: '/receptionist/dashboard',
   };
 
   useEffect(() => {

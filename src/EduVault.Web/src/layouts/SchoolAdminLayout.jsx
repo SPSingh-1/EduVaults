@@ -53,6 +53,16 @@ const SchoolAdminLayout = () => {
     });
   }
 
+  // Receptionist / Front Desk Portal link for school admin
+  if (user?.hasReceptionistModule !== false) {
+    baseLinks.splice(6, 0, {
+      pageKey: 'schooladmin.receptionists',
+      icon: Users,
+      label: 'Receptionists',
+      path: '/school-admin/receptionists'
+    });
+  }
+
   // Dynamic menus from Database RBAC permissions
   const hasDynamicPerms = user?.permissions && user.permissions.filter(p => p.canView && (p.route?.startsWith('/school-admin') || p.pageKey?.startsWith('schooladmin'))).length > 0;
 

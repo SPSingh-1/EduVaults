@@ -110,6 +110,7 @@ namespace EduVault.Api.Controllers
             string themeColor = string.Empty;
             bool hasAccountModule = false;
             bool hasLibraryModule = false;
+            bool hasReceptionistModule = true;
             if (user.SchoolId.HasValue)
             {
                 var school = await _unitOfWork.Schools.GetByIdAsync(user.SchoolId.Value);
@@ -119,6 +120,7 @@ namespace EduVault.Api.Controllers
                 themeColor = school?.ThemeColor ?? string.Empty;
                 hasAccountModule = school?.HasAccountModule ?? false;
                 hasLibraryModule = school?.HasLibraryModule ?? false;
+                hasReceptionistModule = school?.HasReceptionistModule ?? true;
             }
 
             // Build RBAC permissions for this user's role + school
@@ -168,6 +170,7 @@ namespace EduVault.Api.Controllers
                     ThemeColor = themeColor,
                     HasAccountModule = hasAccountModule,
                     HasLibraryModule = hasLibraryModule,
+                    HasReceptionistModule = hasReceptionistModule,
                     Permissions = permissions
                 }
             };

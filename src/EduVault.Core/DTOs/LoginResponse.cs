@@ -26,6 +26,7 @@ namespace EduVault.Core.DTOs
         // Module flags (from School entity)
         public bool HasAccountModule { get; set; }
         public bool HasLibraryModule { get; set; }
+        public bool HasReceptionistModule { get; set; }
 
         // Per-page RBAC permissions for this user's role + school
         public List<PagePermissionDto> Permissions { get; set; } = new List<PagePermissionDto>();

@@ -19,10 +19,12 @@ namespace EduVault.Api.Controllers
     public class LibraryController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly Services.WhatsAppService _whatsAppService;
 
-        public LibraryController(IUnitOfWork unitOfWork)
+        public LibraryController(IUnitOfWork unitOfWork, Services.WhatsAppService whatsAppService)
         {
             _unitOfWork = unitOfWork;
+            _whatsAppService = whatsAppService;
         }
 
         private Guid GetSchoolId()
@@ -497,6 +499,22 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.LibraryTransactions.AddAsync(transaction);
             await _unitOfWork.CompleteAsync();
 
+            // Send WhatsApp Alert
+            try
+            {
+                var studentProfile = await _unitOfWork.Students.GetByIdAsync(member.Id);
+                var phone = studentProfile?.GuardianPhone;
+                if (!string.IsNullOrWhiteSpace(phone))
+                {
+                    var msg = $"[LIBRARY ALERT] Book '{book.Title}' (ISBN: {book.ISBN}) has been issued to {member.FirstName} {member.LastName}. Return Due Date: {dueDate:dd MMM yyyy}.";
+                    _ = _whatsAppService.SendEventNotificationAsync(schoolId, "LIBRARY_ALERT", phone, msg);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Library issue WhatsApp alert error: {ex.Message}");
+            }
+
             return Ok(new { success = true, transactionId = transaction.Id, dueDate });
         }
 
@@ -541,6 +559,25 @@ namespace EduVault.Api.Controllers
 
             _unitOfWork.LibraryTransactions.Update(transaction);
             await _unitOfWork.CompleteAsync();
+
+            if (calculatedFine > 0)
+            {
+                try
+                {
+                    var studentProfile = await _unitOfWork.Students.GetByIdAsync(transaction.MemberId);
+                    var phone = studentProfile?.GuardianPhone;
+                    if (!string.IsNullOrWhiteSpace(phone))
+                    {
+                        var fineStatus = transaction.FinePaid ? "Paid" : $"Due ₹{calculatedFine}";
+                        var msg = $"[LIBRARY NOTICE] Book '{book?.Title}' has been returned with {overdueDays} days overdue. Fine status: {fineStatus}.";
+                        _ = _whatsAppService.SendEventNotificationAsync(schoolId, "LIBRARY_ALERT", phone, msg);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Library return WhatsApp alert error: {ex.Message}");
+                }
+            }
 
             return Ok(new
             {

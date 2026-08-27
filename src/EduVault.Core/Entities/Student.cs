@@ -14,6 +14,18 @@ namespace EduVault.Core.Entities
         public string Address { get; set; } = string.Empty;
         public string DateOfBirth { get; set; } = string.Empty;
 
+        // Inward TC (New student coming from another school)
+        public string? PreviousSchoolName { get; set; }
+        public string? PreviousTcNumber { get; set; }
+        public string? PreviousTcDate { get; set; }
+        public string? PreviousTcDocumentUrl { get; set; }
+
+        // Outward TC (Student leaving school & TC issued)
+        public string? OutwardTcNumber { get; set; }
+        public DateTime? OutwardTcIssuedDate { get; set; }
+        public string? TcReason { get; set; }
+        public string? TcConductRemark { get; set; }
+
         // Navigation properties
         public virtual User? User { get; set; }
         public virtual ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();

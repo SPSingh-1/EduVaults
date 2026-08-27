@@ -331,12 +331,15 @@ const Tickets = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Contact Number *</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Contact Number (10 Digits) *</label>
                 <input
+                  type="tel"
+                  maxLength={10}
+                  pattern="[0-9]{10}"
                   value={newTicket.contactNumber}
-                  onChange={(e) => setNewTicket((p) => ({ ...p, contactNumber: e.target.value }))}
-                  placeholder="e.g. +1 555-0199"
-                  className="input text-xs"
+                  onChange={(e) => setNewTicket((p) => ({ ...p, contactNumber: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                  placeholder="e.g. 9876543210"
+                  className="input text-xs font-mono"
                 />
               </div>
               <div>

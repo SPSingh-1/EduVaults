@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using EduVault.Core.Interfaces;
 
 namespace EduVault.Api.Services
@@ -14,13 +15,13 @@ namespace EduVault.Api.Services
     {
         private readonly IConfiguration _configuration;
         private readonly HttpClient _httpClient;
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public WhatsAppService(IConfiguration configuration, HttpClient httpClient, IUnitOfWork unitOfWork)
+        public WhatsAppService(IConfiguration configuration, HttpClient httpClient, IServiceScopeFactory scopeFactory)
         {
             _configuration = configuration;
             _httpClient = httpClient;
-            _unitOfWork = unitOfWork;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task<bool> SendMessageAsync(string toPhoneNumber, string messageBody, Guid? schoolId = null)
@@ -39,10 +40,19 @@ namespace EduVault.Api.Services
                 EduVault.Core.Entities.School? school = null;
                 if (schoolId.HasValue)
                 {
-                    school = await _unitOfWork.Schools.GetByIdAsync(schoolId.Value);
-                    if (school != null && !string.IsNullOrEmpty(school.WhatsAppProvider))
+                    try
                     {
-                        provider = school.WhatsAppProvider.ToLower();
+                        using var scope = _scopeFactory.CreateScope();
+                        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                        school = await uow.Schools.GetByIdAsync(schoolId.Value);
+                        if (school != null && !string.IsNullOrEmpty(school.WhatsAppProvider))
+                        {
+                            provider = school.WhatsAppProvider.ToLower();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[WHATSAPP NOTICE] Could not load school settings for {schoolId.Value}: {ex.Message}");
                     }
                 }
 
@@ -201,6 +211,59 @@ namespace EduVault.Api.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"[WHATSAPP EXCEPTION] Error sending message: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> SendEventNotificationAsync(Guid? schoolId, string eventType, string toPhoneNumber, string messageBody, string? documentUrl = null, string? fileName = null)
+        {
+            try
+            {
+                if (schoolId.HasValue)
+                {
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                        var school = await uow.Schools.GetByIdAsync(schoolId.Value);
+                        if (school != null)
+                        {
+                            // Check if this specific event type is enabled
+                            bool isEnabled = eventType switch
+                            {
+                                "FEE_RECEIPT" => school.WhatsAppFeeReceiptsEnabled,
+                                "FEE_REMINDER" => school.WhatsAppFeeRemindersEnabled,
+                                "LIBRARY_ALERT" => school.WhatsAppLibraryAlertsEnabled,
+                                "GATE_PASS" => school.WhatsAppGatePassAlertsEnabled,
+                                "ADMISSION_INQUIRY" => school.WhatsAppAdmissionInquiryEnabled,
+                                "TC_NOTICE" => school.WhatsAppTcNoticeEnabled,
+                                _ => true
+                            };
+
+                            if (!isEnabled)
+                            {
+                                Console.WriteLine($"[WHATSAPP NOTICE] Event '{eventType}' is toggled OFF for school: {schoolId.Value}. Notification skipped.");
+                                return true; // Skipped intentionally
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[WHATSAPP NOTICE] Event check error for {schoolId.Value}: {ex.Message}");
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(documentUrl))
+                {
+                    var docLabel = !string.IsNullOrWhiteSpace(fileName) ? fileName : "Download PDF Document";
+                    messageBody = $"{messageBody}\n\n📄 {docLabel}:\n{documentUrl}";
+                }
+
+                return await SendMessageAsync(toPhoneNumber, messageBody, schoolId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WHATSAPP EVENT EXCEPTION] Error sending event {eventType}: {ex.Message}");
                 return false;
             }
         }

@@ -20,6 +20,7 @@ import SuperAdminLayout from './layouts/SuperAdminLayout';
 import SchoolAdminLayout from './layouts/SchoolAdminLayout';
 import AccountManagerLayout from './layouts/AccountManagerLayout';
 import LibrarianLayout from './layouts/LibrarianLayout';
+import ReceptionistLayout from './layouts/ReceptionistLayout';
 import { TeacherLayout } from './pages/teacher/TeacherPages';
 import { StudentLayout } from './pages/student/StudentPages';
 
@@ -31,6 +32,7 @@ import Settings from './pages/super-admin/Settings';
 import Support from './pages/super-admin/Support';
 import SuperAdminNotices from './pages/super-admin/Notices';
 import AccessControl from './pages/super-admin/AccessControl';
+import SchoolHrmSettings from './pages/super-admin/SchoolHrmSettings';
 
 // School Admin Pages
 import SchoolAdminDashboard from './pages/school-admin/Dashboard';
@@ -47,6 +49,8 @@ import LibrarianRegister from './pages/school-admin/LibrarianRegister';
 
 // Account Manager Pages (HRM & Financial Management)
 import AccountDashboard from './pages/account/AccountDashboard';
+import EmployeeDirectory from './pages/account/EmployeeDirectory';
+import FeeRules from './pages/account-manager/FeeRules';
 import SchoolBilling from './pages/account/SchoolBilling';
 import Salaries from './pages/account/Salaries';
 import SalaryRules from './pages/account/SalaryRules';
@@ -62,6 +66,14 @@ import IssueReturn from './pages/library/IssueReturn';
 import TransactionHistory from './pages/library/TransactionHistory';
 import LibrarySettingsPage from './pages/library/LibrarySettingsPage';
 import LibraryProfile from './pages/library/LibraryProfile';
+
+// Receptionist & Front Desk Pages
+import FrontDeskDashboard from './pages/receptionist/FrontDeskDashboard';
+import VisitorRegister from './pages/receptionist/VisitorRegister';
+import CounterFeeDesk from './pages/receptionist/CounterFeeDesk';
+import GatePassDesk from './pages/receptionist/GatePassDesk';
+import AdmissionLeads from './pages/receptionist/AdmissionLeads';
+import ReceptionistRegister from './pages/school-admin/ReceptionistRegister';
 
 // Teacher Pages
 import {
@@ -123,6 +135,7 @@ export default function App() {
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<SuperAdminDashboard />} />
                   <Route path="schools" element={<Schools />} />
+                  <Route path="schools/:schoolId/hrm" element={<SchoolHrmSettings />} />
                   <Route path="subscriptions" element={<Subscriptions />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="access-control" element={<AccessControl />} />
@@ -141,6 +154,7 @@ export default function App() {
                   <Route path="teachers" element={<Teachers />} />
                   <Route path="account-managers" element={<AccountManagerRegister />} />
                   <Route path="librarians" element={<LibrarianRegister />} />
+                  <Route path="receptionists" element={<ReceptionistRegister />} />
                   <Route path="classes" element={<Classes />} />
                   <Route path="fees" element={<Fees />} />
                   <Route path="exams" element={<Exams />} />
@@ -162,6 +176,8 @@ export default function App() {
                 <Route path="/account" element={<AccountManagerLayout />}>
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<AccountDashboard />} />
+                  <Route path="employees" element={<EmployeeDirectory />} />
+                  <Route path="fee-rules" element={<FeeRules />} />
                   <Route path="billing" element={<SchoolBilling />} />
                   <Route path="salaries" element={<Salaries />} />
                   <Route path="salary-rules" element={<SalaryRules />} />
@@ -182,6 +198,18 @@ export default function App() {
                   <Route path="transactions" element={<TransactionHistory />} />
                   <Route path="settings" element={<LibrarySettingsPage />} />
                   <Route path="profile" element={<LibraryProfile />} />
+                </Route>
+              </Route>
+
+              {/* Receptionist / Front Desk Operations */}
+              <Route element={<ProtectedRoute allowedRoles={['receptionist', 'schooladmin']} />}>
+                <Route path="/receptionist" element={<ReceptionistLayout />}>
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<FrontDeskDashboard />} />
+                  <Route path="visitors" element={<VisitorRegister />} />
+                  <Route path="fees" element={<CounterFeeDesk />} />
+                  <Route path="gatepass" element={<GatePassDesk />} />
+                  <Route path="inquiries" element={<AdmissionLeads />} />
                 </Route>
               </Route>
 

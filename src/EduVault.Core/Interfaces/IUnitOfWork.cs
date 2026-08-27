@@ -38,18 +38,37 @@ namespace EduVault.Core.Interfaces
         IRepository<PageDefinition> PageDefinitions { get; }
         IRepository<SchoolRolePermission> SchoolRolePermissions { get; }
 
-        // HRM / Account Module
+        // HRM / Account Module & Unified HRM Engine
         IRepository<AccountManager> AccountManagers { get; }
         IRepository<SalaryRule> SalaryRules { get; }
         IRepository<LeaveQuota> LeaveQuotas { get; }
         IRepository<LeaveRequest> LeaveRequests { get; }
         IRepository<SalaryRecord> SalaryRecords { get; }
         IRepository<Expense> Expenses { get; }
+        IRepository<Employee> Employees { get; }
+        IRepository<TeacherProfile> TeacherProfiles { get; }
+        IRepository<Designation> Designations { get; }
+        IRepository<EmploymentType> EmploymentTypes { get; }
+        IRepository<WorkSchedule> WorkSchedules { get; }
+        IRepository<LeavePolicy> LeavePolicies { get; }
+        IRepository<SalaryComponent> SalaryComponents { get; }
+        IRepository<SalaryStructure> SalaryStructures { get; }
+        IRepository<SalaryStructureComponent> SalaryStructureComponents { get; }
+        IRepository<StatutoryConfiguration> StatutoryConfigurations { get; }
+        IRepository<Payroll> Payrolls { get; }
+        IRepository<PayrollItem> PayrollItems { get; }
+        IRepository<PayrollSnapshot> PayrollSnapshots { get; }
+        IRepository<EmployeeDocument> EmployeeDocuments { get; }
 
         // Library Module
         IRepository<Book> Books { get; }
         IRepository<LibrarySettings> LibrarySettings { get; }
         IRepository<LibraryTransaction> LibraryTransactions { get; }
+
+        // Front Desk / Receptionist Module
+        IRepository<VisitorEntry> Visitors { get; }
+        IRepository<GatePassEntry> GatePasses { get; }
+        IRepository<AdmissionInquiryEntry> AdmissionInquiries { get; }
 
         // Dynamic Dashboard Widgets
         IRepository<DashboardWidgetDefinition> DashboardWidgetDefinitions { get; }

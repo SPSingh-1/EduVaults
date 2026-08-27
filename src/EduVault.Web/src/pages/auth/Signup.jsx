@@ -130,8 +130,16 @@ const Signup = () => {
                     <input type="password" value={form.adminPassword} onChange={e => update('adminPassword', e.target.value)} placeholder="••••••••" className="input" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Phone Number</label>
-                    <input value={form.adminPhone} onChange={e => update('adminPhone', e.target.value)} placeholder="+1 (555) 000-0000" className="input" />
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Phone Number (10 Digits)</label>
+                    <input 
+                      type="tel"
+                      maxLength={10}
+                      pattern="[0-9]{10}"
+                      value={form.adminPhone} 
+                      onChange={e => update('adminPhone', e.target.value.replace(/\D/g, '').slice(0, 10))} 
+                      placeholder="e.g. 9876543210" 
+                      className="input font-mono" 
+                    />
                   </div>
                 </div>
                 <div>

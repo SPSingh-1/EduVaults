@@ -84,6 +84,14 @@ const roleMeta = {
     icon: BookOpen,
     targetPage: 'Library Management Dashboard',
     pageRoute: '/library/dashboard'
+  },
+  receptionist: {
+    label: 'Receptionist',
+    desc: 'Front desk officers managing student 360 lookups, fee counters, visitor logbooks, and gate passes',
+    badge: 'Front Desk',
+    icon: Users,
+    targetPage: 'Front Desk & Reception Portal',
+    pageRoute: '/receptionist/dashboard'
   }
 };
 
@@ -92,7 +100,8 @@ const roleToModuleMap = {
   teacher: 'teacher',
   student: 'student',
   accountmanager: 'account',
-  librarian: 'library'
+  librarian: 'library',
+  receptionist: 'receptionist'
 };
 
 const themeStyles = {
@@ -180,6 +189,21 @@ const AccessControl = () => {
     displayOrder: 1
   });
 
+  // Integrations & Triggers State
+  const [triggersForm, setTriggersForm] = useState({
+    schoolUpiId: '',
+    razorpayKeyId: '',
+    razorpayKeySecret: '',
+    whatsAppFeeReceiptsEnabled: true,
+    whatsAppFeeRemindersEnabled: true,
+    whatsAppLibraryAlertsEnabled: true,
+    whatsAppGatePassAlertsEnabled: true,
+    whatsAppAdmissionInquiryEnabled: true,
+    whatsAppTcNoticeEnabled: true
+  });
+  const [loadingTriggers, setLoadingTriggers] = useState(false);
+  const [savingTriggers, setSavingTriggers] = useState(false);
+
   // 1. Fetch schools list on mount
   const fetchSchools = async () => {
     try {
@@ -230,12 +254,59 @@ const AccessControl = () => {
     }
   };
 
+  // 4. Fetch School Gateway & WhatsApp Event Triggers
+  const fetchSchoolTriggers = async (schoolId) => {
+    if (!schoolId) return;
+    setLoadingTriggers(true);
+    setError('');
+    try {
+      const res = await apiClient.get(`/super/schools/${schoolId}/triggers`);
+      if (res.data) {
+        setTriggersForm({
+          schoolUpiId: res.data.schoolUpiId || '',
+          razorpayKeyId: res.data.razorpayKeyId || '',
+          razorpayKeySecret: '',
+          whatsAppFeeReceiptsEnabled: res.data.whatsAppFeeReceiptsEnabled !== false,
+          whatsAppFeeRemindersEnabled: res.data.whatsAppFeeRemindersEnabled !== false,
+          whatsAppLibraryAlertsEnabled: res.data.whatsAppLibraryAlertsEnabled !== false,
+          whatsAppGatePassAlertsEnabled: res.data.whatsAppGatePassAlertsEnabled !== false,
+          whatsAppAdmissionInquiryEnabled: res.data.whatsAppAdmissionInquiryEnabled !== false,
+          whatsAppTcNoticeEnabled: res.data.whatsAppTcNoticeEnabled !== false
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load school triggers:', err);
+      setError('Failed to load gateway & notification triggers.');
+    } finally {
+      setLoadingTriggers(false);
+    }
+  };
+
+  const handleSaveTriggers = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedSchoolId) return;
+    setSavingTriggers(true);
+    setError('');
+    try {
+      await apiClient.put(`/super/schools/${selectedSchoolId}/triggers`, triggersForm);
+      setSaveSuccess('School payment credentials and WhatsApp trigger matrix updated successfully.');
+      setTimeout(() => setSaveSuccess(''), 4000);
+    } catch (err) {
+      console.error('Save triggers error:', err);
+      setError(err.response?.data?.error || 'Failed to update triggers.');
+    } finally {
+      setSavingTriggers(false);
+    }
+  };
+
   useEffect(() => {
-    if (selectedSchoolId && selectedRole) {
-      if (activeTab === 'menus') {
+    if (selectedSchoolId) {
+      if (activeTab === 'menus' && selectedRole) {
         fetchPermissions(selectedSchoolId, selectedRole);
-      } else {
+      } else if (activeTab === 'widgets' && selectedRole) {
         fetchWidgets(selectedSchoolId, selectedRole);
+      } else if (activeTab === 'integrations') {
+        fetchSchoolTriggers(selectedSchoolId);
       }
     }
   }, [selectedSchoolId, selectedRole, activeTab]);
@@ -247,15 +318,17 @@ const AccessControl = () => {
 
     const newHrm = moduleType === 'hrm' ? !school.hasAccountModule : school.hasAccountModule;
     const newLib = moduleType === 'lib' ? !school.hasLibraryModule : school.hasLibraryModule;
+    const newRec = moduleType === 'rec' ? !(school.hasReceptionistModule !== false) : (school.hasReceptionistModule !== false);
 
     try {
       await apiClient.put(`/super/schools/${selectedSchoolId}/modules`, {
         hasAccountModule: newHrm,
-        hasLibraryModule: newLib
+        hasLibraryModule: newLib,
+        hasReceptionistModule: newRec
       });
       setSchools(prev => prev.map(s => {
         if (s.id === selectedSchoolId) {
-          return { ...s, hasAccountModule: newHrm, hasLibraryModule: newLib };
+          return { ...s, hasAccountModule: newHrm, hasLibraryModule: newLib, hasReceptionistModule: newRec };
         }
         return s;
       }));
@@ -580,6 +653,23 @@ const AccessControl = () => {
                   <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-600"></div>
                 </label>
               </div>
+
+              {/* Receptionist / Front Desk Module Switch */}
+              <div className="flex items-center gap-3 bg-white py-2 px-3.5 rounded-xl border border-gray-200 shadow-2xs">
+                <div className="text-left">
+                  <span className="text-xs font-bold text-gray-800 block">Front Desk / Reception</span>
+                  <span className="text-[11px] text-gray-400">Student 360, Spot Fees, Logs</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer ml-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedSchool.hasReceptionistModule !== false}
+                    onChange={() => handleToggleModule('rec')}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-600"></div>
+                </label>
+              </div>
             </div>
           </div>
         )}
@@ -600,7 +690,7 @@ const AccessControl = () => {
         </div>
       )}
 
-      {/* MODE SWITCHER: 1. MENUS & RBAC vs 2. DASHBOARD CARDS & GRAPHS */}
+      {/* MODE SWITCHER: 1. MENUS & RBAC vs 2. DASHBOARD CARDS & GRAPHS vs 3. GATEWAYS & NOTIFICATIONS */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2 bg-gray-100/90 p-1 rounded-2xl border border-gray-200">
           <button
@@ -612,7 +702,7 @@ const AccessControl = () => {
             }`}
           >
             <Layers className="w-4 h-4" />
-            📱 Navigation Menus & Page Permissions
+            📱 Page & Role Access Matrix
           </button>
           <button
             onClick={() => setActiveTab('widgets')}
@@ -623,11 +713,22 @@ const AccessControl = () => {
             }`}
           >
             <LayoutDashboard className="w-4 h-4" />
-            📊 Dashboard Cards & Graphs Configurator
+            📊 Cards & Dashboard Telemetry
+          </button>
+          <button
+            onClick={() => setActiveTab('integrations')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
+              activeTab === 'integrations'
+                ? 'bg-primary text-white shadow-xs font-bold'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Sliders className="w-4 h-4" />
+            🔌 Gateways & WhatsApp Triggers
           </button>
         </div>
 
-        {activeTab === 'menus' ? (
+        {activeTab === 'menus' && (
           <button
             onClick={() => {
               setMenuForm({
@@ -644,7 +745,9 @@ const AccessControl = () => {
             <Plus className="w-4 h-4" />
             Add New Menu / Screen
           </button>
-        ) : (
+        )}
+
+        {activeTab === 'widgets' && (
           <button
             onClick={() => {
               setWidgetForm({
@@ -667,36 +770,38 @@ const AccessControl = () => {
         )}
       </div>
 
-      {/* SEGMENTED ROLE TABS BAR */}
-      <div className="card p-2.5 bg-gray-50/90 border border-gray-200/80 rounded-2xl">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-          {Object.entries(roleMeta).map(([roleKey, meta]) => {
-            const isSelected = selectedRole === roleKey;
-            const Icon = meta.icon;
-            return (
-              <button
-                key={roleKey}
-                onClick={() => setSelectedRole(roleKey)}
-                className={`py-3 px-3.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-between gap-2 ${
-                  isSelected
-                    ? 'bg-primary text-white shadow-md'
-                    : 'bg-white text-gray-700 hover:bg-gray-100 hover:text-gray-900 border border-gray-200/70 shadow-2xs'
-                }`}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
-                  <span className="font-semibold truncate">{meta.label}</span>
-                </div>
-                <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase shrink-0 ${
-                  isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {meta.badge}
-                </span>
-              </button>
-            );
-          })}
+      {/* SEGMENTED ROLE TABS BAR (Shown for Menus & Widgets) */}
+      {activeTab !== 'integrations' && (
+        <div className="card p-2.5 bg-gray-50/90 border border-gray-200/80 rounded-2xl">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            {Object.entries(roleMeta).map(([roleKey, meta]) => {
+              const isSelected = selectedRole === roleKey;
+              const Icon = meta.icon;
+              return (
+                <button
+                  key={roleKey}
+                  onClick={() => setSelectedRole(roleKey)}
+                  className={`py-3 px-3.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-between gap-2 ${
+                    isSelected
+                      ? 'bg-primary text-white shadow-md'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 hover:text-gray-900 border border-gray-200/70 shadow-2xs'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
+                    <span className="font-semibold truncate">{meta.label}</span>
+                  </div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase shrink-0 ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {meta.badge}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ========================================================================= */}
       {/* TAB 1: NAVIGATION MENUS & PERMISSIONS MATRIX */}
@@ -1160,6 +1265,225 @@ const AccessControl = () => {
               <Save className="w-4 h-4" />
               {saving ? 'Saving...' : 'Save Dashboard Configuration'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 3: GATEWAYS & WHATSAPP NOTIFICATION TRIGGER MATRIX */}
+      {/* ========================================================================= */}
+      {activeTab === 'integrations' && (
+        <div className="space-y-6">
+          <div className="card border border-gray-200/80 p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-5">
+              <div>
+                <h3 className="font-display font-bold text-base text-primary flex items-center gap-2">
+                  <Sliders className="w-5 h-5 text-primary" />
+                  School Payment Gateway & UPI Routing
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Configure merchant credentials for <strong className="text-gray-900">{selectedSchool?.name}</strong>. Student fees and library collections route directly to these credentials.
+                </p>
+              </div>
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 font-bold text-xs rounded-xl border border-emerald-200 shrink-0">
+                School-Level Merchant
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">School UPI VPA / QR ID</label>
+                <input
+                  type="text"
+                  placeholder="e.g. schoolname@hdfcbank"
+                  value={triggersForm.schoolUpiId}
+                  onChange={e => setTriggersForm(p => ({ ...p, schoolUpiId: e.target.value }))}
+                  className="input text-xs font-mono w-full"
+                />
+                <span className="text-[11px] text-gray-400 mt-1 block">Displayed on counter receipts & spot UPI QR</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">School Razorpay Key ID</label>
+                <input
+                  type="text"
+                  placeholder="rzp_live_..."
+                  value={triggersForm.razorpayKeyId}
+                  onChange={e => setTriggersForm(p => ({ ...p, razorpayKeyId: e.target.value }))}
+                  className="input text-xs font-mono w-full"
+                />
+                <span className="text-[11px] text-gray-400 mt-1 block">Online student portal fee checkout</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">School Razorpay Key Secret</label>
+                <input
+                  type="password"
+                  placeholder="••••••••••••••••"
+                  value={triggersForm.razorpayKeySecret}
+                  onChange={e => setTriggersForm(p => ({ ...p, razorpayKeySecret: e.target.value }))}
+                  className="input text-xs font-mono w-full"
+                />
+                <span className="text-[11px] text-gray-400 mt-1 block">Leave empty to preserve existing secret</span>
+              </div>
+            </div>
+          </div>
+
+          {/* WhatsApp Event Dispatch Matrix */}
+          <div className="card border border-gray-200/80 p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-5">
+              <div>
+                <h3 className="font-display font-bold text-base text-primary flex items-center gap-2">
+                  <span>💬</span> WhatsApp Automated Event Notification Matrix
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Select which automated alerts, PDF receipts, and parent notifications should be dispatched via WhatsApp.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveTriggers}
+                disabled={savingTriggers}
+                className="btn-primary text-xs py-2 px-5 font-semibold flex items-center gap-2 shadow-sm shrink-0"
+              >
+                <Save className="w-4 h-4" />
+                {savingTriggers ? 'Saving...' : 'Save All Triggers'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Trigger 1: Fee Receipt */}
+              <div className="p-4 rounded-2xl border border-gray-200/90 bg-gray-50/50 flex items-start justify-between gap-4 hover:bg-white transition-all">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">💳</span>
+                    <h4 className="font-bold text-xs text-gray-900">Fee Payment Receipt & PDF</h4>
+                  </div>
+                  <p className="text-[11px] text-gray-500">
+                    Instantly sends payment confirmation text and official PDF fee slip download link when fee is collected.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={triggersForm.whatsAppFeeReceiptsEnabled}
+                    onChange={e => setTriggersForm(p => ({ ...p, whatsAppFeeReceiptsEnabled: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* Trigger 2: Fee Due Reminder */}
+              <div className="p-4 rounded-2xl border border-gray-200/90 bg-gray-50/50 flex items-start justify-between gap-4 hover:bg-white transition-all">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold">⏳</span>
+                    <h4 className="font-bold text-xs text-gray-900">Fee Due Date Reminders</h4>
+                  </div>
+                  <p className="text-[11px] text-gray-500">
+                    Automated background worker sends upcoming due date alerts & online payment link 7 days and 1 day prior.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={triggersForm.whatsAppFeeRemindersEnabled}
+                    onChange={e => setTriggersForm(p => ({ ...p, whatsAppFeeRemindersEnabled: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* Trigger 3: Library Book Issue & Overdue Alert */}
+              <div className="p-4 rounded-2xl border border-gray-200/90 bg-gray-50/50 flex items-start justify-between gap-4 hover:bg-white transition-all">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center text-xs font-bold">📚</span>
+                    <h4 className="font-bold text-xs text-gray-900">Library Book Issue & Overdue Fine Alert</h4>
+                  </div>
+                  <p className="text-[11px] text-gray-500">
+                    Alerts member/guardian on book loan issuance with return due date and overdue fine calculation.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={triggersForm.whatsAppLibraryAlertsEnabled}
+                    onChange={e => setTriggersForm(p => ({ ...p, whatsAppLibraryAlertsEnabled: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* Trigger 4: Early Student Gate Pass */}
+              <div className="p-4 rounded-2xl border border-gray-200/90 bg-gray-50/50 flex items-start justify-between gap-4 hover:bg-white transition-all">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center text-xs font-bold">🚪</span>
+                    <h4 className="font-bold text-xs text-gray-900">Security Gate Pass Early Exit Alert</h4>
+                  </div>
+                  <p className="text-[11px] text-gray-500">
+                    Sends high-priority exit token and security clearance notification to parent whenever student leaves early.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={triggersForm.whatsAppGatePassAlertsEnabled}
+                    onChange={e => setTriggersForm(p => ({ ...p, whatsAppGatePassAlertsEnabled: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* Trigger 5: Admission Inquiry Welcome */}
+              <div className="p-4 rounded-2xl border border-gray-200/90 bg-gray-50/50 flex items-start justify-between gap-4 hover:bg-white transition-all">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">📋</span>
+                    <h4 className="font-bold text-xs text-gray-900">Admission Inquiry Welcome & Brochure</h4>
+                  </div>
+                  <p className="text-[11px] text-gray-500">
+                    Dispatches warm welcome message and downloadable school brochure link to prospect parents visiting front desk.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={triggersForm.whatsAppAdmissionInquiryEnabled}
+                    onChange={e => setTriggersForm(p => ({ ...p, whatsAppAdmissionInquiryEnabled: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* Trigger 6: Transfer Certificate (TC) Issuance */}
+              <div className="p-4 rounded-2xl border border-gray-200/90 bg-gray-50/50 flex items-start justify-between gap-4 hover:bg-white transition-all">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold">📜</span>
+                    <h4 className="font-bold text-xs text-gray-900">TC Issuance & Portal Archival Notice</h4>
+                  </div>
+                  <p className="text-[11px] text-gray-500">
+                    Notifies parent upon issuance of official Transfer Certificate with clearance confirmation and record release.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={triggersForm.whatsAppTcNoticeEnabled}
+                    onChange={e => setTriggersForm(p => ({ ...p, whatsAppTcNoticeEnabled: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
       )}

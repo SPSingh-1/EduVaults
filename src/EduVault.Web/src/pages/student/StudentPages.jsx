@@ -81,12 +81,15 @@ const loadScript = (src) => {
   });
 };
 
-const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
+const executePaymentFlow = async (invoiceId, setLoader, successCallback, customAmount = null) => {
   if (!invoiceId) return;
   setLoader(true);
   try {
     // 1. Create payment order / get configuration from backend
-    const orderRes = await apiClient.post('/billing/create-order', { invoiceId });
+    const orderRes = await apiClient.post('/billing/create-order', { 
+      invoiceId,
+      amount: customAmount ? parseFloat(customAmount) : undefined
+    });
     const { orderId, amount, currency, keyId, isMock, paymentProvider, publishableKey, clientId, merchantId, instructions } = orderRes.data;
 
     const provider = paymentProvider ? paymentProvider.toLowerCase() : 'razorpay';
@@ -112,6 +115,7 @@ const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
           try {
             await apiClient.post('/billing/verify-payment', {
               invoiceId: invoiceId,
+              amount: customAmount ? parseFloat(customAmount) : undefined,
               razorpayOrderId: response.razorpay_order_id || orderId,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature || 'mock_signature',
@@ -144,6 +148,7 @@ const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
         try {
           await apiClient.post('/billing/verify-payment', {
             invoiceId: invoiceId,
+            amount: customAmount ? parseFloat(customAmount) : undefined,
             paymentProvider: 'cashless',
             transactionReference: txRef
           });
@@ -161,7 +166,7 @@ const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
     else {
       // Stripe, PayPal, PhonePe simulations
       const providerName = provider === 'stripe' ? 'Stripe' : provider === 'paypal' ? 'PayPal' : provider === 'phonepe' ? 'PhonePe' : provider;
-      const confirmMsg = `💳 Active Gateway: ${providerName}\n\nInvoice Amount: Rs. ${amount}\n\nWould you like to proceed with the simulated checkout?`;
+      const confirmMsg = `💳 Active Gateway: ${providerName}\n\nPayable Amount: Rs. ${amount}\n\nWould you like to proceed with the checkout?`;
 
       if (window.confirm(confirmMsg)) {
         setLoader(true);
@@ -169,6 +174,7 @@ const executePaymentFlow = async (invoiceId, setLoader, successCallback) => {
           const txRef = `${provider}_ref_${Math.random().toString(36).substring(7)}`;
           await apiClient.post('/billing/verify-payment', {
             invoiceId: invoiceId,
+            amount: customAmount ? parseFloat(customAmount) : undefined,
             paymentProvider: provider,
             transactionReference: txRef
           });
@@ -426,7 +432,7 @@ export const StudentDashboard = () => {
     : 85.0;
 
   const rankData = [
-    { name: 'Your Average', score: parseFloat(studentAverage.toFixed(1)), fill: '#3b82f6', colorGrad: 'yourAvgGrad' },
+    { name: 'Your Average', score: parseFloat((Number(studentAverage) || 85).toFixed(1)), fill: '#3b82f6', colorGrad: 'yourAvgGrad' },
     { name: 'Class Average', score: parseFloat(performance?.classAverage ?? 76.5), fill: '#94a3b8', colorGrad: 'classAvgGrad' },
     { name: 'Class Highest', score: parseFloat(performance?.classHighest ?? 92.0), fill: '#10b981', colorGrad: 'classHighGrad' }
   ];
@@ -437,14 +443,14 @@ export const StudentDashboard = () => {
     return {
       isVisible: found ? found.isEnabled : true,
       title: found?.title || defaultTitle,
-      timeRange: found?.timeRange || 'Daily'
+      timeRange: found?.timeRange || 'Academic Year'
     };
   };
 
-  const attRateWidget = getStudentWidget('card.student.attendance_rate', 'Attendance Rate');
-  const gpaCardWidget = getStudentWidget('card.student.semester_gpa', 'Semester GPA');
-  const feesCardWidget = getStudentWidget('card.student.outstanding_fees', 'Outstanding Fees');
-  const rankCardWidget = getStudentWidget('card.student.class_rank', 'Rank');
+  const gpaCardWidget = getStudentWidget('card.student.gpa_standing', 'Current GPA Standing');
+  const attendanceCardWidget = getStudentWidget('card.student.attendance_rate', 'Term Attendance Rate');
+  const feesCardWidget = getStudentWidget('card.student.fee_balance', 'Outstanding Fee Balance');
+  const libraryCardWidget = getStudentWidget('card.student.library_loans', 'Active Library Loans');
 
   if (loading) {
     return <Loader message="Gathering your academic overview" />;
@@ -523,7 +529,7 @@ export const StudentDashboard = () => {
                 key: 'fees',
                 isVisible: feesCardWidget.isVisible,
                 label: feesCardWidget.title,
-                value: `Rs. ${pendingAmount.toLocaleString()}`,
+                value: `Rs. ${Number(pendingAmount || 0).toLocaleString()}`,
                 sub: pendingAmount > 0 ? 'Due soon' : 'All Clear',
                 icon: CreditCard,
                 color: 'text-rose-500',
@@ -996,8 +1002,20 @@ export const StudentDashboard = () => {
                     {/* Class Summary Header */}
                     <div className="no-print flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
                       <div>
-                        <div className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">PREVIOUS CLASS</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">HISTORICAL GRADE</span>
+                          {hist.academicYear && (
+                            <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200/60">
+                              📅 Session {hist.academicYear}
+                            </span>
+                          )}
+                        </div>
                         <div className="font-display text-lg font-bold text-primary mt-0.5">{hist.className}</div>
+                        {hist.academicRemark && (
+                          <div className="text-[11px] text-slate-500 mt-1 italic font-medium">
+                            📝 {hist.academicRemark}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
@@ -1007,12 +1025,12 @@ export const StudentDashboard = () => {
                         <div className="border-l border-slate-200 pl-4">
                           <div className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">RESULT STATUS</div>
                           <div className="mt-0.5">
-                            {status === "Pass" ? (
-                              <span className="badge badge-success text-[10px] py-0.5 px-2 font-extrabold uppercase tracking-wider">Pass</span>
-                            ) : status === "Fail" ? (
-                              <span className="badge badge-danger text-[10px] py-0.5 px-2 font-extrabold uppercase tracking-wider">Fail</span>
+                            {status.includes("Pass") || hist.finalResult?.includes("Pass") ? (
+                              <span className="badge badge-success text-[10px] py-0.5 px-2 font-extrabold uppercase tracking-wider">{hist.finalResult || status}</span>
+                            ) : status.includes("Fail") || hist.finalResult?.includes("Fail") ? (
+                              <span className="badge badge-danger text-[10px] py-0.5 px-2 font-extrabold uppercase tracking-wider">{hist.finalResult || status}</span>
                             ) : (
-                              <span className="badge badge-secondary text-[10px] py-0.5 px-2 font-extrabold uppercase tracking-wider">N/A</span>
+                              <span className="badge badge-secondary text-[10px] py-0.5 px-2 font-extrabold uppercase tracking-wider">{hist.finalResult || status || 'N/A'}</span>
                             )}
                           </div>
                         </div>
@@ -1663,12 +1681,26 @@ export const StudentFees = () => {
     }
   };
 
-  useEffect(() => {
-    fetchInvoicesAndStructures();
-  }, []);
+  const [payModalInvoice, setPayModalInvoice] = useState(null);
+  const [payCustomMode, setPayCustomMode] = useState('full'); // 'full' or 'partial'
+  const [payCustomAmount, setPayCustomAmount] = useState('');
 
-  const handlePay = async (invoiceId) => {
-    await executePaymentFlow(invoiceId, setLoading, fetchInvoicesAndStructures);
+  const handleOpenPayDialog = (inv) => {
+    setPayModalInvoice(inv);
+    setPayCustomMode('full');
+    setPayCustomAmount(String(inv.amount || 0));
+  };
+
+  const handleConfirmStudentPay = async () => {
+    if (!payModalInvoice) return;
+    const amountToPay = payCustomMode === 'partial' ? (parseFloat(payCustomAmount) || 0) : payModalInvoice.amount;
+    if (amountToPay <= 0) {
+      alert('Please enter a valid payment amount.');
+      return;
+    }
+    const invId = payModalInvoice.id;
+    setPayModalInvoice(null);
+    await executePaymentFlow(invId, setLoading, fetchInvoicesAndStructures, amountToPay);
   };
 
   const [dateFrom, setDateFrom] = useState('');
@@ -1725,12 +1757,40 @@ export const StudentFees = () => {
   const paidInvoices = filteredInvoices.filter(i => i.status === 'Paid');
   const lastPaymentVal = paidInvoices.length > 0 ? paidInvoices[0].amount : 0;
 
+  useEffect(() => {
+    fetchInvoicesAndStructures();
+  }, []);
+
   if (loading) {
     return <Loader message="Accessing student ledger & invoices" />;
   }
 
   return (
     <div>
+      {payModalInvoice && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-xl">
+            <h3 className="font-bold text-lg">Process Payment</h3>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" checked={payCustomMode === 'full'} onChange={() => setPayCustomMode('full')} />
+                <span className="text-sm">Pay Full Amount (Rs. {payModalInvoice.amount})</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" checked={payCustomMode === 'partial'} onChange={() => { setPayCustomMode('partial'); setPayCustomAmount(''); }} />
+                <span className="text-sm">Partial Payment</span>
+              </label>
+              {payCustomMode === 'partial' && (
+                <input type="number" value={payCustomAmount} onChange={(e) => setPayCustomAmount(e.target.value)} placeholder="Amount" className="w-full border rounded-lg p-2 text-sm" />
+              )}
+            </div>
+            <div className="flex gap-2 justify-end pt-4">
+              <button onClick={() => setPayModalInvoice(null)} className="px-4 py-2 text-sm font-semibold text-gray-500">Cancel</button>
+              <button onClick={handleConfirmStudentPay} className="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg">Confirm Payment</button>
+            </div>
+          </div>
+        </div>
+      )}
       <Topbar title="Fees & Payments" subtitle="Review your financial standing and manage school dues." />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 p-3 bg-gray-50 border border-gray-100 rounded-xl">
@@ -1748,10 +1808,10 @@ export const StudentFees = () => {
             onChange={e => setStatusFilter(e.target.value)}
             className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary rounded-xl"
           >
-            <option value="">All Statuses</option>
+            <option value="">Status: All</option>
             <option value="Paid">Paid</option>
             <option value="Pending">Pending</option>
-            <option value="Overdue">Overdue</option>
+            <option value="Partially Paid">Partially Paid</option>
           </select>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -1762,11 +1822,12 @@ export const StudentFees = () => {
           )}
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-6">
         {[
-          { l: 'Total Outstanding', v: `Rs. ${pendingAmount.toLocaleString()}`, c: 'text-red-500' },
-          { l: 'Total Paid', v: `Rs. ${totalPaid.toLocaleString()}`, c: 'text-green-600' },
-          { l: 'Last Payment Amount', v: lastPaymentVal > 0 ? `Rs. ${lastPaymentVal.toLocaleString()}` : 'Rs. 0.00', c: 'text-blue-600' }
+          { l: 'Total Billed', v: `Rs. ${Number((pendingAmount || 0) + (totalPaid || 0)).toLocaleString()}`, c: 'text-primary' },
+          { l: 'Total Paid', v: `Rs. ${Number(totalPaid || 0).toLocaleString()}`, c: 'text-emerald-600' },
+          { l: 'Pending Dues', v: `Rs. ${Number(pendingAmount || 0).toLocaleString()}`, c: pendingAmount > 0 ? 'text-rose-600' : 'text-slate-400' },
+          { l: 'Last Payment', v: `Rs. ${Number(lastPaymentVal || 0).toLocaleString()}`, c: 'text-primary' },
         ].map(s => (
           <div key={s.l} className="stat-card">
             <div className="text-xs text-gray-500 mb-1">{s.l}</div>
@@ -1794,11 +1855,11 @@ export const StudentFees = () => {
                   <tr key={f.id || i} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
                     <td className="table-td"><div className="font-semibold text-sm text-primary">{f.desc}</div><div className="text-2xs text-gray-400">{f.sub}</div></td>
                     <td className="table-td text-center text-sm font-medium text-slate-650">{f.due}</td>
-                    <td className="table-td text-center font-bold text-slate-800">Rs. {f.amount}</td>
+                    <td className="table-td text-center font-bold text-slate-800">Rs. {Number(f.amount || 0).toLocaleString()}</td>
                     <td className="table-td text-center"><span className={f.status === 'Paid' ? 'badge-success' : 'badge-warning'}>{f.status}</span></td>
                     <td className="table-td text-center">
                       {f.status !== 'Paid' && (
-                        <button onClick={() => handlePay(f.id)} disabled={loading} className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer">
+                        <button onClick={() => handleOpenPayDialog(f)} disabled={loading} className="btn-primary text-xs px-3 py-1 bg-primary hover:bg-primary/90">
                           Pay Now
                         </button>
                       )}
@@ -1825,7 +1886,7 @@ export const StudentFees = () => {
                   <div className="text-sm font-semibold text-primary">{fs.name}</div>
                   <div className="text-xs text-gray-400">{fs.frequency} · Grade {fs.grade}</div>
                 </div>
-                <div className="font-bold text-primary text-sm">Rs. {fs.amount.toLocaleString()}</div>
+                <div className="font-bold text-primary text-sm">Rs. {Number(fs.amount || 0).toLocaleString()}</div>
               </div>
             ))}
             {feeStructures.length === 0 && (
@@ -1857,7 +1918,7 @@ export const StudentFees = () => {
                   <td className="table-td text-sm font-semibold text-slate-700">{t.feeName}</td>
                   <td className="table-td text-center text-xs text-gray-400 font-medium">{t.date}</td>
                   <td className="table-td text-center text-xs text-gray-500 font-medium">{t.paymentMethod}</td>
-                  <td className="table-td text-center text-sm font-bold text-primary">Rs. {t.amount.toLocaleString()}</td>
+                  <td className="table-td text-center text-sm font-bold text-primary">Rs. {Number(t.amount || 0).toLocaleString()}</td>
                   <td className="table-td text-center">
                     <span className={t.status === 'success' ? 'badge-success' : 'badge-danger'}>
                       {t.status}
@@ -2202,13 +2263,15 @@ export const StudentProfile = () => {
                 {editing ? (
                   <input
                     type="tel"
+                    maxLength={10}
+                    pattern="[0-9]{10}"
                     value={form.guardianPhone}
-                    onChange={e => setForm(f => ({ ...f, guardianPhone: e.target.value }))}
-                    className="input text-xs py-1.5 px-3 w-40 text-right border border-slate-200 focus:border-primary rounded-lg focus:ring-1 focus:ring-primary/20"
-                    placeholder="+92 300 000 0000"
+                    onChange={e => setForm(f => ({ ...f, guardianPhone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                    className="input text-xs py-1.5 px-3 w-40 text-right border border-slate-200 focus:border-primary rounded-lg focus:ring-1 focus:ring-primary/20 font-mono"
+                    placeholder="9876543210"
                   />
                 ) : (
-                  <span className="text-xs font-semibold text-slate-700">{profile?.guardianPhone}</span>
+                  <span className="text-xs font-semibold text-slate-700 font-mono">{profile?.guardianPhone}</span>
                 )}
               </div>
               {/* Blood Group — editable */}
@@ -3683,7 +3746,7 @@ export const StudentLibrary = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm font-medium">
-                {data.books.map(b => (
+                {(data?.books || []).map(b => (
                   <tr key={b.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-4 px-6">
                       <div className="font-bold text-slate-900">{b.bookTitle}</div>

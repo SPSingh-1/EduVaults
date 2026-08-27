@@ -34,5 +34,11 @@ namespace EduVault.Core.DTOs
 
         public string Address { get; set; } = string.Empty;
         public string DateOfBirth { get; set; } = string.Empty;
+
+        // Inward TC Details (if student is transferring from another school)
+        public string? PreviousSchoolName { get; set; }
+        public string? PreviousTcNumber { get; set; }
+        public string? PreviousTcDate { get; set; }
+        public string? PreviousTcDocumentUrl { get; set; }
     }
 }

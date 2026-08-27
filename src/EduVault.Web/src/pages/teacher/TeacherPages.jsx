@@ -40,6 +40,7 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
+  AlertCircle,
   Send,
   Plus
 } from 'lucide-react';
@@ -96,6 +97,22 @@ export const TeacherLayout = () => {
       <main className="main-content flex-1"><Outlet /></main>
     </div>
   );
+};
+
+const CustomTeacherTooltip = ({ active, payload, label, isSalary }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur text-white px-3 py-2 rounded-xl shadow-lg border border-slate-700/50 text-xs">
+        <p className="font-semibold text-slate-200">{label || payload[0]?.payload?.className || payload[0]?.payload?.date || payload[0]?.payload?.month || payload[0]?.name}</p>
+        {payload.map((entry, index) => (
+          <p key={`item-${index}`} className="font-bold font-mono mt-0.5" style={{ color: entry.color || entry.stroke || '#60a5fa' }}>
+            {entry.name}: {isSalary ? `₹${Number(entry.value || 0).toLocaleString()}` : entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
 };
 
 // --- Teacher Dashboard ---
@@ -745,9 +762,12 @@ export const TeacherStudents = () => {
 
       const studRes = await apiClient.get('/academics/students');
 
+      const clsData = Array.isArray(clsRes.data) ? clsRes.data : [];
+      const studData = Array.isArray(studRes.data) ? studRes.data : [];
+
       // Filter roster to show students matching classes taught by the teacher
-      const taughtClassIds = clsRes.data.map(c => c.id);
-      const taughtStudents = studRes.data.filter(s => taughtClassIds.includes(s.classId));
+      const taughtClassIds = clsData.map(c => c.id);
+      const taughtStudents = studData.filter(s => taughtClassIds.includes(s.classId));
       setStudents(taughtStudents);
     } catch (err) {
       console.error(err);
@@ -1082,13 +1102,14 @@ export const Attendance = () => {
   const fetchClasses = async () => {
     try {
       const res = await apiClient.get('/academics/teacher/classes');
-      setClasses(res.data);
+      const classesList = Array.isArray(res.data) ? res.data : [];
+      setClasses(classesList);
       // Auto-select the class where teacher is class teacher
-      const classTeacherClass = res.data.find(c => c.isClassTeacher);
+      const classTeacherClass = classesList.find(c => c.isClassTeacher);
       if (classTeacherClass) {
         setSelectedClassId(classTeacherClass.id);
-      } else if (res.data.length > 0) {
-        setSelectedClassId(res.data[0].id);
+      } else if (classesList.length > 0) {
+        setSelectedClassId(classesList[0].id);
       }
     } catch (err) {
       console.error('Failed to load classes:', err);
@@ -1489,7 +1510,8 @@ export const MarksEntry = () => {
       }
       try {
         const res = await apiClient.get(`/academics/class-subjects/${student.classId}`);
-        const mapped = res.data.map(cs => ({
+        const list = Array.isArray(res.data) ? res.data : [];
+        const mapped = list.map(cs => ({
           id: cs.subjectId,
           name: cs.subjectName,
           code: cs.subjectCode
@@ -1524,8 +1546,11 @@ export const MarksEntry = () => {
       await apiClient.post('/exams/results/student-marks', payload);
 
       // Send notices via Express auxiliary service to Student & Admin
-      const studentObj = students.find(s => s.id === selectedStudentId);
-      const teacherUser = JSON.parse(localStorage.getItem('eduvault_user'));
+      const studentObj = (students || []).find(s => s.id === selectedStudentId);
+      let teacherUser = null;
+      try {
+        teacherUser = JSON.parse(localStorage.getItem('eduvault_user') || 'null');
+      } catch (e) {}
       const teacherName = teacherUser ? `${teacherUser.firstName} ${teacherUser.lastName}` : 'Class Teacher';
 
       try {
@@ -3952,12 +3977,44 @@ export const TeacherLeaves = () => {
 
   const handleApply = async (e) => {
     e.preventDefault();
-    if (!form.reason) {
+    setError('');
+    if (!form.reason || !form.reason.trim()) {
       setError('Please provide a reason for the leave application.');
       return;
     }
+
+    const reqFrom = form.fromDate;
+    const reqTo = form.dayType === 'HalfDay' ? form.fromDate : form.toDate;
+
+    if (reqFrom > reqTo) {
+      setError('From date cannot be after To date.');
+      return;
+    }
+
+    // Client-side duplicate / overlap check against existing active leave requests
+    const conflicting = leaves.find(l => {
+      if (l.status === 'Rejected') return false;
+      const lFrom = (l.fromDate || '').split('T')[0];
+      const lTo = (l.toDate || '').split('T')[0];
+      const overlaps = lFrom <= reqTo && lTo >= reqFrom;
+      if (!overlaps) return false;
+
+      // If both are HalfDay on same date but different sessions (Morning vs Afternoon), allow both
+      if (l.dayType === 'HalfDay' && form.dayType === 'HalfDay' && lFrom === reqFrom) {
+        return (l.halfDaySession || 'Morning') === form.halfDaySession;
+      }
+      return true;
+    });
+
+    if (conflicting) {
+      const conflictFrom = new Date(conflicting.fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const conflictTo = new Date(conflicting.toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const dateText = conflictFrom === conflictTo ? conflictFrom : `${conflictFrom} to ${conflictTo}`;
+      setError(`A leave request (${conflicting.leaveType} - ${conflicting.status}) already exists on ${dateText}. Multiple leaves cannot be applied for the same day.`);
+      return;
+    }
+
     setSubmitting(true);
-    setError('');
     try {
       await apiClient.post('/academics/leave/apply', {
         leaveType: form.leaveType,
@@ -3980,7 +4037,7 @@ export const TeacherLeaves = () => {
       fetchLeaveData();
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to submit leave application.');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Failed to submit leave application.');
     } finally {
       setSubmitting(false);
     }
@@ -4166,6 +4223,12 @@ export const TeacherLeaves = () => {
               <button onClick={() => setShowApplyModal(false)} className="text-white/80 hover:text-white">✕</button>
             </div>
             <form onSubmit={handleApply} className="p-6 space-y-4">
+              {error && (
+                <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-2xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Leave Type</label>
@@ -4345,7 +4408,7 @@ export const TeacherLibrary = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm font-medium">
-                {data.books.map(b => (
+                {(data?.books || []).map(b => (
                   <tr key={b.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-4 px-6">
                       <div className="font-bold text-slate-900">{b.bookTitle}</div>

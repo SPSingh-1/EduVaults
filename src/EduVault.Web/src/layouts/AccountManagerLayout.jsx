@@ -10,14 +10,18 @@ import {
   Layers, 
   CreditCard, 
   User,
-  PieChart
+  Users,
+  PieChart,
+  FileCheck
 } from 'lucide-react';
 
 const accountLinks = [
   { pageKey: 'account.dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/account/dashboard' },
+  { pageKey: 'account.employees', icon: Users, label: 'Staff & Employees', path: '/account/employees' },
+  { pageKey: 'account.fee_rules', icon: Sliders, label: 'Fee & Financial Rules', path: '/account/fee-rules' },
   { pageKey: 'account.billing', icon: Receipt, label: 'School Billing & Fees', path: '/account/billing' },
-  { pageKey: 'account.salaries', icon: DollarSign, label: 'Teacher Salaries', path: '/account/salaries' },
-  { pageKey: 'account.salary_rules', icon: Sliders, label: 'Salary Rules (HRA/PF)', path: '/account/salary-rules' },
+  { pageKey: 'account.salaries', icon: DollarSign, label: 'Salaries & Payroll', path: '/account/salaries' },
+  { pageKey: 'account.salary_rules', icon: FileCheck, label: 'Salary Rules (HRA/PF)', path: '/account/salary-rules' },
   { pageKey: 'account.leaves', icon: CalendarCheck, label: 'Leave Requests', path: '/account/leaves' },
   { pageKey: 'account.quotas', icon: Layers, label: 'Leave Quotas (CL/PL)', path: '/account/quotas' },
   { pageKey: 'account.expenses', icon: CreditCard, label: 'Expenses & Vouchers', path: '/account/expenses' },

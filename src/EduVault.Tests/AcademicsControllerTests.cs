@@ -69,7 +69,7 @@ namespace EduVault.Tests
             var school = new School { Id = _schoolId, Name = "Test School" };
             await _context.Schools.AddAsync(school);
 
-            var user = new User { Id = studentId, FirstName = "Aarav", LastName = "Sharma" };
+            var user = new User { Id = studentId, SchoolId = _schoolId, Role = "student", FirstName = "Aarav", LastName = "Sharma" };
             await _context.Users.AddAsync(user);
 
             var student = new Student { UserId = studentId, User = user, GuardianPhone = "+919876543210" };

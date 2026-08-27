@@ -650,19 +650,31 @@ namespace EduVault.Api.Controllers
             // Must have taken all scheduled exams
             if (results.Count() < exams.Count()) return;
 
-            bool hasFail = false;
-            foreach (var r in results)
+            int failedCount = results.Count(r => !r.MarksObtained.HasValue || r.MarksObtained.Value < 40);
+            enrollment.FailedSubjectsCount = failedCount;
+            bool hasFail = failedCount > 0;
+
+            if (hasFail)
             {
-                if (!r.MarksObtained.HasValue || r.MarksObtained.Value < 40)
+                if (failedCount >= 3)
                 {
-                    hasFail = true;
-                    break;
+                    enrollment.Status = "RETAINED_REPEAT";
+                    enrollment.AcademicOutcomeRemark = $"Failed in {failedCount} subjects. Critical Fail - Retained for repeat academic year.";
                 }
+                else
+                {
+                    enrollment.Status = "COMPARTMENT_PENDING";
+                    enrollment.AcademicOutcomeRemark = $"Failed in {failedCount} subject(s). Eligible for Compartment / Supplementary re-examination.";
+                }
+                _unitOfWork.Enrollments.Update(enrollment);
+                await _unitOfWork.CompleteAsync();
+                return;
             }
 
-            if (hasFail) return;
-
             // All exams passed! Promote.
+            enrollment.Status = "PROMOTED";
+            enrollment.AcademicOutcomeRemark = "Passed all subjects successfully.";
+
             // Grade is stored as a string; parse it numerically so "5" -> "6" (a naive
             // string "+ 1" would produce "51" and never match the next grade's class).
             if (!int.TryParse(currentClass.Grade?.Trim(), out var currentGradeNum)) return; // non-numeric grade: cannot auto-promote
@@ -764,15 +776,18 @@ namespace EduVault.Api.Controllers
         }
 
         [HttpGet("student/academic-history")]
-        [Authorize(Roles = "student,schooladmin")]
+        [Authorize(Roles = "student,schooladmin,teacher,receptionist")]
         public async Task<IActionResult> GetStudentAcademicHistory([FromQuery] Guid? studentId)
         {
             var userId = GetUserId();
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
-            Guid targetStudentId = role == "schooladmin" && studentId.HasValue ? studentId.Value : userId;
+            Guid targetStudentId = (role == "schooladmin" || role == "teacher" || role == "receptionist") && studentId.HasValue ? studentId.Value : userId;
             var schoolId = GetSchoolId();
 
-            var currentEnrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == targetStudentId && e.Status == "ACTIVE")).FirstOrDefault();
+            var enrollments = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == targetStudentId))
+                .OrderByDescending(e => e.EnrollDate)
+                .ToList();
+            var currentEnrollment = enrollments.FirstOrDefault();
             Guid? currentClassId = currentEnrollment?.ClassId;
 
             var examResults = await _unitOfWork.ExamResults.FindAsync(er => er.StudentId == targetStudentId);
@@ -785,6 +800,7 @@ namespace EduVault.Api.Controllers
             var classes = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
             var subjects = await _unitOfWork.Subjects.FindAsync(s => s.SchoolId == schoolId);
 
+            // Filter out current class exam results if the student is actively enrolled in that class
             var pastResults = examResults
                 .Select(r => new { Result = r, Exam = exams.FirstOrDefault(e => e.Id == r.ExamId) })
                 .Where(x => x.Exam != null && (currentClassId == null || x.Exam.ClassId != currentClassId))
@@ -799,13 +815,27 @@ namespace EduVault.Api.Controllers
                 .GroupBy(x => x.Exam.ClassId)
                 .Select(g => {
                     var classObj = classes.FirstOrDefault(c => c.Id == g.Key);
-                    var className = classObj != null ? $"Class {classObj.Grade} - {classObj.Section}" : "Unknown Class";
+                    var className = classObj != null ? $"Class {classObj.Grade} - {classObj.Section}" : "Previous Grade";
+
+                    var pastEnrollment = enrollments.FirstOrDefault(e => e.ClassId == g.Key);
 
                     var finalExamIds = exams.Where(e => e.ClassId == g.Key && (e.ExamType == "Final Examination" || e.ExamType == "Semester Examination")).Select(e => e.Id).ToList();
                     var finalResultsForClass = g.Where(x => finalExamIds.Contains(x.Result.ExamId)).ToList();
+                    if (!finalResultsForClass.Any())
+                    {
+                        finalResultsForClass = g.ToList();
+                    }
 
                     decimal gpa = 0;
-                    string finalResult = "No Exam Records";
+                    string finalResult = pastEnrollment?.Status switch
+                    {
+                        "PROMOTED" => "Pass (Promoted)",
+                        "ADMIN_PROMOTED" => "Pass (Admin Discretion)",
+                        "RETAINED_REPEAT" => "Fail (Retained)",
+                        "COMPARTMENT" => "Compartment",
+                        _ => "Evaluated"
+                    };
+
                     if (finalResultsForClass.Any())
                     {
                         decimal totalPoints = 0;
@@ -832,18 +862,21 @@ namespace EduVault.Api.Controllers
                             }
                         }
                         gpa = count > 0 ? Math.Round(totalPoints / count, 2) : 0;
-                        finalResult = hasFail ? "Fail" : (count > 0 ? "Pass" : "No Exam Records");
+                        if (pastEnrollment == null || pastEnrollment.Status == "ACTIVE")
+                        {
+                            finalResult = hasFail ? "Fail" : (count > 0 ? "Pass" : "No Exam Records");
+                        }
                     }
 
                     var subjectDetails = g.Select(x => {
                         var subject = subjects.FirstOrDefault(s => s.Id == x.Exam.SubjectId);
                         return new {
-                            SubjectName = subject?.Name ?? "Unknown Subject",
-                            ExamType = x.Exam.ExamType,
+                            SubjectName = subject?.Name ?? "General Subject",
+                            ExamType = x.Exam.ExamType ?? "Semester Examination",
                             InternalMarks = x.Result.PracticalMarks ?? 0,
                             TheoryMarks = x.Result.TheoryMarks ?? 0,
                             TotalMarks = x.Result.MarksObtained ?? 0,
-                            Grade = x.Result.Grade,
+                            Grade = x.Result.Grade ?? ((x.Result.MarksObtained ?? 0) >= 40 ? "Pass" : "F"),
                             Status = (x.Result.MarksObtained ?? 0) >= 40 ? "Pass" : "Fail"
                         };
                     }).ToList();
@@ -851,6 +884,9 @@ namespace EduVault.Api.Controllers
                     return new {
                         ClassId = g.Key,
                         ClassName = className,
+                        AcademicYear = pastEnrollment?.AcademicYear ?? "Past Session",
+                        EnrollmentStatus = pastEnrollment?.Status ?? "Archived",
+                        AcademicRemark = pastEnrollment?.AcademicOutcomeRemark ?? (finalResult.Contains("Fail") ? "Academic Retention" : "Promoted to Next Grade"),
                         Gpa = gpa,
                         FinalResult = finalResult,
                         Subjects = subjectDetails

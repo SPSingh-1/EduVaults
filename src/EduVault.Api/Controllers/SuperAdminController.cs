@@ -60,6 +60,7 @@ namespace EduVault.Api.Controllers
                     s.City,
                     s.HasAccountModule,
                     s.HasLibraryModule,
+                    s.HasReceptionistModule,
                     StudentsCount = studentCount,
                     AdminEmail = adminUser?.Email,
                     AdminName = adminUser?.FirstName ?? "N/A",
@@ -242,10 +243,11 @@ namespace EduVault.Api.Controllers
 
             school.HasAccountModule = input.HasAccountModule;
             school.HasLibraryModule = input.HasLibraryModule;
+            school.HasReceptionistModule = input.HasReceptionistModule;
             _unitOfWork.Schools.Update(school);
             await _unitOfWork.CompleteAsync();
 
-            return Ok(new { success = true, hasAccountModule = school.HasAccountModule, hasLibraryModule = school.HasLibraryModule });
+            return Ok(new { success = true, hasAccountModule = school.HasAccountModule, hasLibraryModule = school.HasLibraryModule, hasReceptionistModule = school.HasReceptionistModule });
         }
 
         [HttpGet("subscriptions")]
@@ -895,6 +897,65 @@ namespace EduVault.Api.Controllers
 
             return Ok(new { success = true });
         }
+
+        [HttpGet("schools/{id}/triggers")]
+        public async Task<IActionResult> GetSchoolTriggers(Guid id)
+        {
+            var school = await _unitOfWork.Schools.GetByIdAsync(id);
+            if (school == null) return NotFound(new { error = "School not found" });
+
+            return Ok(new
+            {
+                schoolId = school.Id,
+                schoolName = school.Name,
+                schoolUpiId = school.SchoolUpiId,
+                razorpayKeyId = school.RazorpayKeyId,
+                paymentProvider = school.PaymentProvider ?? "razorpay",
+                whatsAppProvider = school.WhatsAppProvider ?? "none",
+                whatsAppFeeReceiptsEnabled = school.WhatsAppFeeReceiptsEnabled,
+                whatsAppFeeRemindersEnabled = school.WhatsAppFeeRemindersEnabled,
+                whatsAppLibraryAlertsEnabled = school.WhatsAppLibraryAlertsEnabled,
+                whatsAppGatePassAlertsEnabled = school.WhatsAppGatePassAlertsEnabled,
+                whatsAppAdmissionInquiryEnabled = school.WhatsAppAdmissionInquiryEnabled,
+                whatsAppTcNoticeEnabled = school.WhatsAppTcNoticeEnabled
+            });
+        }
+
+        [HttpPut("schools/{id}/triggers")]
+        public async Task<IActionResult> UpdateSchoolTriggers(Guid id, [FromBody] SchoolTriggersInput input)
+        {
+            var school = await _unitOfWork.Schools.GetByIdAsync(id);
+            if (school == null) return NotFound(new { error = "School not found" });
+
+            if (input.WhatsAppFeeReceiptsEnabled.HasValue) school.WhatsAppFeeReceiptsEnabled = input.WhatsAppFeeReceiptsEnabled.Value;
+            if (input.WhatsAppFeeRemindersEnabled.HasValue) school.WhatsAppFeeRemindersEnabled = input.WhatsAppFeeRemindersEnabled.Value;
+            if (input.WhatsAppLibraryAlertsEnabled.HasValue) school.WhatsAppLibraryAlertsEnabled = input.WhatsAppLibraryAlertsEnabled.Value;
+            if (input.WhatsAppGatePassAlertsEnabled.HasValue) school.WhatsAppGatePassAlertsEnabled = input.WhatsAppGatePassAlertsEnabled.Value;
+            if (input.WhatsAppAdmissionInquiryEnabled.HasValue) school.WhatsAppAdmissionInquiryEnabled = input.WhatsAppAdmissionInquiryEnabled.Value;
+            if (input.WhatsAppTcNoticeEnabled.HasValue) school.WhatsAppTcNoticeEnabled = input.WhatsAppTcNoticeEnabled.Value;
+
+            if (!string.IsNullOrWhiteSpace(input.SchoolUpiId)) school.SchoolUpiId = input.SchoolUpiId;
+            if (!string.IsNullOrWhiteSpace(input.RazorpayKeyId)) school.RazorpayKeyId = input.RazorpayKeyId;
+            if (!string.IsNullOrWhiteSpace(input.RazorpayKeySecret)) school.RazorpayKeySecret = input.RazorpayKeySecret;
+
+            _unitOfWork.Schools.Update(school);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new { success = true, message = "School notification triggers & gateway updated." });
+        }
+    }
+
+    public class SchoolTriggersInput
+    {
+        public bool? WhatsAppFeeReceiptsEnabled { get; set; }
+        public bool? WhatsAppFeeRemindersEnabled { get; set; }
+        public bool? WhatsAppLibraryAlertsEnabled { get; set; }
+        public bool? WhatsAppGatePassAlertsEnabled { get; set; }
+        public bool? WhatsAppAdmissionInquiryEnabled { get; set; }
+        public bool? WhatsAppTcNoticeEnabled { get; set; }
+        public string? SchoolUpiId { get; set; }
+        public string? RazorpayKeyId { get; set; }
+        public string? RazorpayKeySecret { get; set; }
     }
 
 
@@ -973,5 +1034,6 @@ namespace EduVault.Api.Controllers
     {
         public bool HasAccountModule { get; set; }
         public bool HasLibraryModule { get; set; }
+        public bool HasReceptionistModule { get; set; }
     }
 }

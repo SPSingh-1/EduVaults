@@ -11,7 +11,9 @@ namespace EduVault.Core.Entities
         public DateTime IssueDate { get; set; } = DateTime.UtcNow;
         public DateTime DueDate { get; set; }
         public decimal Amount { get; set; }
-        public string Status { get; set; } = "Pending"; // Pending, Paid, Overdue, Cancelled
+        public decimal PaidAmount { get; set; } = 0.0m;
+        public decimal LateFineAmount { get; set; } = 0.0m;
+        public string Status { get; set; } = "Pending"; // Pending, Partially Paid, Paid, Overdue, Cancelled
 
         // Navigation properties
         public virtual Student? Student { get; set; }

@@ -61,6 +61,7 @@ builder.Services.AddDbContext<EduVaultDbContext>(options =>
 // Register repositories and services
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPayrollCalculationService, PayrollCalculationService>();
 builder.Services.AddScoped<WhatsAppService>();
 builder.Services.AddHostedService<FeeAlertBackgroundService>();
 builder.Services.AddSingleton<IWhatsAppQueue, WhatsAppQueue>();
@@ -192,6 +193,47 @@ using (var scope = app.Services.CreateScope())
         catch (Exception migEx)
         {
             Console.WriteLine($"Migration note: {migEx.Message}");
+        }
+
+        // Ensure newly added columns exist in PostgreSQL
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""HasReceptionistModule"" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""SchoolUpiId"" text NULL;
+                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppFeeReceiptsEnabled"" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppFeeRemindersEnabled"" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppLibraryAlertsEnabled"" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppGatePassAlertsEnabled"" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppAdmissionInquiryEnabled"" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppTcNoticeEnabled"" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""PreviousSchoolName"" text NULL;
+                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""PreviousTcNumber"" text NULL;
+                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""PreviousTcDate"" text NULL;
+                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""PreviousTcDocumentUrl"" text NULL;
+                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""OutwardTcNumber"" text NULL;
+                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""OutwardTcIssuedDate"" timestamp with time zone NULL;
+                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""TcReason"" text NULL;
+                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""TcConductRemark"" text NULL;
+
+                ALTER TABLE ""Invoices"" ADD COLUMN IF NOT EXISTS ""LateFineAmount"" numeric NOT NULL DEFAULT 0.0;
+                ALTER TABLE ""Invoices"" ADD COLUMN IF NOT EXISTS ""PaidAmount"" numeric NOT NULL DEFAULT 0.0;
+
+                ALTER TABLE ""FeeStructures"" ADD COLUMN IF NOT EXISTS ""FeeCategory"" text NOT NULL DEFAULT 'Standard';
+                ALTER TABLE ""FeeStructures"" ADD COLUMN IF NOT EXISTS ""LateFeePerDay"" numeric NOT NULL DEFAULT 0.0;
+                ALTER TABLE ""FeeStructures"" ADD COLUMN IF NOT EXISTS ""GracePeriodDays"" integer NOT NULL DEFAULT 0;
+                ALTER TABLE ""FeeStructures"" ADD COLUMN IF NOT EXISTS ""IsCustomPaymentAllowed"" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE ""FeeStructures"" ADD COLUMN IF NOT EXISTS ""MinPartialPaymentAmount"" numeric NOT NULL DEFAULT 100.0;
+
+                ALTER TABLE ""Enrollments"" ADD COLUMN IF NOT EXISTS ""FailedSubjectsCount"" integer NOT NULL DEFAULT 0;
+                ALTER TABLE ""Enrollments"" ADD COLUMN IF NOT EXISTS ""AcademicOutcomeRemark"" text NULL;
+                ALTER TABLE ""Enrollments"" ADD COLUMN IF NOT EXISTS ""IsAdminOverride"" boolean NOT NULL DEFAULT FALSE;
+                ALTER TABLE ""Enrollments"" ADD COLUMN IF NOT EXISTS ""OverrideReason"" text NULL;
+            ");
+        }
+        catch (Exception colEx)
+        {
+            Console.WriteLine($"Column check note: {colEx.Message}");
         }
 
         // ─── Seed Super Admin (required for platform operation) ────────────────

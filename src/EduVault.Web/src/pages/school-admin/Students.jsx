@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
 
-const sc = { ACTIVE: 'badge-success', WITHDRAWN: 'badge-gray', SUSPENDED: 'badge-danger' };
-
 const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
   const [focused, setFocused] = useState(false);
   const formatDisplay = (val) => {
@@ -29,6 +27,16 @@ const DateFilterInput = ({ label, value, onChange, className = '', style = {} })
   );
 };
 
+const sc = {
+  ACTIVE: 'badge-success',
+  PROMOTED: 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200',
+  ADMIN_PROMOTED: 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200',
+  COMPARTMENT_PENDING: 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200',
+  RETAINED_REPEAT: 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200',
+  WITHDRAWN: 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200',
+  SUSPENDED: 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200'
+};
+
 const getTodayStr = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -50,11 +58,28 @@ const Students = () => {
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewStudentData, setViewStudentData] = useState(null);
+
+  // Promotion Modal state
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [promotingStudent, setPromotingStudent] = useState(null);
   const [promoteNextClassId, setPromoteNextClassId] = useState('');
+  const [promoteAcademicYear, setPromoteAcademicYear] = useState('2026-27');
+  const [promoteAdminOverride, setPromoteAdminOverride] = useState(false);
+  const [promoteOverrideReason, setPromoteOverrideReason] = useState('');
+  const [studentOutcome, setStudentOutcome] = useState(null);
+  const [loadingOutcome, setLoadingOutcome] = useState(false);
   const [promoteError, setPromoteError] = useState('');
   const [promoting, setPromoting] = useState(false);
+
+  // Retention (Fail/Repeat) Modal state
+  const [showRetainModal, setShowRetainModal] = useState(false);
+  const [retainingStudent, setRetainingStudent] = useState(null);
+  const [retainClassId, setRetainClassId] = useState('');
+  const [retainNewAcademicYear, setRetainNewAcademicYear] = useState('2026-27');
+  const [retainReason, setRetainReason] = useState('');
+  const [retainSendWhatsApp, setRetainSendWhatsApp] = useState(true);
+  const [retaining, setRetaining] = useState(false);
+  const [retainError, setRetainError] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,12 +87,28 @@ const Students = () => {
   const [capacityWarning, setCapacityWarning] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
 
+  // Transfer Certificate (TC) & No-Dues Clearance State
+  const [showTcModal, setShowTcModal] = useState(false);
+  const [tcStudent, setTcStudent] = useState(null);
+  const [clearanceData, setClearanceData] = useState(null);
+  const [loadingClearance, setLoadingClearance] = useState(false);
+  const [issuingTc, setIssuingTc] = useState(false);
+  const [tcError, setTcError] = useState('');
+  const [tcSuccessResult, setTcSuccessResult] = useState(null);
+  const [tcForm, setTcForm] = useState({
+    reason: 'Parent Request / Relocation to another city',
+    conductRemark: 'Exemplary Conduct & Good Academic Record',
+    adminOverride: false,
+    adminOverrideNote: ''
+  });
+
   // Form State
   const [editMode, setEditMode] = useState(false);
   const [editStudentId, setEditStudentId] = useState(null);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
+
     email: '',
     password: 'Student123!', // default
     classId: '',
@@ -77,7 +118,11 @@ const Students = () => {
     guardianRelationship: 'Father',
     address: '',
     dateOfBirth: '',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    previousSchoolName: '',
+    previousTcNumber: '',
+    previousTcDate: '',
+    previousTcDocumentUrl: ''
   });
 
   // Bulk Import state
@@ -128,7 +173,11 @@ const Students = () => {
       guardianRelationship: 'Father',
       address: '',
       dateOfBirth: '',
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      previousSchoolName: '',
+      previousTcNumber: '',
+      previousTcDate: '',
+      previousTcDocumentUrl: ''
     });
     setEditMode(false);
     setEditStudentId(null);
@@ -200,7 +249,11 @@ const Students = () => {
         guardianRelationship: student.guardianRelationship || 'Father',
         address: student.address || '',
         dateOfBirth: student.dateOfBirth || '',
-        status: student.status || 'ACTIVE'
+        status: student.status || 'ACTIVE',
+        previousSchoolName: student.previousSchoolName || '',
+        previousTcNumber: student.previousTcNumber || '',
+        previousTcDate: student.previousTcDate || '',
+        previousTcDocumentUrl: student.previousTcDocumentUrl || ''
       });
       setEditStudentId(id);
       setEditMode(true);
@@ -221,11 +274,16 @@ const Students = () => {
     }
   };
 
-  const handlePromoteClick = (student) => {
+  const handlePromoteClick = async (student) => {
     setPromotingStudent(student);
     setPromoteError('');
-    
-    const currentGradeStr = student.class.replace('Class ', '').trim();
+    setPromoteAdminOverride(false);
+    setPromoteOverrideReason('');
+    setStudentOutcome(null);
+    setLoadingOutcome(true);
+    setShowPromoteModal(true);
+
+    const currentGradeStr = (student.class || '').replace('Class ', '').trim();
     const currentGradeNum = parseInt(currentGradeStr, 10);
     if (!isNaN(currentGradeNum)) {
       const nextGradeNum = currentGradeNum + 1;
@@ -244,8 +302,61 @@ const Students = () => {
     } else {
       setPromoteNextClassId('');
     }
-    
-    setShowPromoteModal(true);
+
+    try {
+      const res = await apiClient.get(`/academics/students/${student.id}/academic-outcome`);
+      setStudentOutcome(res.data);
+      if (res.data.failedSubjectsCount > 0) {
+        setPromoteAdminOverride(true);
+      }
+    } catch (err) {
+      console.error('Error fetching academic outcome:', err);
+    } finally {
+      setLoadingOutcome(false);
+    }
+  };
+
+  const handleOpenTcModal = async (student) => {
+    setTcStudent(student);
+    setClearanceData(null);
+    setTcSuccessResult(null);
+    setTcError('');
+    setTcForm({
+      reason: 'Parent Request / Relocation to another city',
+      conductRemark: 'Exemplary Conduct & Good Academic Record',
+      adminOverride: false,
+      adminOverrideNote: ''
+    });
+    setShowTcModal(true);
+    setLoadingClearance(true);
+    try {
+      const res = await apiClient.get(`/academics/students/${student.id}/clearance-check`);
+      setClearanceData(res.data);
+    } catch (err) {
+      setTcError(err.response?.data?.error || 'Failed to check student clearance.');
+    } finally {
+      setLoadingClearance(false);
+    }
+  };
+
+  const handleGenerateTc = async () => {
+    if (!tcStudent) return;
+    setIssuingTc(true);
+    setTcError('');
+    try {
+      const res = await apiClient.post(`/academics/students/${tcStudent.id}/generate-tc`, {
+        reason: tcForm.reason,
+        conductRemark: tcForm.conductRemark,
+        adminOverride: tcForm.adminOverride,
+        adminOverrideNote: tcForm.adminOverrideNote
+      });
+      setTcSuccessResult(res.data);
+      fetchData();
+    } catch (err) {
+      setTcError(err.response?.data?.error || 'Failed to generate Transfer Certificate.');
+    } finally {
+      setIssuingTc(false);
+    }
   };
 
   const handlePromoteSubmit = async () => {
@@ -254,7 +365,10 @@ const Students = () => {
     setPromoteError('');
     try {
       await apiClient.post(`/academics/students/${promotingStudent.id}/promote`, {
-        nextClassId: promoteNextClassId
+        nextClassId: promoteNextClassId,
+        academicYear: promoteAcademicYear,
+        adminOverride: promoteAdminOverride,
+        overrideReason: promoteOverrideReason
       });
       setShowPromoteModal(false);
       fetchData();
@@ -264,6 +378,50 @@ const Students = () => {
       setPromoting(false);
     }
   };
+
+  const handleRetainClick = async (student) => {
+    setRetainingStudent(student);
+    setRetainError('');
+    setStudentOutcome(null);
+    setLoadingOutcome(true);
+    setRetainClassId(student.classId || '');
+    setRetainReason('Failed core subjects evaluation - Retained in current grade for academic reinforcement.');
+    setRetainSendWhatsApp(true);
+    setShowRetainModal(true);
+
+    try {
+      const res = await apiClient.get(`/academics/students/${student.id}/academic-outcome`);
+      setStudentOutcome(res.data);
+      if (res.data.classId) {
+        setRetainClassId(res.data.classId);
+      }
+    } catch (err) {
+      console.error('Error fetching outcome for retention:', err);
+    } finally {
+      setLoadingOutcome(false);
+    }
+  };
+
+  const handleRetainSubmit = async () => {
+    if (!retainingStudent) return;
+    setRetaining(true);
+    setRetainError('');
+    try {
+      await apiClient.post(`/academics/students/${retainingStudent.id}/retain`, {
+        currentClassId: retainClassId || null,
+        newAcademicYear: retainNewAcademicYear,
+        retentionReason: retainReason,
+        sendParentWhatsAppAlert: retainSendWhatsApp
+      });
+      setShowRetainModal(false);
+      fetchData();
+    } catch (err) {
+      setRetainError(err.response?.data?.error || 'Failed to retain student in current grade.');
+    } finally {
+      setRetaining(false);
+    }
+  };
+
 
   const parseCSV = (text) => {
     const lines = text.split(/\r\n|\n/);
@@ -592,9 +750,9 @@ const Students = () => {
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
                           {s.name ? s.name[0] : '?'}
                         </div>
-                        <div>
-                          <div className="font-semibold text-primary text-sm">{s.name}</div>
-                          <div className="text-xs text-gray-400">{s.email}</div>
+                        <div className="min-w-0 max-w-[200px]">
+                          <div className="font-semibold text-primary text-sm truncate" title={s.name}>{s.name}</div>
+                          <div className="text-xs text-gray-400 truncate" title={s.email}>{s.email}</div>
                         </div>
                       </div>
                     </td>
@@ -605,25 +763,64 @@ const Students = () => {
                     <td className="table-td text-sm text-gray-500">{s.dateOfBirth || 'N/A'}</td>
                     <td className="table-td"><span className={sc[s.status] || 'badge-success'}>{s.status}</span></td>
                     <td className="table-td">
-                      <div className="flex items-center gap-1.5">
-                        <button onClick={() => handleView(s.id)} className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105" title="View Profile">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Promote Button */}
+                        <button 
+                          onClick={() => handlePromoteClick(s)} 
+                          className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105 text-xs font-bold" 
+                          title="Promote Student (Normal / Admin Direct Override)"
+                        >
+                          🚀 Promote
+                        </button>
+
+                        {/* Retain (Fail / Repeat Year) Button */}
+                        <button 
+                          onClick={() => handleRetainClick(s)} 
+                          className="p-1.5 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/60 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105 text-xs font-bold" 
+                          title="Retain Student (Fail / Repeat Year Detention)"
+                        >
+                          🔄 Retain
+                        </button>
+
+                        {/* View Profile */}
+                        <button onClick={() => handleView(s.id)} className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105" title="View Profile">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
                         </button>
-                        <button onClick={() => handleEdit(s.id)} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105" title="Edit Profile">
+
+                        {/* Edit Profile */}
+                        <button onClick={() => handleEdit(s.id)} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105" title="Edit Profile">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
-                        <button onClick={() => handleDelete(s.id)} className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow hover:scale-105" title="Delete Profile">
+
+                        {/* Transfer Certificate (TC) */}
+                        <button 
+                          onClick={() => handleOpenTcModal(s)} 
+                          className={`p-1.5 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105 ${
+                            s.status === 'WITHDRAWN' 
+                              ? 'text-purple-600 bg-purple-50 hover:bg-purple-100' 
+                              : 'text-rose-600 bg-rose-50 hover:bg-rose-100'
+                          }`} 
+                          title={s.status === 'WITHDRAWN' ? 'View Issued Transfer Certificate (TC)' : 'Issue Transfer Certificate & No-Dues Clearance'}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </button>
+
+                        {/* Delete Profile */}
+                        <button onClick={() => handleDelete(s.id)} className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105" title="Delete Profile">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
                       </div>
                     </td>
+
                   </tr>
                 ))}
                 {filtered.length === 0 && (
@@ -665,9 +862,9 @@ const Students = () => {
                     </span>
                   </div>
                 </div>
-                <div>
+                <div className="col-span-2 sm:col-span-1 min-w-0">
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Email Address</div>
-                  <div className="text-primary font-medium">{viewStudentData.email}</div>
+                  <div className="text-primary font-medium break-all" title={viewStudentData.email}>{viewStudentData.email}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Date of Birth</div>
@@ -705,6 +902,71 @@ const Students = () => {
                 <div className="text-xs text-gray-400 font-semibold uppercase mb-1">Residential Address</div>
                 <div className="text-primary font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">{viewStudentData.address || 'No address registered.'}</div>
               </div>
+
+              {/* Inward TC Details (if student transferred from another school) */}
+              {(viewStudentData.previousSchoolName || viewStudentData.previousTcNumber) && (
+                <div>
+                  <hr className="border-gray-100 my-4" />
+                  <h4 className="font-semibold text-primary text-xs uppercase mb-3 tracking-wide flex items-center gap-1.5">
+                    <span>🏫 Previous School & Inward TC Record</span>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 bg-blue-50/50 p-3.5 rounded-xl border border-blue-100 text-xs">
+                    <div>
+                      <div className="text-gray-400 font-semibold mb-0.5">Previous School</div>
+                      <div className="font-semibold text-primary">{viewStudentData.previousSchoolName || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-400 font-semibold mb-0.5">Previous TC No.</div>
+                      <div className="font-mono font-bold text-blue-700">{viewStudentData.previousTcNumber || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-400 font-semibold mb-0.5">TC Issue Date</div>
+                      <div className="font-medium text-gray-700">{viewStudentData.previousTcDate || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-400 font-semibold mb-0.5">Attached Document</div>
+                      {viewStudentData.previousTcDocumentUrl ? (
+                        <a href={viewStudentData.previousTcDocumentUrl} target="_blank" rel="noreferrer" className="text-blue-600 font-bold hover:underline">
+                          View Attached TC 📄
+                        </a>
+                      ) : (
+                        <span className="text-gray-400">None attached</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Outward TC Record (if TC was issued by this school) */}
+              {viewStudentData.outwardTcNumber && (
+                <div>
+                  <hr className="border-gray-100 my-4" />
+                  <h4 className="font-semibold text-rose-700 text-xs uppercase mb-3 tracking-wide flex items-center gap-1.5">
+                    <span>📜 Outward Transfer Certificate Issued</span>
+                  </h4>
+                  <div className="bg-rose-50/60 p-3.5 rounded-xl border border-rose-200 text-xs space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 font-semibold">Certificate Number:</span>
+                      <span className="font-mono font-bold text-rose-700 text-sm">{viewStudentData.outwardTcNumber}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 font-semibold">Issued Date:</span>
+                      <span className="font-medium text-gray-800">{viewStudentData.outwardTcIssuedDate}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 font-semibold">Leaving Reason:</span>
+                      <span className="font-medium text-gray-800">{viewStudentData.tcReason || 'Parent Request'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 font-semibold">Conduct Remark:</span>
+                      <span className="font-medium text-gray-800">{viewStudentData.tcConductRemark || 'Good'}</span>
+                    </div>
+                    <div className="pt-2 border-t border-rose-200/60 text-[11px] text-rose-600 font-medium">
+                      🔒 Student user account deactivated upon TC generation.
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex justify-end p-6 border-t border-gray-100 bg-gray-50">
               <button onClick={() => setShowViewModal(false)} className="btn-primary text-xs py-2">Close Profile</button>
@@ -796,8 +1058,16 @@ const Students = () => {
                     <input value={form.guardianName} onChange={e => setForm(f => ({ ...f, guardianName: e.target.value }))} placeholder="Father/Mother name" className="input" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Contact Number</label>
-                    <input value={form.guardianPhone} onChange={e => setForm(f => ({ ...f, guardianPhone: e.target.value }))} placeholder="Phone number" className="input" />
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Contact Number (10 Digits)</label>
+                    <input 
+                      type="tel"
+                      maxLength={10}
+                      pattern="[0-9]{10}"
+                      value={form.guardianPhone} 
+                      onChange={e => setForm(f => ({ ...f, guardianPhone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} 
+                      placeholder="e.g. 9876543210" 
+                      className="input font-mono" 
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Relationship</label>
@@ -810,6 +1080,32 @@ const Students = () => {
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Address</label>
                     <input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Residential address" className="input" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Inward TC Details (Optional: If student is joining from another school) */}
+              <div className="pt-2 border-t border-gray-100">
+                <h4 className="font-semibold text-primary text-sm flex items-center gap-2 mb-1">
+                  <span>🏫 Previous School & Inward TC (Optional)</span>
+                </h4>
+                <p className="text-xs text-gray-400 mb-3">Fill this if the student has transferred from another institution with a Transfer Certificate.</p>
+                <div className="grid grid-cols-2 gap-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Previous School Name</label>
+                    <input value={form.previousSchoolName} onChange={e => setForm(f => ({ ...f, previousSchoolName: e.target.value }))} placeholder="e.g. St. Xavier High School" className="input bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Previous TC Number</label>
+                    <input value={form.previousTcNumber} onChange={e => setForm(f => ({ ...f, previousTcNumber: e.target.value }))} placeholder="e.g. TC-2025-9812" className="input bg-white font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">TC Issue Date</label>
+                    <input value={form.previousTcDate} onChange={e => setForm(f => ({ ...f, previousTcDate: e.target.value }))} placeholder="dd-MM-yyyy" className="input bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">TC Document URL / Link</label>
+                    <input value={form.previousTcDocumentUrl} onChange={e => setForm(f => ({ ...f, previousTcDocumentUrl: e.target.value }))} placeholder="https://drive... or file link" className="input bg-white" />
                   </div>
                 </div>
               </div>
@@ -1032,7 +1328,7 @@ const Students = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {importResult.duplicates.map((dup, idx) => (
+                            {(importResult.duplicates || []).map((dup, idx) => (
                               <tr key={idx} className="border-b border-amber-50/60 last:border-0">
                                 <td className="p-2 font-medium text-gray-700">{dup.firstName} {dup.lastName}</td>
                                 <td className="p-2 text-gray-500 font-mono text-[10px]">{dup.reason}</td>
@@ -1058,8 +1354,601 @@ const Students = () => {
           </div>
         </div>
       )}
+      {/* Transfer Certificate (TC) & No-Dues Clearance Modal */}
+      {showTcModal && tcStudent && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-scale-up">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-rose-700 via-rose-800 to-primary px-6 py-5 flex justify-between items-center text-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl">
+                  📜
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-lg">Transfer Certificate & Clearance Desk</h3>
+                  <p className="text-rose-100 text-xs">Cross-department No-Dues verification for {tcStudent.name}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setShowTcModal(false); setTcSuccessResult(null); }} 
+                className="text-white hover:text-rose-200 text-lg w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center"
+              >
+                ✖
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
+              {tcError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl p-3.5 flex items-start gap-2">
+                  <span>⚠️</span>
+                  <span>{tcError}</span>
+                </div>
+              )}
+
+              {/* SUCCESS / PRINTABLE TC VIEW */}
+              {tcSuccessResult ? (
+                <div className="space-y-5">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-emerald-900 text-xs flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-base shrink-0">
+                      ✓
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm">Transfer Certificate Issued Successfully!</div>
+                      <div className="text-emerald-700 mt-0.5">
+                        Certificate <strong>#{tcSuccessResult.tcNumber}</strong> generated on {tcSuccessResult.issuedDate}. 
+                        Student user account has been deactivated immediately.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Printable TC Certificate Preview */}
+                  <div id="printable-tc-certificate" className="border-2 border-primary/20 bg-amber-50/20 p-6 rounded-2xl space-y-4 text-gray-800">
+                    <div className="text-center border-b border-primary/20 pb-4">
+                      <div className="text-xs uppercase font-bold tracking-widest text-primary/70">Official Document</div>
+                      <h2 className="text-xl font-bold font-display text-primary mt-0.5">{tcSuccessResult.school?.name || 'School of Excellence'}</h2>
+                      <p className="text-xs text-gray-500">{tcSuccessResult.school?.address}, {tcSuccessResult.school?.city} • Code: {tcSuccessResult.school?.code}</p>
+                      <div className="inline-block mt-2 px-4 py-1 rounded-full bg-primary text-white text-xs font-bold uppercase tracking-wider">
+                        Transfer Certificate (T.C.)
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs font-semibold border-b border-gray-100 pb-2">
+                      <span>TC Serial No: <strong className="font-mono text-primary">{tcSuccessResult.tcNumber}</strong></span>
+                      <span>Date of Issue: <strong className="text-gray-900">{tcSuccessResult.issuedDate}</strong></span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
+                      <div>
+                        <span className="text-gray-400 font-semibold block">1. Name of Pupil:</span>
+                        <strong className="text-primary text-sm">{tcSuccessResult.student?.name}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-semibold block">2. Student ID / Roll Code:</span>
+                        <strong className="font-mono text-gray-800">{tcSuccessResult.student?.studentId}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-semibold block">3. Father's / Guardian's Name:</span>
+                        <strong className="text-gray-800">{tcSuccessResult.student?.fatherName || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-semibold block">4. Date of Birth:</span>
+                        <strong className="text-gray-800">{tcSuccessResult.student?.dob || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-semibold block">5. Class Last Studied:</span>
+                        <strong className="text-primary">{tcSuccessResult.student?.className}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-semibold block">6. Reason for Leaving:</span>
+                        <strong className="text-gray-800">{tcSuccessResult.student?.reason}</strong>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-400 font-semibold block">7. General Conduct & Remarks:</span>
+                        <strong className="text-gray-800">{tcSuccessResult.student?.conduct}</strong>
+                      </div>
+                    </div>
+
+                    <div className="pt-8 flex justify-between items-end border-t border-gray-200/80 text-xs">
+                      <div className="text-center">
+                        <div className="w-24 border-b border-gray-400 mb-1 mx-auto"></div>
+                        <span className="text-gray-400 font-medium">Class Teacher</span>
+                      </div>
+                      <div className="text-center">
+                        <div className="w-16 h-16 rounded-full border border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-400 mx-auto mb-1">
+                          School Seal
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="w-28 border-b border-gray-400 mb-1 mx-auto"></div>
+                        <span className="text-gray-800 font-bold">Principal Signature</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button 
+                      type="button" 
+                      onClick={() => window.print()} 
+                      className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5"
+                    >
+                      <span>🖨️ Print Transfer Certificate</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => { setShowTcModal(false); setTcSuccessResult(null); }} 
+                      className="btn-outline text-xs px-4 py-2"
+                    >
+                      Close Desk
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Student Snapshot Info */}
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm">
+                        {tcStudent.name[0]}
+                      </div>
+                      <div>
+                        <div className="font-bold text-primary text-sm">{tcStudent.name}</div>
+                        <div className="text-xs text-gray-500 font-mono">ID: {tcStudent.studentId} • Class: {tcStudent.class} ({tcStudent.section})</div>
+                      </div>
+                    </div>
+                    <span className={`badge ${sc[tcStudent.status] || 'badge-success'} text-xs font-bold`}>
+                      {tcStudent.status}
+                    </span>
+                  </div>
+
+                  {loadingClearance ? (
+                    <div className="py-10 text-center text-gray-400 text-sm">
+                      <div className="inline-block animate-spin text-xl mb-2">⏳</div>
+                      <div>Running real-time cross-department clearance check...</div>
+                    </div>
+                  ) : clearanceData ? (
+                    <div className="space-y-4">
+                      {/* Department Clearance Cards */}
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Multi-Department Clearance Verification</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* 1. Library Clearance Card */}
+                        <div className={`p-4 rounded-xl border transition-all ${
+                          clearanceData.clearance.library.isClear 
+                            ? 'bg-emerald-50/50 border-emerald-200 text-emerald-950' 
+                            : 'bg-rose-50/50 border-rose-200 text-rose-950'
+                        }`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold flex items-center gap-1.5">
+                              <span>📚 Library Department</span>
+                            </span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                              clearanceData.clearance.library.isClear 
+                                ? 'bg-emerald-600 text-white' 
+                                : 'bg-rose-600 text-white'
+                            }`}>
+                              {clearanceData.clearance.library.isClear ? 'CLEARED' : 'DUES PENDING'}
+                            </span>
+                          </div>
+
+                          {clearanceData.clearance.library.isClear ? (
+                            <div className="text-xs text-emerald-700">
+                              ✓ 0 books issued, ₹0 overdue fines pending.
+                            </div>
+                          ) : (
+                            <div className="text-xs space-y-1 text-rose-800">
+                              {clearanceData.clearance.library.unreturnedBookCount > 0 && (
+                                <div>• <strong>{clearanceData.clearance.library.unreturnedBookCount} book(s)</strong> not returned yet.</div>
+                              )}
+                              {clearanceData.clearance.library.unpaidFineAmount > 0 && (
+                                <div>• <strong>₹{clearanceData.clearance.library.unpaidFineAmount}</strong> library fine pending.</div>
+                              )}
+                              <div className="text-[11px] text-rose-600 mt-1">Please return all books to the library before generating TC.</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 2. Fees & Accounts Clearance Card */}
+                        <div className={`p-4 rounded-xl border transition-all ${
+                          clearanceData.clearance.fees.isClear 
+                            ? 'bg-emerald-50/50 border-emerald-200 text-emerald-950' 
+                            : 'bg-rose-50/50 border-rose-200 text-rose-950'
+                        }`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold flex items-center gap-1.5">
+                              <span>💰 Accounts & Fees</span>
+                            </span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                              clearanceData.clearance.fees.isClear 
+                                ? 'bg-emerald-600 text-white' 
+                                : 'bg-rose-600 text-white'
+                            }`}>
+                              {clearanceData.clearance.fees.isClear ? 'CLEARED' : 'DUES PENDING'}
+                            </span>
+                          </div>
+
+                          {clearanceData.clearance.fees.isClear ? (
+                            <div className="text-xs text-emerald-700">
+                              ✓ All fee invoices fully paid up to date.
+                            </div>
+                          ) : (
+                            <div className="text-xs space-y-1 text-rose-800">
+                              <div>• <strong>₹{clearanceData.clearance.fees.pendingFeeAmount?.toLocaleString()}</strong> pending fees across {clearanceData.clearance.fees.unpaidInvoiceCount} invoice(s).</div>
+                              <div className="text-[11px] text-rose-600 mt-1">Please clear all fee dues at the Accounts / Reception counter.</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* TC Generation Form */}
+                      <div className="pt-2 border-t border-gray-100 space-y-3">
+                        <h4 className="text-xs font-bold text-primary uppercase tracking-wide">TC Certificate Details</h4>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Reason for Leaving *</label>
+                            <input 
+                              value={tcForm.reason} 
+                              onChange={e => setTcForm(f => ({ ...f, reason: e.target.value }))}
+                              placeholder="e.g. Parent Request / Relocation" 
+                              className="input text-xs" 
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Conduct & Character *</label>
+                            <input 
+                              value={tcForm.conductRemark} 
+                              onChange={e => setTcForm(f => ({ ...f, conductRemark: e.target.value }))}
+                              placeholder="e.g. Good / Exemplary" 
+                              className="input text-xs" 
+                            />
+                          </div>
+                        </div>
+
+                        {!clearanceData.clearance.isAllClear && (
+                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={tcForm.adminOverride} 
+                                onChange={e => setTcForm(f => ({ ...f, adminOverride: e.target.checked }))}
+                                className="rounded text-rose-600 focus:ring-rose-500" 
+                              />
+                              <span className="text-xs font-bold text-amber-900">Authorize Special Admin Override (Bypass pending dues)</span>
+                            </label>
+                            {tcForm.adminOverride && (
+                              <input 
+                                value={tcForm.adminOverrideNote} 
+                                onChange={e => setTcForm(f => ({ ...f, adminOverrideNote: e.target.value }))}
+                                placeholder="State reason for exemption / admin authorization..." 
+                                className="input bg-white text-xs"
+                              />
+                            )}
+                          </div>
+                        )}
+
+                        <div className="p-3 bg-slate-100 rounded-xl text-xs text-slate-600 flex items-start gap-2">
+                          <span>🔒</span>
+                          <span>
+                            <strong>Immediate Login Deactivation:</strong> Once issued, the student's portal login will be disabled immediately. 
+                            All historical marks, invoices, and records remain preserved for school audits.
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Modal Actions */}
+                      <div className="flex justify-end gap-3 pt-2">
+                        <button 
+                          type="button" 
+                          onClick={() => setShowTcModal(false)} 
+                          className="btn-outline text-xs px-4 py-2"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={handleGenerateTc}
+                          disabled={issuingTc || (!clearanceData.clearance.isAllClear && !tcForm.adminOverride)}
+                          className={`btn-primary text-xs px-4 py-2 flex items-center gap-1.5 ${
+                            !clearanceData.clearance.isAllClear && !tcForm.adminOverride 
+                              ? 'opacity-50 cursor-not-allowed' 
+                              : 'bg-rose-700 hover:bg-rose-800'
+                          }`}
+                        >
+                          <span>{issuingTc ? 'Generating TC...' : '📜 Issue Transfer Certificate & Deactivate'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Promote Student Modal (with Direct Admin Override) */}
+      {showPromoteModal && promotingStudent && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-scale-up">
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 px-6 py-4 flex justify-between items-center text-white shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">🚀</span>
+                <div>
+                  <h3 className="font-display font-bold text-base">Promote Student to Next Grade</h3>
+                  <p className="text-emerald-100 text-xs">{promotingStudent.name} • Current Class: {promotingStudent.class} ({promotingStudent.section})</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPromoteModal(false)} className="text-white hover:text-emerald-200 text-lg">✖</button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+              {promoteError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 font-semibold rounded-xl p-3 flex items-start gap-2">
+                  <span>⚠️</span>
+                  <span>{promoteError}</span>
+                </div>
+              )}
+
+              {/* Academic Outcome Evaluation Card */}
+              {loadingOutcome ? (
+                <div className="py-6 text-center text-gray-400">
+                  <div className="inline-block animate-spin text-lg mb-1">⏳</div>
+                  <div>Evaluating annual exam performance and subject scores...</div>
+                </div>
+              ) : studentOutcome ? (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-gray-700 uppercase tracking-wide text-[11px]">Exam Performance Evaluation:</span>
+                    <span className={`px-2 py-0.5 rounded-full font-bold uppercase text-[10px] ${
+                      studentOutcome.failedSubjectsCount === 0 
+                        ? 'bg-emerald-100 text-emerald-800' 
+                        : studentOutcome.failedSubjectsCount <= 2 
+                        ? 'bg-amber-100 text-amber-800' 
+                        : 'bg-rose-100 text-rose-800'
+                    }`}>
+                      {studentOutcome.recommendedOutcome}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 bg-white p-2.5 rounded-lg border border-slate-100 text-center">
+                    <div>
+                      <div className="text-gray-400 text-[10px]">Total Subjects</div>
+                      <div className="font-bold text-gray-800 text-sm">{studentOutcome.totalSubjects}</div>
+                    </div>
+                    <div>
+                      <div className="text-emerald-600 text-[10px]">Passed (≥40%)</div>
+                      <div className="font-bold text-emerald-700 text-sm">{studentOutcome.passedSubjects}</div>
+                    </div>
+                    <div>
+                      <div className="text-rose-600 text-[10px]">Failed (&lt;40%)</div>
+                      <div className="font-bold text-rose-700 text-sm">{studentOutcome.failedSubjectsCount}</div>
+                    </div>
+                  </div>
+
+                  {studentOutcome.failedSubjectsCount > 0 && (
+                    <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 space-y-1 text-[11px]">
+                      <div className="font-bold flex items-center gap-1">
+                        <span>⚠️</span>
+                        <span>Student has failed in {studentOutcome.failedSubjectsCount} subject(s).</span>
+                      </div>
+                      <div>Standard auto-promotion is blocked. Direct Admin Override is required to grant promotion.</div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {/* Target Class Selection */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Target Class & Section *</label>
+                <select 
+                  value={promoteNextClassId} 
+                  onChange={e => setPromoteNextClassId(e.target.value)}
+                  className="input w-full text-xs"
+                >
+                  <option value="">Select Target Class</option>
+                  {classSections.map(c => (
+                    <option key={c.id} value={c.id}>
+                      Class {c.grade} - {c.section} (Room {c.room}) [{c.enrolled}/{c.capacity}]
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Target Academic Year */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Target Academic Session *</label>
+                <input 
+                  value={promoteAcademicYear} 
+                  onChange={e => setPromoteAcademicYear(e.target.value)}
+                  placeholder="e.g. 2026-27"
+                  className="input w-full text-xs font-mono"
+                />
+              </div>
+
+              {/* School Admin Direct Override Option */}
+              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2.5">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={promoteAdminOverride} 
+                    onChange={e => setPromoteAdminOverride(e.target.checked)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="font-bold text-amber-900">
+                    School Admin Direct Override (Promote despite fail marks / Grace Promotion)
+                  </span>
+                </label>
+                
+                {promoteAdminOverride && (
+                  <div>
+                    <label className="block font-semibold text-amber-800 mb-1">Override Audit Reason *</label>
+                    <textarea 
+                      rows={2}
+                      value={promoteOverrideReason}
+                      onChange={e => setPromoteOverrideReason(e.target.value)}
+                      placeholder="e.g. Medical Leave Exemption / Principal Grace Promotion / Exceptional Extracurricular Discretion"
+                      className="input bg-white w-full text-xs"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="p-3 bg-slate-100 rounded-xl text-slate-600 space-y-1 text-[11px]">
+                <div>• Unpaid invoices from the current class will be consolidated into an <strong>Arrears Rollover</strong> invoice.</div>
+                <div>• New class fee schedule will be attached automatically.</div>
+                <div>• Automated WhatsApp promotion notice will be dispatched to guardian phone.</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2.5 px-6 py-4 bg-gray-50 border-t border-gray-100 shrink-0">
+              <button 
+                type="button" 
+                onClick={() => setShowPromoteModal(false)}
+                className="btn-outline text-xs px-4 py-2"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={handlePromoteSubmit}
+                disabled={promoting || !promoteNextClassId || (studentOutcome?.failedSubjectsCount > 0 && !promoteAdminOverride)}
+                className="btn-primary text-xs px-4 py-2 bg-emerald-700 hover:bg-emerald-800 flex items-center gap-1.5"
+              >
+                <span>{promoting ? 'Promoting...' : '🚀 Confirm Promotion'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Retain Student in Same Class (Fail / Repeat Year) Modal */}
+      {showRetainModal && retainingStudent && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-scale-up">
+            <div className="bg-gradient-to-r from-amber-600 via-rose-600 to-rose-700 px-6 py-4 flex justify-between items-center text-white shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">🔄</span>
+                <div>
+                  <h3 className="font-display font-bold text-base">Retain Student (Fail / Repeat Year)</h3>
+                  <p className="text-amber-100 text-xs">{retainingStudent.name} • Current Class: {retainingStudent.class} ({retainingStudent.section})</p>
+                </div>
+              </div>
+              <button onClick={() => setShowRetainModal(false)} className="text-white hover:text-amber-200 text-lg">✖</button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+              {retainError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 font-semibold rounded-xl p-3 flex items-start gap-2">
+                  <span>⚠️</span>
+                  <span>{retainError}</span>
+                </div>
+              )}
+
+              {/* Performance Evaluation */}
+              {loadingOutcome ? (
+                <div className="py-6 text-center text-gray-400">
+                  <div className="inline-block animate-spin text-lg mb-1">⏳</div>
+                  <div>Loading academic performance evaluation...</div>
+                </div>
+              ) : studentOutcome ? (
+                <div className="bg-rose-50/70 border border-rose-200 rounded-xl p-3.5 space-y-2">
+                  <div className="flex justify-between items-center text-rose-900 font-bold">
+                    <span>Performance Assessment:</span>
+                    <span className="bg-rose-600 text-white px-2 py-0.5 rounded-full text-[10px] uppercase">
+                      {studentOutcome.failedSubjectsCount} Subjects Failed
+                    </span>
+                  </div>
+                  <div className="text-rose-800 text-[11px]">
+                    Aggregate Score: <strong>{studentOutcome.aggregatePercentage}%</strong> across {studentOutcome.totalSubjects} subjects.
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Target Section Selection */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Retention Class & Section *</label>
+                <select 
+                  value={retainClassId} 
+                  onChange={e => setRetainClassId(e.target.value)}
+                  className="input w-full text-xs"
+                >
+                  <option value="">Select Class Section</option>
+                  {classSections.map(c => (
+                    <option key={c.id} value={c.id}>
+                      Class {c.grade} - {c.section} (Room {c.room}) [{c.enrolled}/{c.capacity}]
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* New Academic Year */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">New Academic Session *</label>
+                <input 
+                  value={retainNewAcademicYear} 
+                  onChange={e => setRetainNewAcademicYear(e.target.value)}
+                  placeholder="e.g. 2026-27"
+                  className="input w-full text-xs font-mono"
+                />
+              </div>
+
+              {/* Retention Reason */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Retention Reason / Official Remark *</label>
+                <textarea 
+                  rows={2}
+                  value={retainReason} 
+                  onChange={e => setRetainReason(e.target.value)}
+                  placeholder="e.g. Failed in core subjects - Retained in current grade for academic reinforcement and subject mastery."
+                  className="input w-full text-xs"
+                />
+              </div>
+
+              {/* Send Parent WhatsApp Notice Toggle */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={retainSendWhatsApp} 
+                    onChange={e => setRetainSendWhatsApp(e.target.checked)}
+                    className="rounded text-rose-600 focus:ring-rose-500"
+                  />
+                  <span className="font-bold text-gray-800">
+                    Send Automated WhatsApp Academic Performance & Retention Notice to Parent
+                  </span>
+                </label>
+              </div>
+
+              <div className="p-3 bg-slate-100 rounded-xl text-slate-600 space-y-1 text-[11px]">
+                <div>• Student enrollment status will be marked as <strong>RETAINED_REPEAT</strong>.</div>
+                <div>• Current grade annual fee structure will be renewed for the new academic session.</div>
+                <div>• Historical report cards and exam scores remain safely preserved for institutional audits.</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2.5 px-6 py-4 bg-gray-50 border-t border-gray-100 shrink-0">
+              <button 
+                type="button" 
+                onClick={() => setShowRetainModal(false)}
+                className="btn-outline text-xs px-4 py-2"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={handleRetainSubmit}
+                disabled={retaining || !retainClassId}
+                className="btn-primary text-xs px-4 py-2 bg-rose-700 hover:bg-rose-800 flex items-center gap-1.5"
+              >
+                <span>{retaining ? 'Retaining...' : '🔄 Confirm Class Retention'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Students;
+

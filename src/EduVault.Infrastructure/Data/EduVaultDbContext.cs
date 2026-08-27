@@ -58,6 +58,28 @@ namespace EduVault.Infrastructure.Data
         public DbSet<LibrarySettings> LibrarySettings { get; set; }
         public DbSet<LibraryTransaction> LibraryTransactions { get; set; }
 
+        // Front Desk / Receptionist Module
+        public DbSet<VisitorEntry> Visitors { get; set; }
+        public DbSet<GatePassEntry> GatePasses { get; set; }
+        public DbSet<AdmissionInquiryEntry> AdmissionInquiries { get; set; }
+
+        // Unified HRM / Employee Master & Dynamic Configuration
+        public DbSet<Employee> Employees { get; set; }
+        public DbSet<TeacherProfile> TeacherProfiles { get; set; }
+        public DbSet<Designation> Designations { get; set; }
+        public DbSet<EmploymentType> EmploymentTypes { get; set; }
+        public DbSet<WorkSchedule> WorkSchedules { get; set; }
+        public DbSet<LeavePolicy> LeavePolicies { get; set; }
+        public DbSet<SalaryComponent> SalaryComponents { get; set; }
+        public DbSet<SalaryStructure> SalaryStructures { get; set; }
+        public DbSet<SalaryStructureComponent> SalaryStructureComponents { get; set; }
+        public DbSet<StatutoryConfiguration> StatutoryConfigurations { get; set; }
+        public DbSet<Payroll> Payrolls { get; set; }
+        public DbSet<PayrollItem> PayrollItems { get; set; }
+        public DbSet<PayrollSnapshot> PayrollSnapshots { get; set; }
+        public DbSet<EmployeeDocument> EmployeeDocuments { get; set; }
+        public DbSet<AttendanceSyncRecord> AttendanceSyncRecords { get; set; }
+
         // Dynamic Dashboard Widgets & Charts
         public DbSet<DashboardWidgetDefinition> DashboardWidgetDefinitions { get; set; }
         public DbSet<SchoolDashboardWidget> SchoolDashboardWidgets { get; set; }
@@ -452,6 +474,115 @@ namespace EduVault.Infrastructure.Data
             modelBuilder.Entity<DashboardWidgetDefinition>()
                 .HasIndex(dwd => dwd.WidgetKey)
                 .IsUnique();
+
+            // Front Desk: VisitorEntry
+            modelBuilder.Entity<VisitorEntry>()
+                .HasOne(v => v.School)
+                .WithMany()
+                .HasForeignKey(v => v.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<VisitorEntry>()
+                .HasIndex(v => new { v.SchoolId, v.CheckInTime });
+
+            // Front Desk: GatePassEntry
+            modelBuilder.Entity<GatePassEntry>()
+                .HasOne(gp => gp.School)
+                .WithMany()
+                .HasForeignKey(gp => gp.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<GatePassEntry>()
+                .HasIndex(gp => new { gp.SchoolId, gp.IssuedAt });
+
+            // Front Desk: AdmissionInquiryEntry
+            modelBuilder.Entity<AdmissionInquiryEntry>()
+                .HasOne(ai => ai.School)
+                .WithMany()
+                .HasForeignKey(ai => ai.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<AdmissionInquiryEntry>()
+                .HasIndex(ai => new { ai.SchoolId, ai.CreatedAt });
+
+            // Unified HRM: Employee
+            modelBuilder.Entity<Employee>()
+                .HasOne(e => e.School)
+                .WithMany()
+                .HasForeignKey(e => e.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Employee>()
+                .HasIndex(e => new { e.SchoolId, e.EmployeeCode })
+                .IsUnique();
+
+            modelBuilder.Entity<Employee>()
+                .HasIndex(e => new { e.SchoolId, e.StaffType, e.EmploymentStatus });
+
+            // Unified HRM: TeacherProfile (1-to-1 with Employee)
+            modelBuilder.Entity<TeacherProfile>()
+                .HasKey(tp => tp.EmployeeId);
+
+            modelBuilder.Entity<TeacherProfile>()
+                .HasOne(tp => tp.Employee)
+                .WithOne(e => e.TeacherProfile)
+                .HasForeignKey<TeacherProfile>(tp => tp.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Unified HRM: Designation
+            modelBuilder.Entity<Designation>()
+                .HasOne(d => d.School)
+                .WithMany()
+                .HasForeignKey(d => d.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Unified HRM: StatutoryConfiguration
+            modelBuilder.Entity<StatutoryConfiguration>()
+                .HasOne(sc => sc.School)
+                .WithMany()
+                .HasForeignKey(sc => sc.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<StatutoryConfiguration>()
+                .HasIndex(sc => new { sc.SchoolId, sc.StatutoryType, sc.EffectiveFrom });
+
+            // Unified HRM: SalaryStructure & Components
+            modelBuilder.Entity<SalaryStructure>()
+                .HasOne(ss => ss.School)
+                .WithMany()
+                .HasForeignKey(ss => ss.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SalaryStructureComponent>()
+                .HasOne(ssc => ssc.SalaryStructure)
+                .WithMany(ss => ss.Components)
+                .HasForeignKey(ssc => ssc.SalaryStructureId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Unified HRM: Payroll & Snapshots
+            modelBuilder.Entity<Payroll>()
+                .HasOne(p => p.School)
+                .WithMany()
+                .HasForeignKey(p => p.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Payroll>()
+                .HasIndex(p => new { p.SchoolId, p.PeriodYear, p.PeriodMonth });
+
+            modelBuilder.Entity<PayrollItem>()
+                .HasOne(pi => pi.Payroll)
+                .WithMany(p => p.Items)
+                .HasForeignKey(pi => pi.PayrollId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PayrollSnapshot>()
+                .HasKey(ps => ps.Id);
+
+            modelBuilder.Entity<PayrollSnapshot>()
+                .HasOne(ps => ps.Payroll)
+                .WithOne(p => p.Snapshot)
+                .HasForeignKey<PayrollSnapshot>(ps => ps.PayrollId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

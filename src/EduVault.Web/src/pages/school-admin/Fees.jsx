@@ -24,7 +24,7 @@ const CustomTooltip = ({ active, payload, label }) => {
             <span className="w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm shrink-0" style={{ backgroundColor: item.color || item.fill }} />
             <span className="text-2xs text-slate-550 font-semibold">{item.name}:</span>
             <span className="text-xs font-black text-slate-800 font-mono">
-              Rs. {item.value.toLocaleString()}
+              Rs. {Number(item.value || 0).toLocaleString()}
             </span>
           </div>
         ))}
@@ -513,7 +513,7 @@ const Fees = () => {
                           </div>
                         </td>
                         <td className="table-td text-sm text-gray-500 font-medium">{t.type}</td>
-                        <td className="table-td font-bold text-primary">Rs. {t.amount.toLocaleString()}</td>
+                        <td className="table-td font-bold text-primary">Rs. {Number(t.amount || 0).toLocaleString()}</td>
                         <td className="table-td text-sm text-gray-400 font-medium">{t.date}</td>
                         <td className="table-td">
                           <span className={getStatusBadge(t.status)}>
@@ -565,10 +565,10 @@ const Fees = () => {
                           </div>
                         </td>
                         <td className="table-td text-sm text-gray-500 font-medium">{sl.className}</td>
-                        <td className="table-td font-semibold text-gray-700">Rs. {sl.totalBilled.toLocaleString()}</td>
-                        <td className="table-td font-semibold text-green-600">Rs. {sl.totalPaid.toLocaleString()}</td>
+                        <td className="table-td font-semibold text-gray-700">Rs. {Number(sl.totalBilled || 0).toLocaleString()}</td>
+                        <td className="table-td font-semibold text-green-600">Rs. {Number(sl.totalPaid || 0).toLocaleString()}</td>
                         <td className={`table-td font-bold ${sl.remainingDue > 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                          Rs. {sl.remainingDue.toLocaleString()}
+                          Rs. {Number(sl.remainingDue || 0).toLocaleString()}
                         </td>
                         <td className="table-td">
                           <span className={
@@ -618,7 +618,7 @@ const Fees = () => {
                         <td className="table-td text-sm text-gray-500 font-medium">{tx.feeName}</td>
                         <td className="table-td text-sm text-gray-400 font-medium">{tx.date}</td>
                         <td className="table-td text-sm text-gray-500 font-medium">{tx.paymentMethod}</td>
-                        <td className="table-td font-bold text-primary">Rs. {tx.amount.toLocaleString()}</td>
+                        <td className="table-td font-bold text-primary">Rs. {Number(tx.amount || 0).toLocaleString()}</td>
                         <td className="table-td">
                           <span className={tx.status === 'success' ? 'badge-success' : 'badge-danger'}>
                             {tx.status}

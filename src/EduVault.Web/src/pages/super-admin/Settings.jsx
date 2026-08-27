@@ -836,8 +836,16 @@ const Settings = () => {
               <input value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="input text-xs text-black" />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wider">Contact Phone</label>
-              <input value={contactPhone} onChange={e => setContactPhone(e.target.value)} className="input text-xs text-black" />
+              <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wider">Contact Phone (10 Digits)</label>
+              <input 
+                type="tel" 
+                maxLength={10} 
+                pattern="[0-9]{10}" 
+                value={contactPhone} 
+                onChange={e => setContactPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} 
+                placeholder="e.g. 9876543210" 
+                className="input text-xs text-black font-mono" 
+              />
             </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wider">Office Address</label>
@@ -1294,12 +1302,15 @@ const Settings = () => {
                 )}
 
                 <div className="border-t border-slate-100 pt-3">
-                  <label className="block text-xs font-semibold text-blue-600 mb-1.5 font-bold">🧪 Send Test WhatsApp Message (Optional)</label>
+                  <label className="block text-xs font-semibold text-blue-600 mb-1.5 font-bold">🧪 Send Test WhatsApp Message (10 Digits - Optional)</label>
                   <input 
-                    placeholder="Enter phone with country code: e.g. +919876543210" 
+                    type="tel"
+                    maxLength={10}
+                    pattern="[0-9]{10}"
+                    placeholder="Enter 10-digit mobile: e.g. 9876543210" 
                     value={testPhoneNumber} 
-                    onChange={e => setTestPhoneNumber(e.target.value)} 
-                    className="input border-blue-200 focus:border-blue-500 bg-blue-50/20 text-xs" 
+                    onChange={e => setTestPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))} 
+                    className="input border-blue-200 focus:border-blue-500 bg-blue-50/20 text-xs font-mono" 
                   />
                   <p className="text-[10px] text-gray-400 mt-1">If specified, a test WhatsApp message will be sent to verify configuration.</p>
                 </div>

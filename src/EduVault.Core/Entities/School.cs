@@ -20,6 +20,7 @@ namespace EduVault.Core.Entities
         // Module permissions granted by Super Admin
         public bool HasAccountModule { get; set; } = false;
         public bool HasLibraryModule { get; set; } = false;
+        public bool HasReceptionistModule { get; set; } = true;
 
         public string? RazorpayKeyId { get; set; }
         public string? RazorpayKeySecret { get; set; }
@@ -36,6 +37,7 @@ namespace EduVault.Core.Entities
         public string? CustomProviderFromNumber { get; set; }
 
         public string? PaymentProvider { get; set; } // "razorpay", "stripe", "paypal", "phonepe", "cashless"
+        public string? SchoolUpiId { get; set; }
         public string? StripePublishableKey { get; set; }
         public string? StripeSecretKey { get; set; }
         public string? PayPalClientId { get; set; }
@@ -44,6 +46,14 @@ namespace EduVault.Core.Entities
         public string? PhonePeSaltKey { get; set; }
         public string? PhonePeSaltIndex { get; set; }
         public string? CashlessInstructions { get; set; }
+
+        // WhatsApp Notification Event Triggers
+        public bool WhatsAppFeeReceiptsEnabled { get; set; } = true;
+        public bool WhatsAppFeeRemindersEnabled { get; set; } = true;
+        public bool WhatsAppLibraryAlertsEnabled { get; set; } = true;
+        public bool WhatsAppGatePassAlertsEnabled { get; set; } = true;
+        public bool WhatsAppAdmissionInquiryEnabled { get; set; } = true;
+        public bool WhatsAppTcNoticeEnabled { get; set; } = true;
 
         // Navigation properties
         public virtual ICollection<User> Users { get; set; } = new List<User>();

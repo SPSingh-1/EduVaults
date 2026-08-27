@@ -656,9 +656,9 @@ const Teachers = () => {
                         <td className="table-td text-sm">{t.qualifications}</td>
                         <td className="table-td text-sm font-semibold text-primary">{t.specialization || 'N/A'}</td>
                         <td className="table-td text-xs text-gray-600">{t.classes || 'None'}</td>
-                        <td className="table-td">
-                          <div className="text-xs text-gray-500">{t.email}</div>
-                          <div className="text-xs text-gray-400">{t.phone}</div>
+                        <td className="table-td max-w-[200px]">
+                          <div className="text-xs text-gray-500 truncate" title={t.email}>{t.email}</div>
+                          <div className="text-xs text-gray-400 truncate font-mono">{t.phone}</div>
                         </td>
                         <td className="table-td"><span className={sc[t.status] || 'badge-success'}>{t.status}</span></td>
                         <td className="table-td">
@@ -961,9 +961,9 @@ const Teachers = () => {
                     </span>
                   </div>
                 </div>
-                <div>
+                <div className="col-span-2 sm:col-span-1 min-w-0">
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Email Address</div>
-                  <div className="text-primary font-medium">{viewTeacherData.email}</div>
+                  <div className="text-primary font-medium break-all" title={viewTeacherData.email}>{viewTeacherData.email}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Date of Birth</div>
@@ -1209,7 +1209,7 @@ const Teachers = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {importResult.duplicates.map((dup, idx) => (
+                            {(importResult.duplicates || []).map((dup, idx) => (
                               <tr key={idx} className="border-b border-amber-50/60 last:border-0">
                                 <td className="p-2 font-medium text-gray-700">{dup.firstName} {dup.lastName}</td>
                                 <td className="p-2 text-gray-600 font-mono text-[10px]">{dup.email}</td>

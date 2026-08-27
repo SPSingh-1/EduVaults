@@ -36,5 +36,11 @@ namespace EduVault.Core.DTOs
         [Required]
         public string Status { get; set; } = "ACTIVE";
         public string DateOfBirth { get; set; } = string.Empty;
+
+        // Inward TC Details
+        public string? PreviousSchoolName { get; set; }
+        public string? PreviousTcNumber { get; set; }
+        public string? PreviousTcDate { get; set; }
+        public string? PreviousTcDocumentUrl { get; set; }
     }
 }

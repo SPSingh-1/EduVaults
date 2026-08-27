@@ -423,7 +423,11 @@ namespace EduVault.Api.Controllers
                 GuardianPhone = request.GuardianPhone,
                 GuardianRelationship = request.GuardianRelationship,
                 Address = request.Address,
-                DateOfBirth = request.DateOfBirth ?? string.Empty
+                DateOfBirth = request.DateOfBirth ?? string.Empty,
+                PreviousSchoolName = request.PreviousSchoolName,
+                PreviousTcNumber = request.PreviousTcNumber,
+                PreviousTcDate = request.PreviousTcDate,
+                PreviousTcDocumentUrl = request.PreviousTcDocumentUrl
             };
             await _unitOfWork.Students.AddAsync(student);
 
@@ -643,7 +647,15 @@ namespace EduVault.Api.Controllers
                 Address = student?.Address,
                 DateOfBirth = student?.DateOfBirth ?? string.Empty,
                 ClassId = enrollment?.ClassId,
-                Status = enrollment?.Status ?? "ACTIVE"
+                Status = enrollment?.Status ?? "ACTIVE",
+                PreviousSchoolName = student?.PreviousSchoolName,
+                PreviousTcNumber = student?.PreviousTcNumber,
+                PreviousTcDate = student?.PreviousTcDate,
+                PreviousTcDocumentUrl = student?.PreviousTcDocumentUrl,
+                OutwardTcNumber = student?.OutwardTcNumber,
+                OutwardTcIssuedDate = student?.OutwardTcIssuedDate?.ToString("dd MMM yyyy"),
+                TcReason = student?.TcReason,
+                TcConductRemark = student?.TcConductRemark
             });
         }
 
@@ -691,6 +703,10 @@ namespace EduVault.Api.Controllers
             student.GuardianRelationship = request.GuardianRelationship;
             student.Address = request.Address;
             student.DateOfBirth = request.DateOfBirth ?? string.Empty;
+            student.PreviousSchoolName = request.PreviousSchoolName;
+            student.PreviousTcNumber = request.PreviousTcNumber;
+            student.PreviousTcDate = request.PreviousTcDate;
+            student.PreviousTcDocumentUrl = request.PreviousTcDocumentUrl;
             _unitOfWork.Students.Update(student);
 
             var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == id)).FirstOrDefault();
@@ -717,6 +733,281 @@ namespace EduVault.Api.Controllers
             return Ok(new { success = true });
         }
 
+        // ==========================================
+        // No-Dues Clearance & Transfer Certificate (TC)
+        // ==========================================
+        [HttpGet("students/{id}/clearance-check")]
+        [Authorize(Roles = "schooladmin,receptionist")]
+        public async Task<IActionResult> CheckStudentClearance(Guid id)
+        {
+            var schoolId = GetSchoolId();
+            var user = await _unitOfWork.Users.GetByIdAsync(id);
+            if (user == null || user.SchoolId != schoolId || user.Role != "student")
+            {
+                return NotFound(new { error = "Student not found" });
+            }
+
+            var student = await _unitOfWork.Students.GetByIdAsync(id);
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == id)).FirstOrDefault();
+            var classObj = enrollment != null ? await _unitOfWork.Classes.GetByIdAsync(enrollment.ClassId) : null;
+
+            // 1. Check Library Clearance
+            var libraryTransactions = await _context.LibraryTransactions
+                .Include(t => t.Book)
+                .Where(t => t.MemberId == id && t.SchoolId == schoolId)
+                .ToListAsync();
+
+            var unreturnedBooks = libraryTransactions
+                .Where(t => t.Status == "Issued" || t.Status == "Overdue")
+                .Select(t => new {
+                    t.Id,
+                    BookTitle = t.Book?.Title ?? "Library Book",
+                    ISBN = t.Book?.ISBN ?? "N/A",
+                    IssueDate = t.IssueDate.ToString("dd MMM yyyy"),
+                    DueDate = t.DueDate.ToString("dd MMM yyyy")
+                }).ToList();
+
+            var unpaidLibraryFines = libraryTransactions
+                .Where(t => t.FineAmount > 0 && !t.FinePaid)
+                .Sum(t => t.FineAmount);
+
+            bool isLibraryClear = unreturnedBooks.Count == 0 && unpaidLibraryFines == 0;
+
+            // 2. Check Fee & Billing Clearance
+            var invoices = await _unitOfWork.Invoices.FindAsync(i => i.StudentId == id);
+            var unpaidInvoices = invoices
+                .Where(i => i.Status != "Paid" && i.Status != "Cancelled")
+                .Select(i => new {
+                    i.Id,
+                    Amount = i.Amount,
+                    DueDate = i.DueDate.ToString("dd MMM yyyy"),
+                    Status = i.Status
+                }).ToList();
+
+            decimal pendingFeeAmount = unpaidInvoices.Sum(i => i.Amount);
+            bool isFeeClear = unpaidInvoices.Count == 0 && pendingFeeAmount == 0;
+
+            // 3. Overall Clearance
+            bool isAllClear = isLibraryClear && isFeeClear;
+
+            return Ok(new
+            {
+                student = new
+                {
+                    id = user.Id,
+                    name = $"{user.FirstName} {user.LastName}",
+                    studentId = student?.StudentId ?? "N/A",
+                    className = classObj != null ? $"Class {classObj.Grade}-{classObj.Section}" : "Unassigned",
+                    status = enrollment?.Status ?? "ACTIVE",
+                    isLoginActive = user.IsActive,
+                    outwardTcNumber = student?.OutwardTcNumber,
+                    outwardTcIssuedDate = student?.OutwardTcIssuedDate?.ToString("dd MMM yyyy")
+                },
+                clearance = new
+                {
+                    isAllClear,
+                    library = new
+                    {
+                        isClear = isLibraryClear,
+                        unreturnedBookCount = unreturnedBooks.Count,
+                        unreturnedBooks,
+                        unpaidFineAmount = unpaidLibraryFines
+                    },
+                    fees = new
+                    {
+                        isClear = isFeeClear,
+                        unpaidInvoiceCount = unpaidInvoices.Count,
+                        pendingFeeAmount,
+                        unpaidInvoices
+                    }
+                }
+            });
+        }
+
+        [HttpPost("students/{id}/generate-tc")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> GenerateTransferCertificate(Guid id, [FromBody] GenerateTcRequest request)
+        {
+            var schoolId = GetSchoolId();
+            var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+            var user = await _unitOfWork.Users.GetByIdAsync(id);
+            if (user == null || user.SchoolId != schoolId || user.Role != "student")
+            {
+                return NotFound(new { error = "Student not found" });
+            }
+
+            var student = await _unitOfWork.Students.GetByIdAsync(id);
+            if (student == null) return NotFound(new { error = "Student profile not found" });
+
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == id)).FirstOrDefault();
+            var classObj = enrollment != null ? await _unitOfWork.Classes.GetByIdAsync(enrollment.ClassId) : null;
+
+            // Check if already issued
+            if (!string.IsNullOrEmpty(student.OutwardTcNumber) && !request.ForceReissue)
+            {
+                return BadRequest(new { error = $"Transfer Certificate #{student.OutwardTcNumber} has already been issued on {student.OutwardTcIssuedDate:dd MMM yyyy}." });
+            }
+
+            // Verify Clearance or Admin Override
+            if (!request.AdminOverride)
+            {
+                var libraryIssued = await _context.LibraryTransactions.AnyAsync(t => t.MemberId == id && t.SchoolId == schoolId && (t.Status == "Issued" || t.Status == "Overdue" || (t.FineAmount > 0 && !t.FinePaid)));
+                var feePending = await _context.Invoices.AnyAsync(i => i.StudentId == id && i.Status != "Paid" && i.Status != "Cancelled");
+                if (libraryIssued || feePending)
+                {
+                    return BadRequest(new { error = "Cannot issue TC: Student has pending library books or fee dues. Please clear dues first or check authorized admin override." });
+                }
+            }
+
+            // Generate Serial Number
+            var tcNumber = $"TC-{DateTime.UtcNow.Year}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
+            student.OutwardTcNumber = tcNumber;
+            student.OutwardTcIssuedDate = DateTime.UtcNow;
+            student.TcReason = request.Reason ?? "Parent Request / Relocation";
+            student.TcConductRemark = request.ConductRemark ?? "Good";
+            _unitOfWork.Students.Update(student);
+
+            // Update Enrollment Status
+            if (enrollment != null)
+            {
+                enrollment.Status = "WITHDRAWN";
+                _unitOfWork.Enrollments.Update(enrollment);
+            }
+
+            // Immediately Deactivate Student User Login
+            user.IsActive = false;
+            _unitOfWork.Users.Update(user);
+
+            await _unitOfWork.CompleteAsync();
+
+            // Send WhatsApp Event Notification to Parent if phone exists
+            if (!string.IsNullOrWhiteSpace(student.GuardianPhone))
+            {
+                var msg = $"Dear Parent, Transfer Certificate ({tcNumber}) for student {user.FirstName} {user.LastName} ({student.StudentId}) has been successfully issued by {school?.Name ?? "School Administration"}. All institutional clearances have been verified and student portal login has been archived.";
+                _ = _whatsAppService.SendEventNotificationAsync(schoolId, "TC_NOTICE", student.GuardianPhone, msg);
+            }
+
+            return Ok(new
+            {
+                success = true,
+                tcNumber,
+                issuedDate = student.OutwardTcIssuedDate.Value.ToString("dd MMMM yyyy"),
+                student = new
+                {
+                    name = $"{user.FirstName} {user.LastName}",
+                    studentId = student.StudentId,
+                    fatherName = student.GuardianName,
+                    dob = student.DateOfBirth,
+                    className = classObj != null ? $"Class {classObj.Grade} ({classObj.Section})" : "N/A",
+                    reason = student.TcReason,
+                    conduct = student.TcConductRemark
+                },
+                school = new
+                {
+                    name = school?.Name,
+                    address = school?.Address,
+                    city = school?.City,
+                    code = school?.SchoolCode
+                }
+            });
+        }
+
+        [HttpGet("students/{id}/academic-outcome")]
+        [Authorize(Roles = "schooladmin,teacher,accountmanager")]
+        public async Task<IActionResult> GetStudentAcademicOutcome(Guid id)
+        {
+            var schoolId = GetSchoolId();
+            var user = await _unitOfWork.Users.GetByIdAsync(id);
+            if (user == null || user.SchoolId != schoolId || user.Role != "student")
+            {
+                return NotFound(new { error = "Student not found" });
+            }
+
+            var student = await _unitOfWork.Students.GetByIdAsync(id);
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == id)).FirstOrDefault();
+            var currentClass = enrollment != null ? await _unitOfWork.Classes.GetByIdAsync(enrollment.ClassId) : null;
+
+            // Fetch exam results for this student
+            var results = await _unitOfWork.ExamResults.FindAsync(r => r.StudentId == id);
+            var resultList = results.ToList();
+
+            var subjectScores = new List<object>();
+            int totalSubjects = 0;
+            int passedSubjects = 0;
+            int failedSubjects = 0;
+            decimal totalMarksObtained = 0;
+            decimal totalMaxMarks = 0;
+
+            foreach (var res in resultList)
+            {
+                var exam = await _unitOfWork.Exams.GetByIdAsync(res.ExamId);
+                var subject = exam != null ? await _unitOfWork.Subjects.GetByIdAsync(exam.SubjectId) : null;
+                
+                decimal obtained = res.MarksObtained ?? 0;
+                decimal maxMarks = 100m;
+                decimal pct = Math.Round((obtained / maxMarks) * 100, 2);
+                bool isPassed = obtained >= 40 && pct >= 40;
+
+                if (isPassed) passedSubjects++;
+                else failedSubjects++;
+
+                totalSubjects++;
+                totalMarksObtained += obtained;
+                totalMaxMarks += maxMarks;
+
+                subjectScores.Add(new
+                {
+                    examId = res.ExamId,
+                    examTitle = $"{subject?.Name ?? "Subject"} ({exam?.ExamType ?? "Exam"})",
+                    examType = exam?.ExamType ?? "Standard",
+                    subjectId = exam?.SubjectId,
+                    subjectName = subject?.Name ?? "Subject",
+                    marksObtained = obtained,
+                    maxMarks = maxMarks,
+                    percentage = pct,
+                    isPassed = isPassed,
+                    grade = res.Grade ?? (pct >= 80 ? "A" : pct >= 60 ? "B" : pct >= 40 ? "C" : "F")
+                });
+            }
+
+            decimal aggregatePercentage = totalMaxMarks > 0 ? Math.Round((totalMarksObtained / totalMaxMarks) * 100, 2) : 0;
+            
+            string recommendedOutcome = "PROMOTED";
+            if (failedSubjects >= 3)
+            {
+                recommendedOutcome = "RETAINED_REPEAT";
+            }
+            else if (failedSubjects >= 1)
+            {
+                recommendedOutcome = "COMPARTMENT";
+            }
+            else if (totalSubjects == 0)
+            {
+                recommendedOutcome = "PENDING_EVALUATION";
+            }
+
+            return Ok(new
+            {
+                studentId = id,
+                studentName = $"{user.FirstName} {user.LastName}".Trim(),
+                email = user.Email,
+                guardianPhone = student?.GuardianPhone,
+                classId = enrollment?.ClassId,
+                className = currentClass != null ? $"Class {currentClass.Grade} - {currentClass.Section}" : "Unassigned",
+                academicYear = enrollment?.AcademicYear ?? $"{DateTime.UtcNow.Year}-{((DateTime.UtcNow.Year + 1) % 100):D2}",
+                enrollmentStatus = enrollment?.Status ?? "ACTIVE",
+                isAdminOverride = enrollment?.IsAdminOverride ?? false,
+                overrideReason = enrollment?.OverrideReason,
+                failedSubjectsCount = failedSubjects,
+                totalSubjects = totalSubjects,
+                passedSubjects = passedSubjects,
+                aggregatePercentage = aggregatePercentage,
+                recommendedOutcome = recommendedOutcome,
+                academicOutcomeRemark = enrollment?.AcademicOutcomeRemark,
+                subjectScores = subjectScores
+            });
+        }
+
         [HttpPost("students/{id}/promote")]
         [Authorize(Roles = "schooladmin")]
         public async Task<IActionResult> PromoteStudent(Guid id, [FromBody] PromoteStudentRequest request)
@@ -728,11 +1019,30 @@ namespace EduVault.Api.Controllers
                 return NotFound(new { error = "Student not found" });
             }
 
+            var student = await _unitOfWork.Students.GetByIdAsync(id);
             var nextClassObj = await _unitOfWork.Classes.GetByIdAsync(request.NextClassId);
             if (nextClassObj == null || nextClassObj.SchoolId != schoolId)
             {
                 return BadRequest(new { error = "Target class not found" });
             }
+
+            // Check if student has failed subjects
+            var results = (await _unitOfWork.ExamResults.FindAsync(r => r.StudentId == id)).ToList();
+            int failedCount = results.Count(r => !r.MarksObtained.HasValue || r.MarksObtained.Value < 40);
+
+            if (failedCount > 0 && !request.AdminOverride)
+            {
+                return BadRequest(new
+                {
+                    error = $"Student has failed in {failedCount} subject(s) and cannot be promoted automatically. Please enable 'Admin Direct Override' to grant promotion with grace/discretion.",
+                    failedSubjectsCount = failedCount,
+                    requiresAdminOverride = true
+                });
+            }
+
+            string targetYear = !string.IsNullOrWhiteSpace(request.AcademicYear)
+                ? request.AcademicYear
+                : $"{DateTime.UtcNow.Year}-{((DateTime.UtcNow.Year + 1) % 100):D2}";
 
             var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == id)).FirstOrDefault();
             if (enrollment == null)
@@ -741,9 +1051,15 @@ namespace EduVault.Api.Controllers
                 {
                     StudentId = id,
                     ClassId = request.NextClassId,
-                    AcademicYear = $"{DateTime.UtcNow.Year}-{((DateTime.UtcNow.Year + 1) % 100):D2}",
-                    Status = "ACTIVE",
-                    EnrollDate = DateTime.UtcNow
+                    AcademicYear = targetYear,
+                    Status = request.AdminOverride ? "ADMIN_PROMOTED" : "PROMOTED",
+                    EnrollDate = DateTime.UtcNow,
+                    IsAdminOverride = request.AdminOverride,
+                    OverrideReason = request.OverrideReason,
+                    FailedSubjectsCount = failedCount,
+                    AcademicOutcomeRemark = request.AdminOverride 
+                        ? $"Promoted via School Admin Direct Override: {request.OverrideReason}" 
+                        : "Promoted to next academic grade successfully."
                 };
                 await _unitOfWork.Enrollments.AddAsync(enrollment);
             }
@@ -751,6 +1067,14 @@ namespace EduVault.Api.Controllers
             {
                 enrollment.ClassId = request.NextClassId;
                 enrollment.EnrollDate = DateTime.UtcNow;
+                enrollment.AcademicYear = targetYear;
+                enrollment.Status = request.AdminOverride ? "ADMIN_PROMOTED" : "PROMOTED";
+                enrollment.IsAdminOverride = request.AdminOverride;
+                enrollment.OverrideReason = request.OverrideReason;
+                enrollment.FailedSubjectsCount = failedCount;
+                enrollment.AcademicOutcomeRemark = request.AdminOverride 
+                    ? $"Promoted via School Admin Direct Override: {request.OverrideReason}" 
+                    : "Promoted to next academic grade successfully.";
                 _unitOfWork.Enrollments.Update(enrollment);
             }
 
@@ -836,9 +1160,198 @@ namespace EduVault.Api.Controllers
                 }
             }
 
+            // Dispatch WhatsApp congratulations alert to parent
+            if (student != null && !string.IsNullOrEmpty(student.GuardianPhone))
+            {
+                string studentName = $"{user.FirstName} {user.LastName}".Trim();
+                string promoMsg = $"🎉 Congratulations! Your ward *{studentName}* has been successfully promoted to *Class {nextClassObj.Grade} - {nextClassObj.Section}* for Academic Session {targetYear}.\n" +
+                                  $"---\n" +
+                                  $"बधाई हो! आपके बच्चे *{studentName}* को शैक्षणिक सत्र {targetYear} के लिए *कक्षा {nextClassObj.Grade} - {nextClassObj.Section}* में पदोन्नत (Promoted) कर दिया गया है।";
+
+                _whatsAppQueue.QueueMessage(new WhatsAppQueueItem
+                {
+                    PhoneNumber = student.GuardianPhone,
+                    Message = promoMsg,
+                    SchoolId = schoolId
+                });
+            }
+
             await _unitOfWork.CompleteAsync();
-            return Ok(new { success = true });
+            return Ok(new { 
+                success = true, 
+                status = enrollment.Status, 
+                classId = nextClassObj.Id, 
+                className = $"Class {nextClassObj.Grade} - {nextClassObj.Section}",
+                academicYear = targetYear,
+                isAdminOverride = enrollment.IsAdminOverride
+            });
         }
+
+        [HttpPost("students/{id}/retain")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> RetainStudent(Guid id, [FromBody] RetainStudentRequest request)
+        {
+            var schoolId = GetSchoolId();
+            var user = await _unitOfWork.Users.GetByIdAsync(id);
+            if (user == null || user.SchoolId != schoolId || user.Role != "student")
+            {
+                return NotFound(new { error = "Student not found" });
+            }
+
+            var student = await _unitOfWork.Students.GetByIdAsync(id);
+            var enrollment = (await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == id)).FirstOrDefault();
+            if (enrollment == null)
+            {
+                return BadRequest(new { error = "Student has no active enrollment to retain." });
+            }
+
+            Guid targetClassId = request.CurrentClassId ?? enrollment.ClassId;
+            var currentClassObj = await _unitOfWork.Classes.GetByIdAsync(targetClassId);
+            if (currentClassObj == null || currentClassObj.SchoolId != schoolId)
+            {
+                return BadRequest(new { error = "Target retention class not found." });
+            }
+
+            string newYear = !string.IsNullOrWhiteSpace(request.NewAcademicYear)
+                ? request.NewAcademicYear
+                : $"{DateTime.UtcNow.Year}-{((DateTime.UtcNow.Year + 1) % 100):D2}";
+
+            // Calculate failed subjects count
+            var results = (await _unitOfWork.ExamResults.FindAsync(r => r.StudentId == id)).ToList();
+            int failedCount = results.Count(r => !r.MarksObtained.HasValue || r.MarksObtained.Value < 40);
+
+            string defaultReason = failedCount > 0 
+                ? $"Failed in {failedCount} subject(s). Retained in Class {currentClassObj.Grade} for academic reinforcement." 
+                : "Retained in current grade for repeat academic year.";
+
+            string finalRemark = !string.IsNullOrWhiteSpace(request.RetentionReason) 
+                ? request.RetentionReason 
+                : defaultReason;
+
+            // Update enrollment to RETAINED_REPEAT
+            enrollment.ClassId = targetClassId;
+            enrollment.EnrollDate = DateTime.UtcNow;
+            enrollment.AcademicYear = newYear;
+            enrollment.Status = "RETAINED_REPEAT";
+            enrollment.FailedSubjectsCount = failedCount;
+            enrollment.AcademicOutcomeRemark = finalRemark;
+            enrollment.IsAdminOverride = false;
+            enrollment.OverrideReason = null;
+            _unitOfWork.Enrollments.Update(enrollment);
+
+            // Consolidate unpaid fees into previous dues
+            var unpaidInvoices = await _unitOfWork.Invoices.FindAsync(i => i.StudentId == id && i.Status != "Paid" && i.Status != "Cancelled");
+            decimal unpaidSum = unpaidInvoices.Sum(i => i.Amount);
+            foreach (var inv in unpaidInvoices)
+            {
+                _unitOfWork.Invoices.Remove(inv);
+            }
+
+            if (unpaidSum > 0)
+            {
+                var prevClassFeeStruct = new FeeStructure
+                {
+                    SchoolId = schoolId,
+                    Name = "Previous Session Outstanding Dues (Arrears)",
+                    Amount = unpaidSum,
+                    Frequency = "One-Time",
+                    Grade = "All Grades",
+                    StudentId = id
+                };
+                await _unitOfWork.FeeStructures.AddAsync(prevClassFeeStruct);
+                await _unitOfWork.CompleteAsync();
+
+                var prevClassInvoice = new StudentInvoice
+                {
+                    StudentId = id,
+                    FeeStructureId = prevClassFeeStruct.Id,
+                    Amount = unpaidSum,
+                    IssueDate = DateTime.UtcNow,
+                    DueDate = DateTime.UtcNow.AddDays(15),
+                    Status = "Pending"
+                };
+                await _unitOfWork.Invoices.AddAsync(prevClassInvoice);
+            }
+
+            // Assign new session fee structures for the repeat grade
+            var feeStructures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId && !fs.StudentId.HasValue);
+            foreach (var fs in feeStructures)
+            {
+                var cleanGradeStr = fs.Grade?.Replace("Class ", "").Trim() ?? string.Empty;
+                string gradePart = cleanGradeStr;
+                string sectionPart = "";
+
+                if (cleanGradeStr.Contains("-"))
+                {
+                    var parts = cleanGradeStr.Split('-', 2);
+                    gradePart = parts[0].Trim();
+                    sectionPart = parts[1].Trim();
+                }
+                else if (cleanGradeStr.Contains(" "))
+                {
+                    var parts = cleanGradeStr.Split(' ', 2);
+                    gradePart = parts[0].Trim();
+                    sectionPart = parts[1].Trim();
+                }
+
+                if (sectionPart.StartsWith("Section ", StringComparison.OrdinalIgnoreCase))
+                {
+                    sectionPart = sectionPart.Substring(8).Trim();
+                }
+
+                bool matchesGrade = gradePart.Equals(currentClassObj.Grade, StringComparison.OrdinalIgnoreCase) || fs.Grade.Equals("All Grades", StringComparison.OrdinalIgnoreCase);
+                bool matchesSection = string.IsNullOrEmpty(sectionPart) || currentClassObj.Section.Equals(sectionPart, StringComparison.OrdinalIgnoreCase) || currentClassObj.Section.Equals($"Section {sectionPart}", StringComparison.OrdinalIgnoreCase);
+
+                if (matchesGrade && matchesSection)
+                {
+                    decimal installmentAmount = Math.Round(fs.Amount / fs.Installments, 2);
+                    for (int step = 1; step <= fs.Installments; step++)
+                    {
+                        var invoice = new StudentInvoice
+                        {
+                            StudentId = id,
+                            FeeStructureId = fs.Id,
+                            Amount = installmentAmount,
+                            IssueDate = DateTime.UtcNow,
+                            DueDate = DateTime.UtcNow.AddDays(30 * step),
+                            Status = "Pending"
+                        };
+                        await _unitOfWork.Invoices.AddAsync(invoice);
+                    }
+                }
+            }
+
+            // Send parent WhatsApp performance & retention notice if opted
+            if (request.SendParentWhatsAppAlert && student != null && !string.IsNullOrEmpty(student.GuardianPhone))
+            {
+                string studentName = $"{user.FirstName} {user.LastName}".Trim();
+                string retainMsg = $"📢 *Academic Evaluation & Class Retention Notice*\n" +
+                                   $"Dear Parent, based on annual exam evaluation, your ward *{studentName}* has been retained in *Class {currentClassObj.Grade} - {currentClassObj.Section}* for Academic Session {newYear} to ensure core conceptual mastery.\n" +
+                                   $"Reason: {finalRemark}\n" +
+                                   $"---\n" +
+                                   $"प्रिय अभिभावक, वार्षिक परीक्षा मूल्यांकन के आधार पर आपके बच्चे *{studentName}* को शैक्षणिक सत्र {newYear} के लिए *कक्षा {currentClassObj.Grade} - {currentClassObj.Section}* में पुन: नामांकित (Retained) किया गया है।";
+
+                _whatsAppQueue.QueueMessage(new WhatsAppQueueItem
+                {
+                    PhoneNumber = student.GuardianPhone,
+                    Message = retainMsg,
+                    SchoolId = schoolId
+                });
+            }
+
+            await _unitOfWork.CompleteAsync();
+            return Ok(new
+            {
+                success = true,
+                status = "RETAINED_REPEAT",
+                classId = targetClassId,
+                className = $"Class {currentClassObj.Grade} - {currentClassObj.Section}",
+                academicYear = newYear,
+                remark = finalRemark,
+                failedSubjectsCount = failedCount
+            });
+        }
+
 
         [HttpDelete("students/{id}")]
         [Authorize(Roles = "schooladmin")]
@@ -2501,7 +3014,9 @@ namespace EduVault.Api.Controllers
             // Only accept attendance for students that actually belong to the caller's school
             // (prevents cross-tenant writes and misdirected guardian notifications).
             var requestedIds = request.Students.Select(s => s.StudentId).ToList();
-            var validStudentIds = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student" && requestedIds.Contains(u.Id)))
+            var validStudentIds = (await _context.Users.AsNoTracking()
+                .Where(u => u.SchoolId == schoolId && (u.Role == "student" || u.Role == null) && requestedIds.Contains(u.Id))
+                .ToListAsync())
                 .Select(u => u.Id)
                 .ToHashSet();
 
@@ -3084,19 +3599,31 @@ namespace EduVault.Api.Controllers
             // Must have taken all scheduled exams
             if (results.Count() < exams.Count()) return;
 
-            bool hasFail = false;
-            foreach (var r in results)
+            int failedCount = results.Count(r => !r.MarksObtained.HasValue || r.MarksObtained.Value < 40);
+            enrollment.FailedSubjectsCount = failedCount;
+            bool hasFail = failedCount > 0;
+
+            if (hasFail)
             {
-                if (!r.MarksObtained.HasValue || r.MarksObtained.Value < 40)
+                if (failedCount >= 3)
                 {
-                    hasFail = true;
-                    break;
+                    enrollment.Status = "RETAINED_REPEAT";
+                    enrollment.AcademicOutcomeRemark = $"Failed in {failedCount} subjects. Critical Fail - Retained for repeat academic year.";
                 }
+                else
+                {
+                    enrollment.Status = "COMPARTMENT_PENDING";
+                    enrollment.AcademicOutcomeRemark = $"Failed in {failedCount} subject(s). Eligible for Compartment / Supplementary re-examination.";
+                }
+                _unitOfWork.Enrollments.Update(enrollment);
+                await _unitOfWork.CompleteAsync();
+                return;
             }
 
-            if (hasFail) return;
-
             // All exams passed! Promote.
+            enrollment.Status = "PROMOTED";
+            enrollment.AcademicOutcomeRemark = "Passed all subjects successfully.";
+
             // Grade is stored as a string; parse it numerically so "5" -> "6" (a naive
             // string "+ 1" would produce "51" and never match the next grade's class).
             if (!int.TryParse(currentClass.Grade?.Trim(), out var currentGradeNum)) return; // non-numeric grade: cannot auto-promote
@@ -3367,6 +3894,57 @@ namespace EduVault.Api.Controllers
             }));
         }
 
+        [HttpPost("register-receptionist")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> RegisterReceptionist([FromBody] RegisterReceptionistRequest request)
+        {
+            var schoolId = GetSchoolId();
+            var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+            if (school == null) return NotFound(new { error = "School not found" });
+
+            if (!school.HasReceptionistModule)
+            {
+                return BadRequest(new { error = "Front Desk & Receptionist Module is not enabled for your school. Please contact Super Admin." });
+            }
+
+            var existingUser = (await _unitOfWork.Users.FindAsync(u => u.Email == request.Email)).FirstOrDefault();
+            if (existingUser != null)
+            {
+                return BadRequest(new { error = "User with this email already exists." });
+            }
+
+            var user = new User
+            {
+                SchoolId = schoolId,
+                Email = request.Email,
+                PasswordHash = _authService.HashPassword(request.Password),
+                Role = "receptionist",
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                IsActive = true
+            };
+            await _unitOfWork.Users.AddAsync(user);
+            await _unitOfWork.CompleteAsync();
+            return Ok(new { success = true, userId = user.Id, email = user.Email });
+        }
+
+        [HttpGet("receptionists")]
+        [Authorize(Roles = "schooladmin")]
+        public async Task<IActionResult> GetReceptionists()
+        {
+            var schoolId = GetSchoolId();
+            var users = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "receptionist");
+            return Ok(users.Select(u => new {
+                u.Id,
+                u.FirstName,
+                u.LastName,
+                u.Email,
+                u.IsActive,
+                u.CreatedAt,
+                Designation = "Front Desk & Reception"
+            }));
+        }
+
         // ==========================================
         // Teacher Leave Management (Self Apply)
         // ==========================================
@@ -3377,9 +3955,53 @@ namespace EduVault.Api.Controllers
             var schoolId = GetSchoolId();
             var userId = GetUserId();
 
-            if (request.FromDate > request.ToDate)
+            var reqFromDate = DateTime.SpecifyKind(request.FromDate.Date, DateTimeKind.Utc);
+            var reqToDate = request.DayType.Equals("HalfDay", StringComparison.OrdinalIgnoreCase)
+                ? reqFromDate
+                : DateTime.SpecifyKind(request.ToDate.Date, DateTimeKind.Utc);
+
+            if (reqFromDate > reqToDate)
             {
                 return BadRequest(new { error = "From date cannot be after To date." });
+            }
+
+            // Validation: Check for existing active/pending/approved leave on the same date(s)
+            var existingLeaves = await _unitOfWork.LeaveRequests.FindAsync(l =>
+                l.SchoolId == schoolId &&
+                l.TeacherUserId == userId &&
+                l.Status != "Rejected"
+            );
+
+            var conflictingLeave = existingLeaves.FirstOrDefault(l =>
+            {
+                var lFrom = l.FromDate.Date;
+                var lTo = l.ToDate.Date;
+
+                // Check date overlap
+                bool datesOverlap = lFrom <= reqToDate.Date && lTo >= reqFromDate.Date;
+                if (!datesOverlap) return false;
+
+                // If both are HalfDay on the exact same date and different sessions (Morning vs Afternoon), allow both sessions
+                if (string.Equals(l.DayType, "HalfDay", StringComparison.OrdinalIgnoreCase) &&
+                    request.DayType.Equals("HalfDay", StringComparison.OrdinalIgnoreCase) &&
+                    lFrom == reqFromDate.Date)
+                {
+                    // If same session, conflict!
+                    return string.Equals(l.HalfDaySession, request.HalfDaySession, StringComparison.OrdinalIgnoreCase);
+                }
+
+                return true;
+            });
+
+            if (conflictingLeave != null)
+            {
+                var overlapFrom = conflictingLeave.FromDate.ToString("dd MMM yyyy");
+                var overlapTo = conflictingLeave.ToDate.ToString("dd MMM yyyy");
+                var dateMsg = overlapFrom == overlapTo ? overlapFrom : $"{overlapFrom} to {overlapTo}";
+                var sessionInfo = conflictingLeave.DayType == "HalfDay" ? $" ({conflictingLeave.HalfDaySession} session)" : "";
+                return BadRequest(new {
+                    error = $"You already have a leave request ({conflictingLeave.LeaveType} - {conflictingLeave.Status}{sessionInfo}) on {dateMsg}. You cannot apply for multiple leaves on the same day."
+                });
             }
 
             decimal totalDays = 0;
@@ -3389,11 +4011,11 @@ namespace EduVault.Api.Controllers
             }
             else
             {
-                totalDays = (decimal)(request.ToDate.Date - request.FromDate.Date).TotalDays + 1;
+                totalDays = (decimal)(reqToDate.Date - reqFromDate.Date).TotalDays + 1;
             }
 
             // Check current year quota
-            int year = request.FromDate.Year;
+            int year = reqFromDate.Year;
             var quota = (await _unitOfWork.LeaveQuotas.FindAsync(q => q.SchoolId == schoolId && q.TeacherUserId == userId && q.AcademicYear == year)).FirstOrDefault();
             if (quota == null)
             {
@@ -3418,12 +4040,13 @@ namespace EduVault.Api.Controllers
                 TeacherUserId = userId,
                 LeaveType = request.LeaveType.ToUpper(),
                 DayType = request.DayType,
-                HalfDaySession = request.HalfDaySession,
-                FromDate = request.FromDate,
-                ToDate = request.DayType.Equals("HalfDay", StringComparison.OrdinalIgnoreCase) ? request.FromDate : request.ToDate,
+                HalfDaySession = request.DayType.Equals("HalfDay", StringComparison.OrdinalIgnoreCase) ? request.HalfDaySession : null,
+                FromDate = reqFromDate,
+                ToDate = reqToDate,
                 TotalDays = totalDays,
                 Reason = request.Reason,
-                Status = "Pending"
+                Status = "Pending",
+                AppliedAt = DateTime.UtcNow
             };
 
             await _unitOfWork.LeaveRequests.AddAsync(leave);
@@ -3781,6 +4404,16 @@ namespace EduVault.Api.Controllers
         public string? EmployeeId { get; set; }
     }
 
+    public class RegisterReceptionistRequest
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string? EmployeeId { get; set; }
+        public string? DeskNumber { get; set; }
+    }
+
     public class ApplyLeaveRequest
     {
         public string LeaveType { get; set; } = "CL"; // CL, SL, EL, ML
@@ -3826,6 +4459,25 @@ namespace EduVault.Api.Controllers
     public class PromoteStudentRequest
     {
         public Guid NextClassId { get; set; }
+        public string? AcademicYear { get; set; }
+        public bool AdminOverride { get; set; } = false;
+        public string? OverrideReason { get; set; }
+    }
+
+    public class RetainStudentRequest
+    {
+        public Guid? CurrentClassId { get; set; }
+        public string? NewAcademicYear { get; set; }
+        public string? RetentionReason { get; set; }
+        public bool SendParentWhatsAppAlert { get; set; } = true;
+    }
+
+    public class SupplementaryExamRequest
+    {
+        public Guid StudentId { get; set; }
+        public List<Guid> SubjectIds { get; set; } = new();
+        public DateTime? ExamDate { get; set; }
+        public string? Remarks { get; set; }
     }
 
     public class ReportApprovalRequest
@@ -3847,5 +4499,14 @@ namespace EduVault.Api.Controllers
     {
         public Guid ClassId { get; set; }
         public string ExamType { get; set; } = string.Empty;
+    }
+
+    public class GenerateTcRequest
+    {
+        public string? Reason { get; set; } = "Parent Request / Relocation";
+        public string? ConductRemark { get; set; } = "Good";
+        public bool AdminOverride { get; set; } = false;
+        public string? AdminOverrideNote { get; set; }
+        public bool ForceReissue { get; set; } = false;
     }
 }

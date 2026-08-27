@@ -520,7 +520,7 @@ const Landing = () => {
               <form onSubmit={handleInquirySubmit} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <input required aria-label="Your Name" placeholder="Your Name" value={inquiryForm.name} onChange={e => setInquiryForm(p => ({ ...p, name: e.target.value }))} className="w-full text-xs bg-slate-900/60 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-accent" />
-                  <input aria-label="Your Phone (Optional)" placeholder="Your Phone (Optional)" value={inquiryForm.phone || ''} onChange={e => setInquiryForm(p => ({ ...p, phone: e.target.value }))} className="w-full text-xs bg-slate-900/60 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-accent" />
+                  <input aria-label="Your Phone (10 Digits)" placeholder="Your Phone (10 Digits)" maxLength={10} pattern="[0-9]{10}" value={inquiryForm.phone || ''} onChange={e => setInquiryForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} className="w-full text-xs bg-slate-900/60 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-accent font-mono" />
                 </div>
                 <input required type="email" aria-label="Your Email" placeholder="Your Email" value={inquiryForm.email} onChange={e => setInquiryForm(p => ({ ...p, email: e.target.value }))} className="w-full text-xs bg-slate-900/60 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-accent" />
                 <div>
@@ -628,8 +628,8 @@ const Landing = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="admin-phone" className="block text-xs font-semibold text-blue-200 mb-1">Contact Phone Number *</label>
-                    <input required id="admin-phone" type="tel" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="+91 98765 43210" className="w-full text-xs bg-slate-800/80 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-accent" />
+                    <label htmlFor="admin-phone" className="block text-xs font-semibold text-blue-200 mb-1">Contact Phone Number (10 Digits) *</label>
+                    <input required id="admin-phone" type="tel" maxLength={10} pattern="[0-9]{10}" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="e.g. 9876543210" className="w-full text-xs bg-slate-800/80 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-accent font-mono" />
                   </div>
 
                   <button type="submit" disabled={submitting} className="w-full bg-accent hover:bg-accent-light text-white font-bold py-3 rounded-lg text-xs mt-2 transition-all flex items-center justify-center gap-2">

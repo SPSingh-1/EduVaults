@@ -477,7 +477,7 @@ const BookCatalog = () => {
                   {importResult.errors && importResult.errors.length > 0 && (
                     <div className="text-3xs text-rose-700 space-y-1 mt-2">
                       <span className="font-bold">Errors encountered:</span>
-                      {importResult.errors.map((err, i) => (
+                      {(importResult.errors || []).map((err, i) => (
                         <div key={i}>• {err}</div>
                       ))}
                     </div>

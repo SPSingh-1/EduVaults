@@ -84,10 +84,10 @@ const LibraryDashboard = () => {
   const chartData = stats?.dailyIssuanceTrend || [];
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-16">
+    <div className="space-y-6">
       <Topbar title="Library Management Dashboard" subtitle="Book Inventory, Active Loans, Returns & Fine Records" />
 
-      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+      <div className="space-y-6">
         {/* Dynamic KPI Strip (Controlled by Super Admin Configurator) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Total Books */}
@@ -311,7 +311,7 @@ const LibraryDashboard = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={stats.categoryBreakdown}
+                      data={stats?.categoryBreakdown || []}
                       cx="50%"
                       cy="50%"
                       innerRadius={50}
@@ -319,7 +319,7 @@ const LibraryDashboard = () => {
                       paddingAngle={4}
                       dataKey="total"
                     >
-                      {stats.categoryBreakdown.map((entry, index) => (
+                      {(stats?.categoryBreakdown || []).map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>

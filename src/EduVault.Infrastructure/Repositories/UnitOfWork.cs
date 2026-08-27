@@ -52,11 +52,30 @@ namespace EduVault.Infrastructure.Repositories
             LeaveRequests = new Repository<LeaveRequest>(_context);
             SalaryRecords = new Repository<SalaryRecord>(_context);
             Expenses = new Repository<Expense>(_context);
+            Employees = new Repository<Employee>(_context);
+            TeacherProfiles = new Repository<TeacherProfile>(_context);
+            Designations = new Repository<Designation>(_context);
+            EmploymentTypes = new Repository<EmploymentType>(_context);
+            WorkSchedules = new Repository<WorkSchedule>(_context);
+            LeavePolicies = new Repository<LeavePolicy>(_context);
+            SalaryComponents = new Repository<SalaryComponent>(_context);
+            SalaryStructures = new Repository<SalaryStructure>(_context);
+            SalaryStructureComponents = new Repository<SalaryStructureComponent>(_context);
+            StatutoryConfigurations = new Repository<StatutoryConfiguration>(_context);
+            Payrolls = new Repository<Payroll>(_context);
+            PayrollItems = new Repository<PayrollItem>(_context);
+            PayrollSnapshots = new Repository<PayrollSnapshot>(_context);
+            EmployeeDocuments = new Repository<EmployeeDocument>(_context);
 
             // Library Module
             Books = new Repository<Book>(_context);
             LibrarySettings = new Repository<LibrarySettings>(_context);
             LibraryTransactions = new Repository<LibraryTransaction>(_context);
+
+            // Front Desk / Receptionist Module
+            Visitors = new Repository<VisitorEntry>(_context);
+            GatePasses = new Repository<GatePassEntry>(_context);
+            AdmissionInquiries = new Repository<AdmissionInquiryEntry>(_context);
 
             // Dynamic Dashboard Widgets
             DashboardWidgetDefinitions = new Repository<DashboardWidgetDefinition>(_context);
@@ -95,18 +114,37 @@ namespace EduVault.Infrastructure.Repositories
         public IRepository<PageDefinition> PageDefinitions { get; private set; }
         public IRepository<SchoolRolePermission> SchoolRolePermissions { get; private set; }
 
-        // HRM / Account Module
+        // HRM / Account Module & Unified HRM Engine
         public IRepository<AccountManager> AccountManagers { get; private set; }
         public IRepository<SalaryRule> SalaryRules { get; private set; }
         public IRepository<LeaveQuota> LeaveQuotas { get; private set; }
         public IRepository<LeaveRequest> LeaveRequests { get; private set; }
         public IRepository<SalaryRecord> SalaryRecords { get; private set; }
         public IRepository<Expense> Expenses { get; private set; }
+        public IRepository<Employee> Employees { get; private set; }
+        public IRepository<TeacherProfile> TeacherProfiles { get; private set; }
+        public IRepository<Designation> Designations { get; private set; }
+        public IRepository<EmploymentType> EmploymentTypes { get; private set; }
+        public IRepository<WorkSchedule> WorkSchedules { get; private set; }
+        public IRepository<LeavePolicy> LeavePolicies { get; private set; }
+        public IRepository<SalaryComponent> SalaryComponents { get; private set; }
+        public IRepository<SalaryStructure> SalaryStructures { get; private set; }
+        public IRepository<SalaryStructureComponent> SalaryStructureComponents { get; private set; }
+        public IRepository<StatutoryConfiguration> StatutoryConfigurations { get; private set; }
+        public IRepository<Payroll> Payrolls { get; private set; }
+        public IRepository<PayrollItem> PayrollItems { get; private set; }
+        public IRepository<PayrollSnapshot> PayrollSnapshots { get; private set; }
+        public IRepository<EmployeeDocument> EmployeeDocuments { get; private set; }
 
         // Library Module
         public IRepository<Book> Books { get; private set; }
         public IRepository<LibrarySettings> LibrarySettings { get; private set; }
         public IRepository<LibraryTransaction> LibraryTransactions { get; private set; }
+
+        // Front Desk / Receptionist Module
+        public IRepository<VisitorEntry> Visitors { get; private set; }
+        public IRepository<GatePassEntry> GatePasses { get; private set; }
+        public IRepository<AdmissionInquiryEntry> AdmissionInquiries { get; private set; }
 
         // Dynamic Dashboard Widgets
         public IRepository<DashboardWidgetDefinition> DashboardWidgetDefinitions { get; private set; }

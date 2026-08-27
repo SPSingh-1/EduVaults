@@ -2339,11 +2339,12 @@ const Setup = () => {
                             {fr.breakdown && (() => {
                               try {
                                 const parsed = JSON.parse(fr.breakdown);
+                                if (!Array.isArray(parsed)) return null;
                                 return (
                                   <div className="mt-1 flex flex-wrap gap-1">
                                     {parsed.map((item, idx) => (
                                       <span key={idx} className="inline-block px-2 py-0.5 bg-primary/5 text-primary text-[10px] font-bold rounded-lg border border-primary/10">
-                                        {item.category}: Rs. {item.amount.toLocaleString()}
+                                        {item.category}: Rs. {Number(item.amount || 0).toLocaleString()}
                                       </span>
                                     ))}
                                   </div>
@@ -2364,7 +2365,7 @@ const Setup = () => {
                               </span>
                             )}
                           </td>
-                          <td className="py-3 text-sm font-bold text-gray-700">Rs. {fr.amount.toLocaleString()}</td>
+                          <td className="py-3 text-sm font-bold text-gray-700">Rs. {Number(fr.amount || 0).toLocaleString()}</td>
                           <td className="py-3 text-sm font-semibold text-primary">{fr.installments} {fr.installments === 1 ? 'step' : 'steps'}</td>
                           <td className="py-3 text-sm text-gray-400 font-medium">{fr.submissionTime}</td>
                           <td className="py-3 text-sm text-right">
