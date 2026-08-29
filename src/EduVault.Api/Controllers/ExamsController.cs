@@ -17,11 +17,13 @@ namespace EduVault.Api.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly EduVault.Infrastructure.Data.EduVaultDbContext _context;
+        private readonly Services.WhatsAppService _whatsAppService;
 
-        public ExamsController(IUnitOfWork unitOfWork, EduVault.Infrastructure.Data.EduVaultDbContext context)
+        public ExamsController(IUnitOfWork unitOfWork, EduVault.Infrastructure.Data.EduVaultDbContext context, Services.WhatsAppService whatsAppService)
         {
             _unitOfWork = unitOfWork;
             _context = context;
+            _whatsAppService = whatsAppService;
         }
 
         private Guid GetSchoolId()
@@ -114,6 +116,33 @@ namespace EduVault.Api.Controllers
 
             await _unitOfWork.Exams.AddAsync(exam);
             await _unitOfWork.CompleteAsync();
+
+            // Send WhatsApp exam schedule notice to class parents
+            try
+            {
+                var schoolId = GetSchoolId();
+                var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+                var classObj = await _unitOfWork.Classes.GetByIdAsync(exam.ClassId);
+                var subject = await _unitOfWork.Subjects.GetByIdAsync(exam.SubjectId);
+
+                var enrollments = await _unitOfWork.Enrollments.FindAsync(e => e.ClassId == exam.ClassId && e.Status == "ACTIVE");
+                var studentIds = enrollments.Select(e => e.StudentId).Distinct().ToList();
+
+                foreach (var sId in studentIds)
+                {
+                    var student = await _unitOfWork.Students.GetByIdAsync(sId);
+                    if (student != null && !string.IsNullOrWhiteSpace(student.GuardianPhone))
+                    {
+                        string msg = $"📝 *EXAM SCHEDULE NOTICE*\n\nDear Parent,\nAn examination has been scheduled:\n\n• *Subject:* {subject?.Name ?? "General"}\n• *Class:* {classObj?.Grade} - {classObj?.Section}\n• *Exam Type:* {exam.ExamType}\n• *Date:* {exam.Date:dd MMM yyyy}\n• *Time:* {exam.Time ?? "As per schedule"}\n\n- *{school?.Name ?? "School Administration"}*";
+                        _ = _whatsAppService.SendEventNotificationAsync(schoolId, "EXAM_NOTICE", student.GuardianPhone, msg);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WHATSAPP NOTICE] Error broadcasting exam notice: {ex.Message}");
+            }
+
             return Ok(new { success = true, examId = exam.Id });
         }
 
@@ -309,10 +338,28 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.CompleteAsync();
 
             var schoolId = GetSchoolId();
+            var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+            var subject = await _unitOfWork.Subjects.GetByIdAsync(exam.SubjectId);
             var results = await _unitOfWork.ExamResults.FindAsync(r => r.ExamId == examId);
             foreach (var result in results)
             {
                 await CheckAndAutoPromoteStudent(result.StudentId, schoolId);
+
+                // Send WhatsApp result announcement to student parent
+                try
+                {
+                    var student = await _unitOfWork.Students.GetByIdAsync(result.StudentId);
+                    var studentUser = await _unitOfWork.Users.GetByIdAsync(result.StudentId);
+                    if (student != null && !string.IsNullOrWhiteSpace(student.GuardianPhone))
+                    {
+                        string msg = $"📊 *EXAM RESULT DECLARED*\n\nDear Parent of *{studentUser?.FirstName} {studentUser?.LastName}*,\nThe exam result has been declared:\n\n• *Subject:* {subject?.Name ?? "Subject"}\n• *Cycle:* {exam.ExamType}\n• *Marks:* {result.MarksObtained}\n• *Grade:* {result.Grade}\n\n- *{school?.Name ?? "School Administration"}*";
+                        _ = _whatsAppService.SendEventNotificationAsync(schoolId, "EXAM_RESULT", student.GuardianPhone, msg);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WHATSAPP NOTICE] Error notifying parent on exam result: {ex.Message}");
+                }
             }
 
             return Ok(new { success = true });

@@ -459,10 +459,12 @@ namespace EduVault.Api.Controllers
                 Status = "success"
             };
 
-            using (var dbTransaction = await _context.Database.BeginTransactionAsync())
+            var strategy = _context.Database.CreateExecutionStrategy();
+            try
             {
-                try
+                await strategy.ExecuteAsync(async () =>
                 {
+                    using var dbTransaction = await _context.Database.BeginTransactionAsync();
                     await _context.Transactions.AddAsync(transaction);
 
                     invoice.PaidAmount += payAmount;
@@ -471,12 +473,11 @@ namespace EduVault.Api.Controllers
 
                     await _context.SaveChangesAsync();
                     await dbTransaction.CommitAsync();
-                }
-                catch (Exception ex)
-                {
-                    await dbTransaction.RollbackAsync();
-                    return StatusCode(500, new { error = "Payment processing failed: " + ex.Message });
-                }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Payment processing failed: " + ex.Message });
             }
 
             decimal newRemainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount);

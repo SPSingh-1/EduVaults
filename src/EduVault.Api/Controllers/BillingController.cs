@@ -23,12 +23,14 @@ namespace EduVault.Api.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly Services.WhatsAppService _whatsAppService;
 
-        public BillingController(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpClientFactory httpClientFactory)
+        public BillingController(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpClientFactory httpClientFactory, Services.WhatsAppService whatsAppService)
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
+            _whatsAppService = whatsAppService;
         }
 
         private Guid GetSchoolId()
@@ -349,6 +351,7 @@ namespace EduVault.Api.Controllers
         public async Task<IActionResult> PayInvoice([FromBody] PayInvoiceRequest request)
         {
             var studentId = GetUserId();
+            var schoolId = GetSchoolId();
             var invoice = await _unitOfWork.Invoices.GetByIdAsync(request.InvoiceId);
             if (invoice == null) return NotFound(new { error = "Invoice not found" });
 
@@ -390,6 +393,24 @@ namespace EduVault.Api.Controllers
             _unitOfWork.Invoices.Update(invoice);
 
             await _unitOfWork.CompleteAsync();
+
+            // Send WhatsApp payment receipt to parent
+            try
+            {
+                var studentProfile = await _unitOfWork.Students.GetByIdAsync(invoice.StudentId);
+                var feeStruct = await _unitOfWork.FeeStructures.GetByIdAsync(invoice.FeeStructureId);
+                var feeTitle = feeStruct?.Name ?? "School Fee";
+                var schoolObj = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+                if (studentProfile != null && !string.IsNullOrWhiteSpace(studentProfile.GuardianPhone))
+                {
+                    string msg = $"🧾 *FEE PAYMENT RECEIPT*\n\nDear Parent,\nPayment of ₹{payAmount:N2} for *{feeTitle}* has been received successfully.\n\n• *Mode:* {request.PaymentMethod}\n• *Ref ID:* {transaction.ReferenceNumber}\n• *Status:* {invoice.Status}\n• *Remaining Due:* ₹{Math.Max(0, totalPayable - invoice.PaidAmount):N2}\n\nThank you,\n*{schoolObj?.Name ?? "School Administration"}*";
+                    _ = _whatsAppService.SendEventNotificationAsync(schoolId, "FEE_RECEIPT", studentProfile.GuardianPhone, msg);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WHATSAPP NOTICE] Error notifying parent on fee payment: {ex.Message}");
+            }
 
             return Ok(new {
                 success = true,
@@ -564,29 +585,14 @@ namespace EduVault.Api.Controllers
             else
             {
                 // Razorpay
-                bool hasSchoolKeys = school != null && !string.IsNullOrWhiteSpace(school.RazorpayKeyId) && !string.IsNullOrWhiteSpace(school.RazorpayKeySecret);
-
-                if (!hasSchoolKeys || school == null)
+                bool hasKeys = school != null && !string.IsNullOrWhiteSpace(school.RazorpayKeyId) && !string.IsNullOrWhiteSpace(school.RazorpayKeySecret);
+                if (!hasKeys || school == null)
                 {
-                    return BadRequest(new { error = "PAYMENT_NOT_CONFIGURED" });
+                    return BadRequest(new { error = "PAYMENT_NOT_CONFIGURED", message = "Razorpay credentials are not configured for this school in database settings." });
                 }
 
-                var keyId = school.RazorpayKeyId!;
-                var keySecret = school.RazorpayKeySecret!;
-
-                if (keyId.Contains("mock") || keySecret.Contains("mock"))
-                {
-                    // Return a mock order ID if credentials are set to mock values to allow testing
-                    return Ok(new {
-                        paymentProvider = "razorpay",
-                        orderId = $"order_mock_{Guid.NewGuid().ToString().Substring(0, 8)}",
-                        amount = (int)Math.Round(payAmount * 100),
-                        currency = "INR",
-                        keyId = keyId,
-                        invoiceId = invoice.Id,
-                        isMock = true
-                    });
-                }
+                var keyId = school.RazorpayKeyId!.Trim();
+                var keySecret = school.RazorpayKeySecret!.Trim();
 
                 try
                 {
@@ -628,19 +634,17 @@ namespace EduVault.Api.Controllers
                 }
                 catch (Exception ex)
                 {
-                    return StatusCode(500, new { error = $"Error calling Razorpay: {ex.Message}" });
+                    return StatusCode(500, new { error = $"Error calling Razorpay API: {ex.Message}" });
                 }
             }
         }
 
         [HttpPost("verify-payment")]
-        [Authorize(Roles = "student")]
+        [Authorize(Roles = "student,schooladmin,accountmanager")]
         public async Task<IActionResult> VerifyPayment([FromBody] VerifyPaymentRequest request)
         {
             var invoice = await _unitOfWork.Invoices.GetByIdAsync(request.InvoiceId);
             if (invoice == null) return NotFound(new { error = "Invoice not found" });
-
-            if (invoice.Status == "Paid") return BadRequest(new { error = "Invoice is already paid" });
 
             decimal totalPayable = invoice.Amount + invoice.LateFineAmount;
             decimal remainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount);
@@ -651,11 +655,12 @@ namespace EduVault.Api.Controllers
 
             if (payAmount <= 0)
             {
-                return BadRequest(new { error = "Payment amount must be greater than zero." });
+                return BadRequest(new { error = "No pending payment amount due for this invoice." });
             }
 
             var user = await _unitOfWork.Users.GetByIdAsync(invoice.StudentId);
             var school = user != null ? await _unitOfWork.Schools.GetByIdAsync(user.SchoolId) : null;
+            var schoolId = user?.SchoolId ?? GetSchoolId();
             
             // Get active payment provider
             string provider = school?.PaymentProvider?.ToLower() ?? "razorpay";
@@ -675,18 +680,19 @@ namespace EduVault.Api.Controllers
             else
             {
                 // Razorpay
-                bool hasSchoolKeys = school != null && !string.IsNullOrWhiteSpace(school.RazorpayKeySecret);
-                if (!hasSchoolKeys)
+                bool hasKeys = school != null && !string.IsNullOrWhiteSpace(school.RazorpayKeySecret);
+                if (!hasKeys || school == null)
                 {
-                    return BadRequest(new { error = "PAYMENT_NOT_CONFIGURED" });
+                    return BadRequest(new { error = "PAYMENT_NOT_CONFIGURED", message = "Razorpay secret key is not configured for this school in database settings." });
                 }
 
-                var keySecret = school.RazorpayKeySecret;
+                var keySecret = school.RazorpayKeySecret!.Trim();
                 var razorOrderId = request.RazorpayOrderId ?? "";
                 var razorPaymentId = request.RazorpayPaymentId ?? "";
                 var razorSignature = request.RazorpaySignature ?? "";
 
-                if (razorOrderId.StartsWith("order_mock_") || string.IsNullOrEmpty(keySecret) || keySecret == "yourKeySecretHere")
+                // If testing with mock orders or signature verification against secret
+                if (razorOrderId.StartsWith("order_mock_") || keySecret == "yourKeySecretHere")
                 {
                     isVerified = true;
                 }
@@ -723,6 +729,24 @@ namespace EduVault.Api.Controllers
 
             await _unitOfWork.CompleteAsync();
 
+            // Send WhatsApp payment receipt
+            try
+            {
+                var studentProfile = await _unitOfWork.Students.GetByIdAsync(invoice.StudentId);
+                var feeStruct = await _unitOfWork.FeeStructures.GetByIdAsync(invoice.FeeStructureId);
+                var feeTitle = feeStruct?.Name ?? "School Fee";
+                var schoolObj = school ?? await _unitOfWork.Schools.GetByIdAsync(schoolId);
+                if (studentProfile != null && !string.IsNullOrWhiteSpace(studentProfile.GuardianPhone))
+                {
+                    string msg = $"🧾 *FEE PAYMENT RECEIPT*\n\nDear Parent,\nWe have successfully received payment for invoice *{feeTitle}*.\n\n• *Amount Paid:* ₹{payAmount:N2}\n• *Payment Mode:* {paymentMethod}\n• *Ref / Txn ID:* {transaction.ReferenceNumber}\n• *Status:* {invoice.Status}\n• *Remaining Due:* ₹{Math.Max(0, totalPayable - invoice.PaidAmount):N2}\n\nThank you,\n*{schoolObj?.Name ?? "School Administration"}*";
+                    _ = _whatsAppService.SendEventNotificationAsync(schoolId, "FEE_RECEIPT", studentProfile.GuardianPhone, msg);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WHATSAPP NOTICE] Error notifying parent on fee payment: {ex.Message}");
+            }
+
             return Ok(new { 
                 success = true, 
                 referenceNumber = transaction.ReferenceNumber,
@@ -731,6 +755,37 @@ namespace EduVault.Api.Controllers
                 remainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount),
                 status = invoice.Status
             });
+        }
+
+        [HttpPost("invoices/{id}/reminder")]
+        [Authorize(Roles = "accountmanager,schooladmin")]
+        public async Task<IActionResult> SendFeeReminder(Guid id)
+        {
+            var schoolId = GetSchoolId();
+            var invoice = await _unitOfWork.Invoices.GetByIdAsync(id);
+            if (invoice == null) return NotFound(new { error = "Invoice not found" });
+
+            var student = await _unitOfWork.Students.GetByIdAsync(invoice.StudentId);
+            var studentUser = await _unitOfWork.Users.GetByIdAsync(invoice.StudentId);
+            var feeStruct = await _unitOfWork.FeeStructures.GetByIdAsync(invoice.FeeStructureId);
+            var feeTitle = feeStruct?.Name ?? "School Fee";
+            var school = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+
+            decimal totalPayable = invoice.Amount + invoice.LateFineAmount;
+            decimal remainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount);
+
+            var phone = student?.GuardianPhone;
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                return BadRequest(new { error = "Student has no registered guardian phone number for WhatsApp alerts." });
+            }
+
+            string dueDateStr = invoice.DueDate.ToString("dd MMM yyyy");
+            string msg = $"🔔 *FEE PAYMENT REMINDER*\n\nDear Parent of *{studentUser?.FirstName} {studentUser?.LastName}*,\nThis is a friendly reminder regarding pending fee invoice for *{feeTitle}*.\n\n• *Pending Amount:* ₹{remainingBalance:N2}\n• *Due Date:* {dueDateStr}\n• *Invoice ID:* INV-{invoice.Id.ToString().Substring(0, 8).ToUpper()}\n\nPlease clear the dues to avoid late fee penalties.\n\n- *{school?.Name ?? "Accounts Department"}*";
+
+            _ = _whatsAppService.SendEventNotificationAsync(schoolId, "FEE_REMINDER", phone, msg);
+
+            return Ok(new { success = true, message = "Fee payment reminder sent via WhatsApp successfully." });
         }
 
         // =========================================================================

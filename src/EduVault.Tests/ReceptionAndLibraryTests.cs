@@ -33,7 +33,8 @@ namespace EduVault.Tests
             _unitOfWork = new UnitOfWork(_context);
 
             var mockConfig = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
-            _mockWhatsApp = new Mock<WhatsAppService>(mockConfig.Object, new System.Net.Http.HttpClient(), _unitOfWork);
+            var mockScopeFactory = new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
+            _mockWhatsApp = new Mock<WhatsAppService>(mockConfig.Object, new System.Net.Http.HttpClient(), mockScopeFactory.Object);
         }
 
         // ==========================================

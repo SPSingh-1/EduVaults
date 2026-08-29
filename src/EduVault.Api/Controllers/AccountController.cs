@@ -20,11 +20,13 @@ namespace EduVault.Api.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly EduVaultDbContext _context;
+        private readonly Services.WhatsAppService _whatsAppService;
 
-        public AccountController(IUnitOfWork unitOfWork, EduVaultDbContext context)
+        public AccountController(IUnitOfWork unitOfWork, EduVaultDbContext context, Services.WhatsAppService whatsAppService)
         {
             _unitOfWork = unitOfWork;
             _context = context;
+            _whatsAppService = whatsAppService;
         }
 
         private Guid GetSchoolId()
@@ -312,6 +314,27 @@ namespace EduVault.Api.Controllers
             }
 
             await _unitOfWork.CompleteAsync();
+
+            // Send WhatsApp alert to teacher
+            try
+            {
+                var teacherUser = await _unitOfWork.Users.GetByIdAsync(leave.TeacherUserId);
+                var emp = (await _unitOfWork.Employees.FindAsync(e => e.UserId == leave.TeacherUserId || (teacherUser != null && e.Email == teacherUser.Email))).FirstOrDefault();
+                var schoolObj = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+                var phone = emp?.Phone ?? emp?.EmergencyContactPhone;
+                if (!string.IsNullOrWhiteSpace(phone))
+                {
+                    string statusBadge = request.Status == "Approved" ? "✅ APPROVED" : "❌ REJECTED";
+                    string note = !string.IsNullOrWhiteSpace(request.RejectionNote) ? $"\n• *Remarks:* {request.RejectionNote}" : "";
+                    string msg = $"📌 *LEAVE REQUEST UPDATE*\n\nDear {teacherUser?.FirstName ?? "Staff"},\nYour *{leave.LeaveType}* leave request ({leave.FromDate:dd MMM yyyy} to {leave.ToDate:dd MMM yyyy}, {leave.TotalDays} day(s)) has been *{statusBadge}* by School Administration.{note}\n\n- *{schoolObj?.Name ?? "School Administration"}*";
+                    _ = _whatsAppService.SendEventNotificationAsync(schoolId, "LEAVE_STATUS", phone, msg);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WHATSAPP NOTICE] Error notifying teacher on leave status: {ex.Message}");
+            }
+
             return Ok(new { success = true, status = leave.Status });
         }
 
@@ -688,6 +711,26 @@ namespace EduVault.Api.Controllers
             record.PaidOn = DateTime.UtcNow;
             _unitOfWork.SalaryRecords.Update(record);
             await _unitOfWork.CompleteAsync();
+
+            // Send WhatsApp salary credit advice to employee
+            try
+            {
+                var teacherUser = await _unitOfWork.Users.GetByIdAsync(record.TeacherUserId);
+                var emp = (await _unitOfWork.Employees.FindAsync(e => e.UserId == record.TeacherUserId || (teacherUser != null && e.Email == teacherUser.Email))).FirstOrDefault();
+                var schoolObj = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+                var phone = emp?.Phone ?? emp?.EmergencyContactPhone;
+                if (!string.IsNullOrWhiteSpace(phone))
+                {
+                    var monthName = new DateTime(record.Year, record.Month, 1).ToString("MMMM yyyy");
+                    string msg = $"💰 *SALARY DISBURSAL ADVICE*\n\nDear {teacherUser?.FirstName ?? "Staff"},\nYour salary for *{monthName}* has been disbursed successfully.\n\n• *Net Pay:* ₹{record.NetPay:N2}\n• *Present Days:* {record.PresentDays} days\n• *Credit Date:* {record.PaidOn:dd MMM yyyy}\n\n- *{schoolObj?.Name ?? "Accounts Dept"}*";
+                    _ = _whatsAppService.SendEventNotificationAsync(schoolId, "SALARY_CREDIT", phone, msg);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WHATSAPP NOTICE] Error notifying employee on salary credit: {ex.Message}");
+            }
+
             return Ok(new { success = true, paidOn = record.PaidOn });
         }
 

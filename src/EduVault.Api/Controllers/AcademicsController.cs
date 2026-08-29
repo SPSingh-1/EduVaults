@@ -4052,6 +4052,25 @@ namespace EduVault.Api.Controllers
             await _unitOfWork.LeaveRequests.AddAsync(leave);
             await _unitOfWork.CompleteAsync();
 
+            // Send WhatsApp confirmation to teacher
+            try
+            {
+                var teacherUser = await _unitOfWork.Users.GetByIdAsync(userId);
+                var emp = (await _unitOfWork.Employees.FindAsync(e => e.UserId == userId || (teacherUser != null && e.Email == teacherUser.Email))).FirstOrDefault();
+                var schoolObj = await _unitOfWork.Schools.GetByIdAsync(schoolId);
+                var phone = emp?.Phone ?? emp?.EmergencyContactPhone;
+                if (!string.IsNullOrWhiteSpace(phone))
+                {
+                    string sessionInfo = request.DayType.Equals("HalfDay", StringComparison.OrdinalIgnoreCase) ? $" ({request.HalfDaySession})" : "";
+                    string msg = $"📋 *LEAVE APPLICATION SUBMITTED*\n\nDear {teacherUser?.FirstName ?? "Staff"},\nYour *{request.LeaveType.ToUpper()}* leave application ({totalDays} day(s){sessionInfo}, {reqFromDate:dd MMM yyyy} to {reqToDate:dd MMM yyyy}) has been received and is pending administrative approval.\n\n- *{schoolObj?.Name ?? "School Administration"}*";
+                    _ = _whatsAppService.SendEventNotificationAsync(schoolId, "LEAVE_STATUS", phone, msg);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WHATSAPP NOTICE] Error notifying teacher on leave application: {ex.Message}");
+            }
+
             return Ok(new { success = true, message = "Leave request submitted successfully." });
         }
 

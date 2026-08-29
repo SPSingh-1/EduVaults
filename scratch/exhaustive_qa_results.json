@@ -1,0 +1,108 @@
+{
+  "totalTests": 60,
+  "passed": 60,
+  "failed": 0,
+  "modules": {
+    "Authentication": {
+      "total": 16,
+      "passed": 16,
+      "failed": 0
+    },
+    "SuperAdmin": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "Database": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "Academics": {
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    "HRM": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "Billing": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "Validation": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "Teacher": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    "Receptionist": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "Library": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "Exams": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "Academic Lifecycle": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "Security": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    "Performance": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "benchmarks": [
+    {
+      "endpoint": "POST /api/auth/login (SuperAdmin)",
+      "duration": 467
+    },
+    {
+      "endpoint": "POST /api/super/schools",
+      "duration": 959
+    },
+    {
+      "endpoint": "POST /api/academics/attendance/submit",
+      "duration": 1999
+    },
+    {
+      "endpoint": "GET /api/receptionist/search-student",
+      "duration": 1033
+    },
+    {
+      "endpoint": "POST /api/receptionist/collect-spot-fee",
+      "duration": 1782
+    },
+    {
+      "endpoint": "POST /api/hrm/payroll/calculate",
+      "duration": 290
+    },
+    {
+      "endpoint": "20 Concurrent GET /api/receptionist/search-student",
+      "avgDuration": "2159ms"
+    }
+  ],
+  "bugs": []
+}

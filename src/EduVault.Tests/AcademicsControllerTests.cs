@@ -43,7 +43,8 @@ namespace EduVault.Tests
             }, "mock"));
 
             var mockConfig = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
-            var realWhatsApp = new WhatsAppService(mockConfig.Object, new System.Net.Http.HttpClient(), _mockUow.Object);
+            var mockScopeFactory = new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
+            var realWhatsApp = new WhatsAppService(mockConfig.Object, new System.Net.Http.HttpClient(), mockScopeFactory.Object);
 
             _controller = new AcademicsController(
                 _mockUow.Object,

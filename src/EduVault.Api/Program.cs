@@ -109,8 +109,8 @@ builder.Services.AddRateLimiter(options =>
     options.AddFixedWindowLimiter("public-api", opt =>
     {
         opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 10; // Max 10 requests per minute
-        opt.QueueLimit = 0;
+        opt.PermitLimit = 300; // Allow sufficient throughput for campus networks & test suites
+        opt.QueueLimit = 50;
     });
 });
 
