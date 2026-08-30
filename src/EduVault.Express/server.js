@@ -10,7 +10,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+const config = require('./config/env');
 
 const connectDB = require('./config/db');
 connectDB();
@@ -37,28 +37,23 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Configure CORS securely — MUST run before the rate limiter so that throttled (429)
-// responses still carry Access-Control-Allow-Origin headers; otherwise the browser
-// reports them as opaque "CORS blocked" errors instead of a clean 429.
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5000,http://localhost:5265,http://localhost:3000').split(',');
+// Configure CORS securely using centralized allowed origins
+const allowedOrigins = config.ALLOWED_ORIGINS;
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+    if (!origin || allowedOrigins.includes(origin) || config.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
-      callback(null, true);
+      callback(new Error(`CORS Error: Origin ${origin} is not allowed`));
     }
   },
   credentials: true
 }));
 
 // Apply global rate limiting to protect API endpoints.
-// This is a multi-user SaaS: many users share one school/NAT public IP, and the SPA
-// polls notifications/data frequently, so the per-IP budget must be generous.
-// CORS preflight (OPTIONS) requests are skipped so they never consume the budget.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX || '3000', 10), // per IP per window
+  max: config.RATE_LIMIT_MAX, // per IP per window
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.method === 'OPTIONS',
@@ -103,7 +98,29 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Mock local storage for document uploads (for demo/dev purposes)
+// Safe Health Check Endpoints
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'Healthy',
+    service: 'EduVault Express Auxiliary API',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/health/ready', (req, res) => {
+  const mongoose = require('mongoose');
+  const dbState = mongoose.connection.readyState;
+  const isHealthy = dbState === 1 || dbState === 2;
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'Healthy' : 'Unhealthy',
+    service: 'EduVault Express Auxiliary API',
+    database: dbState === 1 ? 'Connected' : 'Disconnected',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Storage for document uploads
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
@@ -115,7 +132,7 @@ const authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Access token missing' });
 
-  jwt.verify(token, process.env.JWT_SECRET || 'EduVaultSuperSecretJWTKey2025!WithSecureKey32BytesLength', (err, user) => {
+  jwt.verify(token, config.JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: 'Token invalid or expired' });
 
     // Normalize claims from .NET schema URIs
@@ -1449,7 +1466,7 @@ app.post('/api/homework/:id/submit-file', authenticateToken, async (req, res) =>
 // --- SOCKET.IO FOR REAL-TIME CHAT & NOTIFICATIONS ---
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: config.ALLOWED_ORIGINS,
     methods: ['GET', 'POST']
   }
 });
@@ -1459,7 +1476,7 @@ io.use((socket, next) => {
   const token = socket.handshake.auth.token;
   if (!token) return next(new Error('Authentication error: Token missing'));
 
-  jwt.verify(token, process.env.JWT_SECRET || 'EduVaultSuperSecretJWTKey2025!WithSecureKey32BytesLength', (err, decoded) => {
+  jwt.verify(token, config.JWT_SECRET, (err, decoded) => {
     if (err) return next(new Error('Authentication error: Token invalid'));
 
     const idClaim = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier';
@@ -1544,7 +1561,7 @@ if (fs.existsSync(webDistPath)) {
   });
 }
 
-const PORT = process.env.PORT || 5000;
+const PORT = config.PORT;
 server.listen(PORT, () => {
-  console.log(`Express auxiliary service running on port ${PORT}`);
+  console.log(`Express auxiliary service running on port ${PORT} (loaded config from: ${config.loadedFrom || 'environment'})`);
 });

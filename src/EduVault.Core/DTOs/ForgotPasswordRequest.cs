@@ -4,11 +4,8 @@ namespace EduVault.Core.DTOs
 {
     public class ForgotPasswordRequest
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Invalid email address.")]
         public string Email { get; set; } = string.Empty;
-
-        [Required]
-        public string NewPassword { get; set; } = string.Empty;
     }
 }

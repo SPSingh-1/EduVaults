@@ -1,5 +1,39 @@
 services:
   - type: web
+    name: eduvault-api
+    env: docker
+    dockerfilePath: src/EduVault.Api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/auth/settings
+    envVars:
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: SUPERADMIN_EMAIL
+        sync: false
+      - key: SUPERADMIN_PASSWORD
+        sync: false
+
+  - type: web
+    name: eduvault-express
+    env: node
+    buildCommand: cd src/EduVault.Express && npm install
+    startCommand: cd src/EduVault.Express && node server.js
+    healthCheckPath: /api-docs
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: PORT
+        value: 5005
+
+  - type: web
     name: eduvault-web
     env: static
     buildCommand: cd src/EduVault.Web && npm install && npm run build
@@ -8,9 +42,8 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
-
-  - type: web
-    name: eduvault-express
-    env: node
-    buildCommand: cd src/EduVault.Express && npm install
-    startCommand: cd src/EduVault.Express && node server.js
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_EXPRESS_URL
+        sync: false

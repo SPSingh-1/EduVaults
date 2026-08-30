@@ -39,7 +39,10 @@ import SchoolAdminDashboard from './pages/school-admin/Dashboard';
 import Students from './pages/school-admin/Students';
 import Teachers from './pages/school-admin/Teachers';
 import Fees from './pages/school-admin/Fees';
-import { Classes, Notices, Exams, Admission } from './pages/school-admin/AdminPages';
+import Classes from './pages/school-admin/Classes';
+import Notices from './pages/school-admin/Notices';
+import Exams from './pages/school-admin/Exams';
+import Admissions from './pages/school-admin/Admissions';
 import Setup from './pages/school-admin/Setup';
 import Reports from './pages/school-admin/Reports';
 import SchoolAdminProfile from './pages/school-admin/Profile';
@@ -50,7 +53,7 @@ import LibrarianRegister from './pages/school-admin/LibrarianRegister';
 // Account Manager Pages (HRM & Financial Management)
 import AccountDashboard from './pages/account/AccountDashboard';
 import EmployeeDirectory from './pages/account/EmployeeDirectory';
-import FeeRules from './pages/account-manager/FeeRules';
+import FeeRules from './pages/account/FeeRules';
 import SchoolBilling from './pages/account/SchoolBilling';
 import Salaries from './pages/account/Salaries';
 import SalaryRules from './pages/account/SalaryRules';
@@ -149,7 +152,8 @@ export default function App() {
                 <Route path="/school-admin" element={<SchoolAdminLayout />}>
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<SchoolAdminDashboard />} />
-                  <Route path="admission" element={<Admission />} />
+                  <Route path="admission" element={<Admissions />} />
+                  <Route path="admissions" element={<Admissions />} />
                   <Route path="students" element={<Students />} />
                   <Route path="teachers" element={<Teachers />} />
                   <Route path="account-managers" element={<AccountManagerRegister />} />

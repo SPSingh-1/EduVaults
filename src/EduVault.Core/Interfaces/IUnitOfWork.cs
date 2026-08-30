@@ -74,6 +74,9 @@ namespace EduVault.Core.Interfaces
         IRepository<DashboardWidgetDefinition> DashboardWidgetDefinitions { get; }
         IRepository<SchoolDashboardWidget> SchoolDashboardWidgets { get; }
 
+        // Security & Auth
+        IRepository<PasswordResetToken> PasswordResetTokens { get; }
+
         Task<int> CompleteAsync();
     }
 }

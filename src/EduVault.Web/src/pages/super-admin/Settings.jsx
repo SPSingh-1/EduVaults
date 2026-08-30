@@ -490,8 +490,17 @@ const Settings = () => {
       l.ipAddress || ''
     ]);
 
+    const sanitizeCell = (val) => {
+      if (val === null || val === undefined) return '';
+      const str = String(val).replace(/"/g, '""');
+      if (/^[=+\-@\t\r]/.test(str)) {
+        return `'${str}`;
+      }
+      return str;
+    };
+
     const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(','))].join('\n');
+      + [headers.join(','), ...rows.map(e => e.map(val => `"${sanitizeCell(val)}"`).join(','))].join('\n');
       
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");

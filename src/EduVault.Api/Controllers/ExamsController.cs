@@ -29,8 +29,23 @@ namespace EduVault.Api.Controllers
         private Guid GetSchoolId()
         {
             var schoolIdStr = User.FindFirst("schoolId")?.Value;
-            if (string.IsNullOrEmpty(schoolIdStr)) throw new UnauthorizedAccessException("School ID missing in token");
-            return Guid.Parse(schoolIdStr);
+            if (!string.IsNullOrEmpty(schoolIdStr) && Guid.TryParse(schoolIdStr, out var parsed))
+            {
+                return parsed;
+            }
+
+            if (User.IsInRole("superadmin"))
+            {
+                if (Request.Headers.TryGetValue("X-School-Id", out var headerVal) && Guid.TryParse(headerVal, out var headerSchoolId))
+                {
+                    return headerSchoolId;
+                }
+
+                var firstSchool = _context.Schools.Select(s => s.Id).FirstOrDefault();
+                if (firstSchool != Guid.Empty) return firstSchool;
+            }
+
+            throw new UnauthorizedAccessException("School ID missing in token");
         }
 
         private Guid GetUserId()
@@ -40,6 +55,7 @@ namespace EduVault.Api.Controllers
             return Guid.Parse(userIdStr);
         }
 
+        [HttpGet("")]
         [HttpGet("schedule")]
         public async Task<IActionResult> GetExams()
         {
@@ -75,6 +91,74 @@ namespace EduVault.Api.Controllers
             });
 
             return Ok(result);
+        }
+
+        [HttpGet("summary-stats")]
+        public async Task<IActionResult> GetExamSummaryStats()
+        {
+            var schoolId = GetSchoolId();
+            var classes = (await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId)).ToList();
+            var classIds = classes.Select(c => c.Id).ToList();
+
+            var exams = (await _unitOfWork.Exams.FindAsync(e => classIds.Contains(e.ClassId))).ToList();
+            var examIds = exams.Select(e => e.Id).ToList();
+
+            var allResults = (await _unitOfWork.ExamResults.FindAsync(r => examIds.Contains(r.ExamId))).ToList();
+
+            int upcoming = exams.Count(e => e.Status == "SCHEDULED" || e.Status == "Draft" || e.Status == "Scheduled");
+            int ongoing = exams.Count(e => e.Status == "ONGOING" || e.Status == "Ongoing");
+            int completed = exams.Count(e => e.Status == "Completed" || e.Status == "COMPLETED");
+            int pendingApprovals = exams.Count(e => e.Status != "Completed" && allResults.Any(r => r.ExamId == e.Id && r.IsSubmitted));
+
+            var totalStudents = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student")).Count();
+
+            return Ok(new
+            {
+                upcomingExams = upcoming,
+                ongoingExams = ongoing,
+                completedExams = completed,
+                pendingApprovals,
+                totalAssessments = exams.Count,
+                readyForReportCards = totalStudents
+            });
+        }
+
+        [HttpGet("submissions/pending")]
+        [Authorize(Roles = "schooladmin,SchoolAdmin,superadmin,SuperAdmin")]
+        public async Task<IActionResult> GetPendingSubmissions()
+        {
+            var schoolId = GetSchoolId();
+            var classes = (await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId)).ToList();
+            var classIds = classes.Select(c => c.Id).ToList();
+
+            var exams = (await _unitOfWork.Exams.FindAsync(e => classIds.Contains(e.ClassId) && e.Status != "Completed")).ToList();
+            var subjects = (await _unitOfWork.Subjects.FindAsync(s => s.SchoolId == schoolId)).ToList();
+            var teachers = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "teacher")).ToList();
+
+            var list = new System.Collections.Generic.List<object>();
+            foreach (var exam in exams)
+            {
+                var results = (await _unitOfWork.ExamResults.FindAsync(r => r.ExamId == exam.Id && r.IsSubmitted)).ToList();
+                if (results.Any())
+                {
+                    var subj = subjects.FirstOrDefault(s => s.Id == exam.SubjectId);
+                    var cls = classes.FirstOrDefault(c => c.Id == exam.ClassId);
+                    var teacher = teachers.FirstOrDefault(t => t.Id == exam.ProctorId);
+
+                    list.Add(new
+                    {
+                        ExamId = exam.Id,
+                        SubjectName = subj?.Name ?? "Subject",
+                        Grade = cls != null ? $"Grade {cls.Grade}-{cls.Section}" : "Class",
+                        SubmittedBy = teacher != null ? $"{teacher.FirstName} {teacher.LastName}" : "Assigned Teacher",
+                        StudentCount = results.Count,
+                        ExamType = exam.ExamType,
+                        Date = exam.Date.ToString("MMM dd, yyyy")
+                    });
+                }
+            }
+
+            return Ok(list);
         }
 
         [HttpPost("schedule")]

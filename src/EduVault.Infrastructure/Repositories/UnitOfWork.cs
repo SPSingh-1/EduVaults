@@ -80,6 +80,9 @@ namespace EduVault.Infrastructure.Repositories
             // Dynamic Dashboard Widgets
             DashboardWidgetDefinitions = new Repository<DashboardWidgetDefinition>(_context);
             SchoolDashboardWidgets = new Repository<SchoolDashboardWidget>(_context);
+
+            // Security & Auth
+            PasswordResetTokens = new Repository<PasswordResetToken>(_context);
         }
 
         public IRepository<School> Schools { get; private set; }
@@ -149,6 +152,9 @@ namespace EduVault.Infrastructure.Repositories
         // Dynamic Dashboard Widgets
         public IRepository<DashboardWidgetDefinition> DashboardWidgetDefinitions { get; private set; }
         public IRepository<SchoolDashboardWidget> SchoolDashboardWidgets { get; private set; }
+
+        // Security & Auth
+        public IRepository<PasswordResetToken> PasswordResetTokens { get; private set; }
 
         public async Task<int> CompleteAsync()
         {

@@ -144,7 +144,7 @@ namespace EduVault.Api.Controllers
 
         [HttpPost("reset-password")]
         [Authorize(Roles = "superadmin")]
-        public async Task<IActionResult> ResetUserPassword([FromBody] ResetPasswordRequest request)
+        public async Task<IActionResult> ResetUserPassword([FromBody] SupportUserResetRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email))
             {
@@ -224,7 +224,7 @@ namespace EduVault.Api.Controllers
         public string ContactNumber { get; set; } = string.Empty;
     }
 
-    public class ResetPasswordRequest
+    public class SupportUserResetRequest
     {
         public string Email { get; set; } = string.Empty;
     }

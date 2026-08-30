@@ -93,6 +93,14 @@ namespace EduVault.Api.Controllers
                 return Unauthorized(new { error = "Invalid email or password" });
             }
 
+            // Transparently upgrade legacy password hashes to modern PBKDF2-SHA512
+            if (_authService.NeedsRehash(user.PasswordHash))
+            {
+                user.PasswordHash = _authService.HashPassword(request.Password);
+                _unitOfWork.Users.Update(user);
+                await _unitOfWork.CompleteAsync();
+            }
+
             var settings = (await _unitOfWork.PlatformSettings.GetAllAsync()).FirstOrDefault();
             if (settings != null && settings.MaintenanceMode && user.Role != "superadmin" && user.Role != "schooladmin")
             {
@@ -241,22 +249,108 @@ namespace EduVault.Api.Controllers
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
-            var userList = await _unitOfWork.Users.FindAsync(u => u.Email == request.Email);
-            var user = userList.FirstOrDefault();
-
-            if (user == null)
+            if (string.IsNullOrWhiteSpace(request.Email))
             {
-                return NotFound(new { error = "No account found with this email address." });
+                return BadRequest(new { error = "Email address is required." });
             }
 
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+            var userList = await _unitOfWork.Users.FindAsync(u => u.Email.ToLower() == normalizedEmail);
+            var user = userList.FirstOrDefault();
+
+            if (user != null && user.IsActive)
+            {
+                // Invalidate any existing unused reset tokens for this user
+                var existingTokens = await _unitOfWork.PasswordResetTokens.FindAsync(t => t.UserId == user.Id && !t.IsUsed);
+                foreach (var oldToken in existingTokens)
+                {
+                    oldToken.IsUsed = true;
+                    _unitOfWork.PasswordResetTokens.Update(oldToken);
+                }
+
+                // Generate cryptographically secure 256-bit token
+                byte[] randomBytes = new byte[32];
+                RandomNumberGenerator.Fill(randomBytes);
+                string rawToken = Convert.ToHexString(randomBytes).ToLowerInvariant();
+
+                // Store SHA-256 hash in database
+                string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawToken)));
+
+                var resetToken = new PasswordResetToken
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    TokenHash = tokenHash,
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+                    IsUsed = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _unitOfWork.PasswordResetTokens.AddAsync(resetToken);
+                await _unitOfWork.CompleteAsync();
+            }
+
+            // Always return a generic success message to prevent user enumeration
+            return Ok(new
+            {
+                success = true,
+                message = "If an active account exists with this email address, a password reset instruction has been dispatched."
+            });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                return BadRequest(new { error = "Email, reset token, and new password are required." });
+            }
+
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+            var userList = await _unitOfWork.Users.FindAsync(u => u.Email.ToLower() == normalizedEmail);
+            var user = userList.FirstOrDefault();
+
+            if (user == null || !user.IsActive)
+            {
+                return BadRequest(new { error = "Invalid or expired password reset token." });
+            }
+
+            string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.Token.Trim().ToLowerInvariant())));
+            var validTokens = await _unitOfWork.PasswordResetTokens.FindAsync(t => 
+                t.UserId == user.Id && 
+                t.TokenHash == tokenHash && 
+                !t.IsUsed && 
+                t.ExpiresAt > DateTime.UtcNow);
+
+            var matchingToken = validTokens.FirstOrDefault();
+            if (matchingToken == null)
+            {
+                return BadRequest(new { error = "Invalid or expired password reset token." });
+            }
+
+            // Invalidate token
+            matchingToken.IsUsed = true;
+            matchingToken.UsedAt = DateTime.UtcNow;
+            _unitOfWork.PasswordResetTokens.Update(matchingToken);
+
+            // Invalidate any sibling tokens for this user
+            var otherTokens = await _unitOfWork.PasswordResetTokens.FindAsync(t => t.UserId == user.Id && !t.IsUsed);
+            foreach (var ot in otherTokens)
+            {
+                ot.IsUsed = true;
+                _unitOfWork.PasswordResetTokens.Update(ot);
+            }
+
+            // Update user password hash
             user.PasswordHash = _authService.HashPassword(request.NewPassword);
             _unitOfWork.Users.Update(user);
+
             await _unitOfWork.CompleteAsync();
 
             return Ok(new
             {
                 success = true,
-                message = "Password updated successfully."
+                message = "Password has been successfully reset. You may now log in with your new password."
             });
         }
 

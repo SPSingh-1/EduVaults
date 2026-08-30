@@ -1,4 +1,6 @@
 using System.Text;
+using System.IO;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -8,49 +10,127 @@ using EduVault.Core.Interfaces;
 using EduVault.Infrastructure.Data;
 using EduVault.Infrastructure.Repositories;
 using EduVault.Api.Services;
+using EduVault.Api.Configuration;
 
-using System.IO;
-
-// Load environment variables from .env file if it exists at API root or workspace root
-var pathsToTry = new[] {
-    Path.Combine(Directory.GetCurrentDirectory(), ".env"),
-    Path.Combine(Directory.GetCurrentDirectory(), "src", "EduVault.Api", ".env"),
-    Path.Combine(AppContext.BaseDirectory, ".env")
-};
-foreach (var path in pathsToTry)
+// ─── 1. Centralized Environment Variable Resolution ────────────────────────
+// Search for the single authoritative .env file starting from AppContext and CWD up the tree
+var candidateDirectories = new List<string>
 {
-    if (File.Exists(path))
+    Directory.GetCurrentDirectory(),
+    AppContext.BaseDirectory,
+    Path.Combine(Directory.GetCurrentDirectory(), ".."),
+    Path.Combine(Directory.GetCurrentDirectory(), "../.."),
+    Path.Combine(AppContext.BaseDirectory, ".."),
+    Path.Combine(AppContext.BaseDirectory, "../.."),
+    Path.Combine(AppContext.BaseDirectory, "../../..")
+};
+
+string? loadedEnvPath = null;
+foreach (var dir in candidateDirectories)
+{
+    try
     {
-        foreach (var line in File.ReadAllLines(path))
+        var fullDir = Path.GetFullPath(dir);
+        var envFile = Path.Combine(fullDir, ".env");
+        if (File.Exists(envFile))
         {
-            var trimmedLine = line.Trim();
-            if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#")) continue;
-            
-            var parts = trimmedLine.Split('=', 2);
-            if (parts.Length == 2)
+            foreach (var line in File.ReadAllLines(envFile))
             {
-                var envKey = parts[0].Trim();
-                var envVal = parts[1].Trim();
-                if (envVal.StartsWith("\"") && envVal.EndsWith("\"")) envVal = envVal.Substring(1, envVal.Length - 2);
-                else if (envVal.StartsWith("'") && envVal.EndsWith("'")) envVal = envVal.Substring(1, envVal.Length - 2);
-                
-                Environment.SetEnvironmentVariable(envKey, envVal);
+                var trimmed = line.Trim();
+                if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#")) continue;
+
+                var parts = trimmed.Split('=', 2);
+                if (parts.Length == 2)
+                {
+                    var envKey = parts[0].Trim();
+                    var envVal = parts[1].Trim();
+                    if ((envVal.StartsWith("\"") && envVal.EndsWith("\"")) ||
+                        (envVal.StartsWith("'") && envVal.EndsWith("'")))
+                    {
+                        envVal = envVal.Substring(1, envVal.Length - 2);
+                    }
+
+                    if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(envKey)))
+                    {
+                        Environment.SetEnvironmentVariable(envKey, envVal);
+                    }
+                }
             }
+            loadedEnvPath = envFile;
+            break;
         }
-        break; // Only load from the first one found
     }
+    catch
+    {
+        // continue searching
+    }
+}
+
+if (loadedEnvPath != null)
+{
+    Console.WriteLine($"[CONFIG] Authoritative .env loaded from: {loadedEnvPath}");
 }
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Normalize environment variables across naming conventions
+var rawJwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") 
+    ?? Environment.GetEnvironmentVariable("Jwt__Secret") 
+    ?? builder.Configuration["Jwt:Secret"] 
+    ?? builder.Configuration["Jwt__Secret"];
+
+var rawDbConn = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") 
+    ?? Environment.GetEnvironmentVariable("DATABASE_URL") 
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+var rawSuperEmail = Environment.GetEnvironmentVariable("SUPERADMIN_EMAIL") 
+    ?? builder.Configuration["SUPERADMIN_EMAIL"] 
+    ?? "superadmin@eduvault.com";
+
+var rawSuperPass = Environment.GetEnvironmentVariable("SUPERADMIN_PASSWORD") 
+    ?? builder.Configuration["SUPERADMIN_PASSWORD"] 
+    ?? "Admin123!";
+
+var rawAllowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") 
+    ?? builder.Configuration["ALLOWED_ORIGINS"] 
+    ?? "http://localhost:5173,http://localhost:3000,http://localhost:5265,http://localhost:5005";
+
+// Fail-fast configuration validation
+if (string.IsNullOrWhiteSpace(rawJwtSecret) || rawJwtSecret.Length < 32)
+{
+    var msg = "[FATAL CONFIG ERROR] JWT Secret is required and must be at least 32 characters. Set JWT_SECRET in .env or environment variables.";
+    Console.Error.WriteLine(msg);
+    throw new InvalidOperationException(msg);
+}
+
+if (string.IsNullOrWhiteSpace(rawDbConn))
+{
+    var msg = "[FATAL CONFIG ERROR] PostgreSQL Connection String is required. Set ConnectionStrings__DefaultConnection or DATABASE_URL in .env or environment variables.";
+    Console.Error.WriteLine(msg);
+    throw new InvalidOperationException(msg);
+}
+
+// ─── 2. Strongly Typed Options Configuration ──────────────────────────────
+builder.Services.Configure<JwtOptions>(options =>
+{
+    options.Secret = rawJwtSecret;
+    options.Issuer = "EduVault";
+    options.Audience = "EduVaultUsers";
+    options.ExpirationDays = 7;
+});
+
+builder.Services.Configure<SuperAdminOptions>(options =>
+{
+    options.Email = rawSuperEmail;
+    options.Password = rawSuperPass;
+});
+
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
 
-// Configure EF Core with PostgreSQL
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// ─── 3. Database Context (PostgreSQL EF Core) ──────────────────────────────
 builder.Services.AddDbContext<EduVaultDbContext>(options =>
-    options.UseNpgsql(connectionString, npgsqlOptions =>
+    options.UseNpgsql(rawDbConn, npgsqlOptions =>
         npgsqlOptions.EnableRetryOnFailure(
             maxRetryCount: 5,
             maxRetryDelay: TimeSpan.FromSeconds(10),
@@ -58,7 +138,7 @@ builder.Services.AddDbContext<EduVaultDbContext>(options =>
         )
     ));
 
-// Register repositories and services
+// ─── 4. Dependency Injection ──────────────────────────────────────────────
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPayrollCalculationService, PayrollCalculationService>();
@@ -68,9 +148,8 @@ builder.Services.AddSingleton<IWhatsAppQueue, WhatsAppQueue>();
 builder.Services.AddHostedService<WhatsAppQueueWorker>();
 builder.Services.AddHttpClient();
 
-// Configure JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Secret"] ?? "EduVaultSuperSecretJWTKey2025!WithSecureKey32BytesLength";
-var key = Encoding.ASCII.GetBytes(jwtKey);
+// ─── 5. JWT Authentication & Token Validation ─────────────────────────────
+var jwtKeyBytes = Encoding.UTF8.GetBytes(rawJwtSecret);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -84,43 +163,61 @@ builder.Services.AddAuthentication(options =>
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ClockSkew = TimeSpan.Zero
+        IssuerSigningKey = new SymmetricSecurityKey(jwtKeyBytes),
+        ValidateIssuer = true,
+        ValidIssuer = "EduVault",
+        ValidateAudience = true,
+        ValidAudience = "EduVaultUsers",
+        ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
+        ClockSkew = TimeSpan.FromMinutes(1)
     };
 });
 
-// Configure CORS
+// ─── 6. CORS Configuration ────────────────────────────────────────────────
+var parsedOrigins = rawAllowedOrigins
+    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+    .Select(o => o.Trim().Trim('"', '\''))
+    .ToArray();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("CentralizedCorsPolicy", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(parsedOrigins)
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
-// Configure Rate Limiting
+// ─── 7. Rate Limiting ─────────────────────────────────────────────────────
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    
+    // General API window
     options.AddFixedWindowLimiter("public-api", opt =>
     {
         opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 300; // Allow sufficient throughput for campus networks & test suites
+        opt.PermitLimit = 300;
         opt.QueueLimit = 50;
+    });
+
+    // Stricter limiter for authentication & password reset endpoints (Brute Force Protection)
+    options.AddFixedWindowLimiter("auth-strict", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 15;
+        opt.QueueLimit = 5;
     });
 });
 
-// Swagger support
+// ─── 8. Swagger Documentation ─────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "EduVault Web API", Version = "v1" });
     
-    // Add JWT support in Swagger UI
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
@@ -146,37 +243,95 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// ─── 8. Infrastructure Services & Health Checks ───────────────────────────
+builder.Services.AddHealthChecks()
+    .AddCheck("Database", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ─── 9. HTTP Pipeline & Production Error Shield ───────────────────────────
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "EduVault Web API v1"));
 }
+else
+{
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+            var traceId = context.TraceIdentifier;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                success = false,
+                message = "An unexpected server error occurred. Please try again later or contact system administration.",
+                traceId = traceId
+            });
+        });
+    });
+}
 
-// HTTP Security Headers Middleware
+// HTTP Security Headers
 app.Use(async (context, next) =>
 {
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     context.Response.Headers["X-Frame-Options"] = "DENY";
-    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-    context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss: http: https:;";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()";
+    if (context.Request.IsHttps)
+    {
+        context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    }
+    context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' ws: wss: http: https:; frame-ancestors 'none';";
     await next();
 });
 
-app.UseCors("AllowAll");
+app.UseCors("CentralizedCorsPolicy");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseStaticFiles();
+// Health Check Endpoints (safe, non-leaking)
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false,
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            status = "Healthy",
+            service = "EduVault .NET API",
+            timestamp = DateTime.UtcNow
+        });
+    }
+});
 
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        bool isHealthy = report.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy;
+        context.Response.StatusCode = isHealthy ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            status = report.Status.ToString(),
+            service = "EduVault .NET API",
+            database = report.Entries.TryGetValue("Database", out var dbEntry) ? dbEntry.Status.ToString() : "Unknown",
+            timestamp = DateTime.UtcNow
+        });
+    }
+});
+
+app.UseStaticFiles();
 app.MapControllers();
 app.MapFallbackToFile("index.html");
 
-// Database Startup — Schema creation and minimal bootstrap only
+// ─── 10. Database Startup Bootstrap & Schema Sync ─────────────────────────
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -185,67 +340,80 @@ using (var scope = app.Services.CreateScope())
         var context = services.GetRequiredService<EduVaultDbContext>();
         var authService = services.GetRequiredService<IAuthService>();
 
-        // Apply database migrations programmatically via EF Core
         try
         {
             await context.Database.MigrateAsync();
         }
         catch (Exception migEx)
         {
-            Console.WriteLine($"Migration note: {migEx.Message}");
+            Console.WriteLine($"[STARTUP NOTE] Migration check: {migEx.Message}");
         }
 
-        // Ensure newly added columns exist in PostgreSQL
+        // Schema sync for newly defined tables and columns
         try
         {
-            await context.Database.ExecuteSqlRawAsync(@"
-                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""HasReceptionistModule"" boolean NOT NULL DEFAULT TRUE;
-                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""SchoolUpiId"" text NULL;
-                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppFeeReceiptsEnabled"" boolean NOT NULL DEFAULT TRUE;
-                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppFeeRemindersEnabled"" boolean NOT NULL DEFAULT TRUE;
-                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppLibraryAlertsEnabled"" boolean NOT NULL DEFAULT TRUE;
-                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppGatePassAlertsEnabled"" boolean NOT NULL DEFAULT TRUE;
-                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppAdmissionInquiryEnabled"" boolean NOT NULL DEFAULT TRUE;
-                ALTER TABLE ""Schools"" ADD COLUMN IF NOT EXISTS ""WhatsAppTcNoticeEnabled"" boolean NOT NULL DEFAULT TRUE;
-                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""PreviousSchoolName"" text NULL;
-                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""PreviousTcNumber"" text NULL;
-                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""PreviousTcDate"" text NULL;
-                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""PreviousTcDocumentUrl"" text NULL;
-                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""OutwardTcNumber"" text NULL;
-                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""OutwardTcIssuedDate"" timestamp with time zone NULL;
-                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""TcReason"" text NULL;
-                ALTER TABLE ""Students"" ADD COLUMN IF NOT EXISTS ""TcConductRemark"" text NULL;
+            await context.Database.ExecuteSqlRawAsync("""
+                CREATE TABLE IF NOT EXISTS "PasswordResetTokens" (
+                    "Id" uuid NOT NULL PRIMARY KEY,
+                    "UserId" uuid NOT NULL REFERENCES "Users" ("Id") ON DELETE CASCADE,
+                    "TokenHash" text NOT NULL DEFAULT '',
+                    "ExpiresAt" timestamp with time zone NOT NULL DEFAULT NOW(),
+                    "IsUsed" boolean NOT NULL DEFAULT FALSE,
+                    "CreatedAt" timestamp with time zone NOT NULL DEFAULT NOW(),
+                    "UsedAt" timestamp with time zone NULL
+                );
+                CREATE INDEX IF NOT EXISTS "IX_PasswordResetTokens_TokenHash" ON "PasswordResetTokens" ("TokenHash");
 
-                ALTER TABLE ""Invoices"" ADD COLUMN IF NOT EXISTS ""LateFineAmount"" numeric NOT NULL DEFAULT 0.0;
-                ALTER TABLE ""Invoices"" ADD COLUMN IF NOT EXISTS ""PaidAmount"" numeric NOT NULL DEFAULT 0.0;
+                ALTER TABLE "PasswordResetTokens" ADD COLUMN IF NOT EXISTS "TokenHash" text NOT NULL DEFAULT '';
+                ALTER TABLE "PasswordResetTokens" ADD COLUMN IF NOT EXISTS "ExpiresAt" timestamp with time zone NOT NULL DEFAULT NOW();
+                ALTER TABLE "PasswordResetTokens" ADD COLUMN IF NOT EXISTS "IsUsed" boolean NOT NULL DEFAULT FALSE;
+                ALTER TABLE "PasswordResetTokens" ADD COLUMN IF NOT EXISTS "CreatedAt" timestamp with time zone NOT NULL DEFAULT NOW();
+                ALTER TABLE "PasswordResetTokens" ADD COLUMN IF NOT EXISTS "UsedAt" timestamp with time zone NULL;
 
-                ALTER TABLE ""FeeStructures"" ADD COLUMN IF NOT EXISTS ""FeeCategory"" text NOT NULL DEFAULT 'Standard';
-                ALTER TABLE ""FeeStructures"" ADD COLUMN IF NOT EXISTS ""LateFeePerDay"" numeric NOT NULL DEFAULT 0.0;
-                ALTER TABLE ""FeeStructures"" ADD COLUMN IF NOT EXISTS ""GracePeriodDays"" integer NOT NULL DEFAULT 0;
-                ALTER TABLE ""FeeStructures"" ADD COLUMN IF NOT EXISTS ""IsCustomPaymentAllowed"" boolean NOT NULL DEFAULT TRUE;
-                ALTER TABLE ""FeeStructures"" ADD COLUMN IF NOT EXISTS ""MinPartialPaymentAmount"" numeric NOT NULL DEFAULT 100.0;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "HasReceptionistModule" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "SchoolUpiId" text NULL;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "WhatsAppFeeReceiptsEnabled" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "WhatsAppFeeRemindersEnabled" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "WhatsAppLibraryAlertsEnabled" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "WhatsAppGatePassAlertsEnabled" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "WhatsAppAdmissionInquiryEnabled" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "WhatsAppTcNoticeEnabled" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "PreviousSchoolName" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "PreviousTcNumber" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "PreviousTcDate" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "PreviousTcDocumentUrl" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "OutwardTcNumber" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "OutwardTcIssuedDate" timestamp with time zone NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "TcReason" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "TcConductRemark" text NULL;
 
-                ALTER TABLE ""Enrollments"" ADD COLUMN IF NOT EXISTS ""FailedSubjectsCount"" integer NOT NULL DEFAULT 0;
-                ALTER TABLE ""Enrollments"" ADD COLUMN IF NOT EXISTS ""AcademicOutcomeRemark"" text NULL;
-                ALTER TABLE ""Enrollments"" ADD COLUMN IF NOT EXISTS ""IsAdminOverride"" boolean NOT NULL DEFAULT FALSE;
-                ALTER TABLE ""Enrollments"" ADD COLUMN IF NOT EXISTS ""OverrideReason"" text NULL;
-            ");
+                ALTER TABLE "Invoices" ADD COLUMN IF NOT EXISTS "LateFineAmount" numeric NOT NULL DEFAULT 0.0;
+                ALTER TABLE "Invoices" ADD COLUMN IF NOT EXISTS "PaidAmount" numeric NOT NULL DEFAULT 0.0;
+
+                ALTER TABLE "FeeStructures" ADD COLUMN IF NOT EXISTS "FeeCategory" text NOT NULL DEFAULT 'Standard';
+                ALTER TABLE "FeeStructures" ADD COLUMN IF NOT EXISTS "LateFeePerDay" numeric NOT NULL DEFAULT 0.0;
+                ALTER TABLE "FeeStructures" ADD COLUMN IF NOT EXISTS "GracePeriodDays" integer NOT NULL DEFAULT 0;
+                ALTER TABLE "FeeStructures" ADD COLUMN IF NOT EXISTS "IsCustomPaymentAllowed" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE "FeeStructures" ADD COLUMN IF NOT EXISTS "MinPartialPaymentAmount" numeric NOT NULL DEFAULT 100.0;
+
+                ALTER TABLE "Enrollments" ADD COLUMN IF NOT EXISTS "FailedSubjectsCount" integer NOT NULL DEFAULT 0;
+                ALTER TABLE "Enrollments" ADD COLUMN IF NOT EXISTS "AcademicOutcomeRemark" text NULL;
+                ALTER TABLE "Enrollments" ADD COLUMN IF NOT EXISTS "IsAdminOverride" boolean NOT NULL DEFAULT FALSE;
+                ALTER TABLE "Enrollments" ADD COLUMN IF NOT EXISTS "OverrideReason" text NULL;
+            """);
         }
         catch (Exception colEx)
         {
-            Console.WriteLine($"Column check note: {colEx.Message}");
+            Console.WriteLine($"[STARTUP NOTE] Column sync: {colEx.Message}");
         }
 
-        // ─── Seed Super Admin (required for platform operation) ────────────────
+        // Seed Super Admin if missing
         if (!context.Users.Any(u => u.Role == "superadmin"))
         {
-            var seedEmail = Environment.GetEnvironmentVariable("SUPERADMIN_EMAIL") ?? "superadmin@eduvault.com";
-            var seedPassword = Environment.GetEnvironmentVariable("SUPERADMIN_PASSWORD") ?? "Admin123!";
-
             var superAdmin = new EduVault.Core.Entities.User
             {
-                Email = seedEmail,
-                PasswordHash = authService.HashPassword(seedPassword),
+                Email = rawSuperEmail,
+                PasswordHash = authService.HashPassword(rawSuperPass),
                 Role = "superadmin",
                 FirstName = "EduVault",
                 LastName = "SuperAdmin",
@@ -253,10 +421,10 @@ using (var scope = app.Services.CreateScope())
             };
             context.Users.Add(superAdmin);
             context.SaveChanges();
-            Console.WriteLine($"Seeded Super Admin: {seedEmail} / [HIDDEN]");
+            Console.WriteLine($"[STARTUP] Seeded Super Admin: {rawSuperEmail}");
         }
 
-        // ─── Seed or Update Standard Platform Plan ────────────────
+        // Seed Standard Platform Plan if missing
         var standardPlan = context.PlatformPlans.FirstOrDefault(p => p.PlanName.Contains("Standard"));
         if (standardPlan == null)
         {
@@ -273,24 +441,14 @@ using (var scope = app.Services.CreateScope())
             };
             context.PlatformPlans.Add(standardPlan);
             context.SaveChanges();
-            Console.WriteLine("Seeded Platform Plan: Standard Plan");
-        }
-        else
-        {
-            standardPlan.ImplementationCost = 0m;
-            standardPlan.StudentCapacity = "Scale on Demand";
-            standardPlan.StorageLimit = "Varying / DB Cost";
-            standardPlan.MonthlyPrice = "Per-User Pricing";
-            context.PlatformPlans.Update(standardPlan);
-            context.SaveChanges();
-            Console.WriteLine("Updated Platform Plan: Standard Plan details");
+            Console.WriteLine("[STARTUP] Seeded Platform Plan: Standard Plan");
         }
 
-        Console.WriteLine("EduVault startup complete. All real data must be entered via the admin portal.");
+        Console.WriteLine("[STARTUP] EduVault API bootstrap completed successfully.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Startup error: {ex.Message}");
+        Console.WriteLine($"[STARTUP ERROR] Bootstrap failure: {ex.Message}");
     }
 }
 

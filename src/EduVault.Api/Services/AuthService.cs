@@ -3,46 +3,58 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using EduVault.Core.Entities;
 using EduVault.Core.Interfaces;
+using EduVault.Api.Configuration;
 
 namespace EduVault.Api.Services
 {
     public class AuthService : IAuthService
     {
-        private readonly IConfiguration _config;
+        private readonly JwtOptions _jwtOptions;
+        private const int CurrentPbkdf2Iterations = 210000;
+        private const int SaltSizeBytes = 16;
+        private const int HashSizeBytes = 32;
 
-        public AuthService(IConfiguration config)
+        public AuthService(IOptions<JwtOptions> jwtOptions)
         {
-            _config = config;
+            _jwtOptions = jwtOptions?.Value ?? throw new ArgumentNullException(nameof(jwtOptions));
+            
+            if (string.IsNullOrWhiteSpace(_jwtOptions.Secret) || _jwtOptions.Secret.Length < 32)
+            {
+                throw new InvalidOperationException("Fatal: Centralized JWT Secret is missing or shorter than 32 characters in configuration.");
+            }
         }
 
         public string GenerateToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var jwtKey = _config["Jwt:Secret"] ?? "EduVaultSuperSecretJWTKey2025!WithSecureKey32BytesLength";
-            var key = Encoding.ASCII.GetBytes(jwtKey);
+            var key = Encoding.UTF8.GetBytes(_jwtOptions.Secret);
 
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role),
+                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+                new Claim(ClaimTypes.Role, user.Role ?? string.Empty),
                 new Claim("id", user.Id.ToString()),
-                new Claim("email", user.Email),
-                new Claim("role", user.Role),
-                new Claim("firstName", user.FirstName),
-                new Claim("lastName", user.LastName),
+                new Claim("email", user.Email ?? string.Empty),
+                new Claim("role", user.Role ?? string.Empty),
+                new Claim("firstName", user.FirstName ?? string.Empty),
+                new Claim("lastName", user.LastName ?? string.Empty),
                 new Claim("schoolId", user.SchoolId?.ToString() ?? string.Empty)
             };
+
+            var expirationDays = _jwtOptions.ExpirationDays > 0 ? _jwtOptions.ExpirationDays : 7;
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddDays(7),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                Issuer = _jwtOptions.Issuer,
+                Audience = _jwtOptions.Audience,
+                Expires = DateTime.UtcNow.AddDays(expirationDays),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
             };
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
@@ -51,16 +63,21 @@ namespace EduVault.Api.Services
 
         public string HashPassword(string password)
         {
-            byte[] salt = new byte[16];
+            if (string.IsNullOrEmpty(password))
+                throw new ArgumentException("Password cannot be empty.", nameof(password));
+
+            byte[] salt = new byte[SaltSizeBytes];
             RandomNumberGenerator.Fill(salt);
-            
-            byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 10000, HashAlgorithmName.SHA256, 20);
 
-            byte[] hashBytes = new byte[36];
-            Array.Copy(salt, 0, hashBytes, 0, 16);
-            Array.Copy(hash, 0, hashBytes, 16, 20);
+            byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
+                password,
+                salt,
+                CurrentPbkdf2Iterations,
+                HashAlgorithmName.SHA512,
+                HashSizeBytes);
 
-            return Convert.ToBase64String(hashBytes);
+            // Self-describing upgraded format: $v2$<iterations>$<salt_b64>$<hash_b64>
+            return $"$v2${CurrentPbkdf2Iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
         }
 
         public bool VerifyPassword(string password, string hashedPassword)
@@ -70,24 +87,56 @@ namespace EduVault.Api.Services
 
             try
             {
+                // 1. Check for modern self-describing v2 format ($v2$iterations$salt$hash)
+                if (hashedPassword.StartsWith("$v2$"))
+                {
+                    var parts = hashedPassword.Split('$');
+                    if (parts.Length != 5) return false;
+
+                    if (!int.TryParse(parts[2], out int iterations)) return false;
+                    byte[] salt = Convert.FromBase64String(parts[3]);
+                    byte[] expectedHash = Convert.FromBase64String(parts[4]);
+
+                    byte[] actualHash = Rfc2898DeriveBytes.Pbkdf2(
+                        password,
+                        salt,
+                        iterations,
+                        HashAlgorithmName.SHA512,
+                        expectedHash.Length);
+
+                    return CryptographicOperations.FixedTimeEquals(expectedHash, actualHash);
+                }
+
+                // 2. Fallback to Legacy 36-byte raw format (16 bytes salt + 20 bytes SHA256 @ 10,000 iter)
                 byte[] hashBytes = Convert.FromBase64String(hashedPassword);
                 if (hashBytes.Length != 36)
                     return false;
 
-                byte[] salt = new byte[16];
-                Array.Copy(hashBytes, 0, salt, 0, 16);
+                byte[] legacySalt = new byte[16];
+                Array.Copy(hashBytes, 0, legacySalt, 0, 16);
 
-                byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 10000, HashAlgorithmName.SHA256, 20);
+                byte[] computedHash = Rfc2898DeriveBytes.Pbkdf2(
+                    password,
+                    legacySalt,
+                    10000,
+                    HashAlgorithmName.SHA256,
+                    20);
 
                 byte[] storedHash = new byte[20];
                 Array.Copy(hashBytes, 16, storedHash, 0, 20);
 
-                return CryptographicOperations.FixedTimeEquals(storedHash, hash);
+                return CryptographicOperations.FixedTimeEquals(storedHash, computedHash);
             }
             catch
             {
                 return false;
             }
+        }
+
+        public bool NeedsRehash(string hashedPassword)
+        {
+            if (string.IsNullOrEmpty(hashedPassword)) return true;
+            return !hashedPassword.StartsWith("$v2$");
         }
     }
 }

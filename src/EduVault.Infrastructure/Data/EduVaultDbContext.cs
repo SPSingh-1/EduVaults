@@ -84,6 +84,9 @@ namespace EduVault.Infrastructure.Data
         public DbSet<DashboardWidgetDefinition> DashboardWidgetDefinitions { get; set; }
         public DbSet<SchoolDashboardWidget> SchoolDashboardWidgets { get; set; }
 
+        // Security & Password Reset
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -583,6 +586,16 @@ namespace EduVault.Infrastructure.Data
                 .WithOne(p => p.Snapshot)
                 .HasForeignKey<PayrollSnapshot>(ps => ps.PayrollId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Password Reset Tokens
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasIndex(p => p.TokenHash);
         }
     }
 }

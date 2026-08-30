@@ -7,5 +7,6 @@ namespace EduVault.Core.Interfaces
         string GenerateToken(User user);
         string HashPassword(string password);
         bool VerifyPassword(string password, string hashedPassword);
+        bool NeedsRehash(string hashedPassword);
     }
 }
