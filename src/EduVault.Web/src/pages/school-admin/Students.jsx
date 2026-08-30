@@ -102,6 +102,15 @@ const Students = () => {
     adminOverrideNote: ''
   });
 
+  // Student Password Reset Modal State
+  const [showResetPassModal, setShowResetPassModal] = useState(false);
+  const [resetStudentObj, setResetStudentObj] = useState(null);
+  const [newStudentPassword, setNewStudentPassword] = useState('Student123!');
+  const [resetPassLoading, setResetPassLoading] = useState(false);
+  const [resetPassSuccess, setResetPassSuccess] = useState('');
+  const [resetPassError, setResetPassError] = useState('');
+  const [showPasswordText, setShowPasswordText] = useState(false);
+
   // Form State
   const [editMode, setEditMode] = useState(false);
   const [editStudentId, setEditStudentId] = useState(null);
@@ -419,6 +428,38 @@ const Students = () => {
       setRetainError(err.response?.data?.error || 'Failed to retain student in current grade.');
     } finally {
       setRetaining(false);
+    }
+  };
+
+  const handleOpenResetPass = (student) => {
+    setResetStudentObj(student);
+    setNewStudentPassword('Student123!');
+    setResetPassSuccess('');
+    setResetPassError('');
+    setShowPasswordText(false);
+    setShowResetPassModal(true);
+  };
+
+  const handleExecuteResetPass = async (e) => {
+    e.preventDefault();
+    if (!resetStudentObj) return;
+    setResetPassLoading(true);
+    setResetPassError('');
+    setResetPassSuccess('');
+    try {
+      const res = await apiClient.post('/support/reset-student-password', {
+        studentId: resetStudentObj.id,
+        newPassword: newStudentPassword
+      });
+      if (res.data.success) {
+        setResetPassSuccess(res.data.message || 'Password successfully updated.');
+      } else {
+        setResetPassError(res.data.error || 'Failed to update password.');
+      }
+    } catch (err) {
+      setResetPassError(err.response?.data?.error || 'Failed to update student password.');
+    } finally {
+      setResetPassLoading(false);
     }
   };
 
@@ -795,6 +836,15 @@ const Students = () => {
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
+                        </button>
+
+                        {/* Reset Password */}
+                        <button 
+                          onClick={() => handleOpenResetPass(s)} 
+                          className="p-1.5 text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200/60 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105 text-xs font-bold" 
+                          title="Reset Student Password (Instant Admin/Teacher Reset)"
+                        >
+                          🔑 Reset
                         </button>
 
                         {/* Transfer Certificate (TC) */}
@@ -1943,6 +1993,135 @@ const Students = () => {
                 <span>{retaining ? 'Retaining...' : '🔄 Confirm Class Retention'}</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Student Password Reset Modal */}
+      {showResetPassModal && resetStudentObj && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50/50 via-white to-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-lg shadow-xs">
+                  🔑
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-primary text-base">Reset Student Password</h3>
+                  <p className="text-xs text-gray-500">
+                    Instant institutional credential reset
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowResetPassModal(false)}
+                className="w-8 h-8 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleExecuteResetPass} className="p-6 space-y-4">
+              {/* Student Summary Banner */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div className="font-bold text-sm text-slate-800">{resetStudentObj.name}</div>
+                <div className="text-xs text-slate-500 flex items-center gap-3">
+                  <span>Class: <strong>{resetStudentObj.class} - {resetStudentObj.section}</strong></span>
+                  <span>ID: <strong className="font-mono">{resetStudentObj.studentId}</strong></span>
+                </div>
+                <div className="text-xs text-slate-400 font-mono truncate">{resetStudentObj.email}</div>
+              </div>
+
+              {resetPassSuccess && (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs space-y-2">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <span>✓</span> {resetPassSuccess}
+                  </div>
+                  <div className="p-2 bg-white/80 rounded-lg border border-emerald-100 flex items-center justify-between font-mono text-xs">
+                    <span>New Password: <strong>{newStudentPassword}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard.writeText(newStudentPassword)}
+                      className="text-emerald-700 hover:underline text-2xs font-bold"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {resetPassError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold">
+                  ⚠️ {resetPassError}
+                </div>
+              )}
+
+              {!resetPassSuccess && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type={showPasswordText ? 'text' : 'password'}
+                        value={newStudentPassword}
+                        onChange={e => setNewStudentPassword(e.target.value)}
+                        placeholder="Enter new password (min 6 chars)"
+                        className="input pr-10 text-xs sm:text-sm font-mono"
+                        required
+                        minLength={6}
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => setShowPasswordText(!showPasswordText)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+                      >
+                        {showPasswordText ? '🙈' : '👁'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Preset Buttons */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xs text-gray-400 font-semibold uppercase tracking-wider">Quick Preset:</span>
+                    <button
+                      type="button"
+                      onClick={() => setNewStudentPassword('Student123!')}
+                      className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors border border-slate-200"
+                    >
+                      Student123!
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewStudentPassword(`Pass#${Math.floor(100000 + Math.random() * 900000)}`)}
+                      className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors border border-slate-200"
+                    >
+                      Random PIN
+                    </button>
+                  </div>
+                </>
+              )}
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowResetPassModal(false)}
+                  className="btn-outline text-xs px-4 py-2"
+                >
+                  {resetPassSuccess ? 'Close' : 'Cancel'}
+                </button>
+                {!resetPassSuccess && (
+                  <button
+                    type="submit"
+                    disabled={resetPassLoading || !newStudentPassword}
+                    className="btn-primary text-xs px-4 py-2 bg-blue-600 hover:bg-blue-700 flex items-center gap-1.5 shadow-sm"
+                  >
+                    <span>{resetPassLoading ? 'Updating...' : '🔑 Update Password'}</span>
+                  </button>
+                )}
+              </div>
+            </form>
           </div>
         </div>
       )}

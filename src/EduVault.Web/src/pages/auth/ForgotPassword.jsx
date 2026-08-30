@@ -138,11 +138,19 @@ const ForgotPassword = () => {
             </span>
           </div>
 
-          <p className="text-gray-500 text-sm mb-6">
+          <p className="text-gray-500 text-sm mb-4">
             {step === 1 
-              ? 'Enter your registered email address to receive a secure recovery code.' 
+              ? 'Enter your registered staff/admin email address to receive a secure recovery code.' 
               : 'Enter the recovery code sent to your email and your new password.'}
           </p>
+
+          {/* Student Guidance Card */}
+          <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-3 mb-5 flex items-start gap-2.5">
+            <span className="text-base leading-none mt-0.5">🎓</span>
+            <div className="text-xs text-amber-900 leading-relaxed">
+              <span className="font-bold">Are you a Student?</span> Students do not need email verification. You can ask your <strong>Class Teacher</strong> or <strong>School Admin</strong> to reset your password instantly from their portal.
+            </div>
+          </div>
 
           {infoMessage && (
             <div className="bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium rounded-lg p-3 mb-4">

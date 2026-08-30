@@ -182,6 +182,61 @@ namespace EduVault.Api.Controllers
             });
         }
 
+        [HttpPost("reset-student-password")]
+        [Authorize(Roles = "superadmin,schooladmin,teacher")]
+        public async Task<IActionResult> ResetStudentPassword([FromBody] ResetStudentPasswordRequest request)
+        {
+            if (request.StudentId == Guid.Empty)
+            {
+                return BadRequest(new { error = "Student ID is required." });
+            }
+
+            var student = await _unitOfWork.Users.GetByIdAsync(request.StudentId);
+            if (student == null || student.Role != "student")
+            {
+                return NotFound(new { error = "Student account not found." });
+            }
+
+            // Tenant isolation check
+            var isSuperAdmin = User.IsInRole("superadmin");
+            if (!isSuperAdmin)
+            {
+                var userSchoolId = GetSchoolId();
+                if (userSchoolId == null || student.SchoolId != userSchoolId)
+                {
+                    return Forbid();
+                }
+            }
+
+            var newPassword = string.IsNullOrWhiteSpace(request.NewPassword) ? "Student123!" : request.NewPassword.Trim();
+            if (newPassword.Length < 6)
+            {
+                return BadRequest(new { error = "Password must be at least 6 characters long." });
+            }
+
+            student.PasswordHash = _authService.HashPassword(newPassword);
+            _unitOfWork.Users.Update(student);
+
+            // Invalidate any open password reset tokens for this user
+            var existingTokens = await _unitOfWork.PasswordResetTokens.FindAsync(t => t.UserId == student.Id && !t.IsUsed);
+            foreach (var token in existingTokens)
+            {
+                token.IsUsed = true;
+                _unitOfWork.PasswordResetTokens.Update(token);
+            }
+
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Password for {student.FirstName} {student.LastName} has been successfully updated.",
+                studentId = student.Id,
+                email = student.Email,
+                updatedPassword = newPassword
+            });
+        }
+
         [HttpPatch("tickets/{id}/status")]
         [Authorize(Roles = "superadmin")]
         public async Task<IActionResult> UpdateTicketStatus(Guid id, [FromBody] UpdateStatusRequest request)
@@ -227,6 +282,12 @@ namespace EduVault.Api.Controllers
     public class SupportUserResetRequest
     {
         public string Email { get; set; } = string.Empty;
+    }
+
+    public class ResetStudentPasswordRequest
+    {
+        public Guid StudentId { get; set; }
+        public string? NewPassword { get; set; }
     }
 
     public class UpdateStatusRequest

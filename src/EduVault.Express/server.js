@@ -1494,8 +1494,13 @@ io.use((socket, next) => {
     if (Array.isArray(decoded.role)) decoded.role = decoded.role[0];
     if (Array.isArray(decoded.schoolId)) decoded.schoolId = decoded.schoolId[0];
 
-    if (!decoded.schoolId) {
+    const isSuperAdmin = decoded.role === 'superadmin';
+    if (!decoded.schoolId && !isSuperAdmin) {
       return next(new Error('Authentication error: School ID missing in token'));
+    }
+
+    if (isSuperAdmin && !decoded.schoolId) {
+      decoded.schoolId = 'ALL';
     }
 
     socket.user = decoded;
@@ -1504,10 +1509,15 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  console.log(`Socket Connected: User ${socket.user.id} in School ${socket.user.schoolId}`);
+  console.log(`Socket Connected: User ${socket.user.id} (${socket.user.role}) in School ${socket.user.schoolId}`);
 
-  // Join standard school-wide room
-  socket.join(socket.user.schoolId);
+  // Join standard school-wide room if present
+  if (socket.user.schoolId && socket.user.schoolId !== 'ALL') {
+    socket.join(socket.user.schoolId);
+  }
+  if (socket.user.role === 'superadmin') {
+    socket.join('SUPERADMIN');
+  }
   // Join private personal room for direct messages
   socket.join(socket.user.id);
 
