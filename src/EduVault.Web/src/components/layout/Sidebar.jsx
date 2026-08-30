@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSidebar } from '../../contexts/SidebarContext';
@@ -20,7 +21,6 @@ const resolveIcon = (icon) => {
 const NavLink = ({ icon, label, path, onClick }) => {
   const location = useLocation();
   const active = location.pathname === path || location.pathname.startsWith(path + '/');
-  const IconComponent = resolveIcon(icon);
 
   return (
     <div className={`sidebar-link group ${active ? 'active' : ''}`} onClick={onClick || (() => {})}>
@@ -29,7 +29,7 @@ const NavLink = ({ icon, label, path, onClick }) => {
         <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-accent rounded-r-full shadow-[0_0_12px_rgba(212,160,23,0.5)]" />
       )}
       <span className={`flex items-center justify-center transition-all duration-300 ease-out shrink-0 ${active ? 'scale-115 text-accent' : 'text-blue-300/85 group-hover:scale-110 group-hover:text-white'}`}>
-        <IconComponent className="w-4 h-4 stroke-[2]" />
+        {createElement(resolveIcon(icon), { className: "w-4 h-4 stroke-[2]" })}
       </span>
       <span className="transition-all duration-300 ease-out">{label}</span>
     </div>

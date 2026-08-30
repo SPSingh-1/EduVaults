@@ -15,12 +15,14 @@ const safeUrl = (url) => {
   if (trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('data:image/')) {
     return trimmed;
   }
-  try {
-    const parsed = new URL(trimmed, window.location.origin);
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-      return parsed.href;
+    try {
+      const parsed = new URL(trimmed, window.location.origin);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return parsed.href;
+      }
+    } catch {
+      // invalid URL format, fallback to default
     }
-  } catch (e) {}
   return '/logo.jpeg';
 };
 

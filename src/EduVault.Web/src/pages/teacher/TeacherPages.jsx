@@ -1721,7 +1721,9 @@ export const MarksEntry = () => {
       let teacherUser = null;
       try {
         teacherUser = JSON.parse(localStorage.getItem('eduvault_user') || 'null');
-      } catch (e) {}
+      } catch {
+        // fallback to default
+      }
       const teacherName = teacherUser ? `${teacherUser.firstName} ${teacherUser.lastName}` : 'Class Teacher';
 
       try {

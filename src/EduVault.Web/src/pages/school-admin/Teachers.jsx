@@ -48,6 +48,9 @@ const Teachers = () => {
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceTeachers, setAttendanceTeachers] = useState([]);
   const [attendanceSaved, setAttendanceSaved] = useState(false);
+  const [attendanceSubmitting, setAttendanceSubmitting] = useState(false);
+  const [attendanceSubmitted, setAttendanceSubmitted] = useState(false);
+  const [isEditingAttendance, setIsEditingAttendance] = useState(false);
 
   // Teacher Attendance Inspection States
   const [selectedInspectionTeacherId, setSelectedInspectionTeacherId] = useState('');

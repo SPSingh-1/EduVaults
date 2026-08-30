@@ -100,19 +100,25 @@ const SchoolHrmSettings = () => {
         try {
           const parsed = JSON.parse(pfRes.data.configurationJson || '{}');
           setPfConfig({ isEnabled: pfRes.data.isEnabled, ...parsed });
-        } catch (e) {}
+        } catch (e) {
+          console.debug('Failed to parse PF config:', e);
+        }
       }
       if (esiRes.data) {
         try {
           const parsed = JSON.parse(esiRes.data.configurationJson || '{}');
           setEsiConfig({ isEnabled: esiRes.data.isEnabled, ...parsed });
-        } catch (e) {}
+        } catch (e) {
+          console.debug('Failed to parse ESI config:', e);
+        }
       }
       if (ptRes.data) {
         try {
           const parsed = JSON.parse(ptRes.data.configurationJson || '{}');
           setPtConfig({ isEnabled: ptRes.data.isEnabled, state: parsed.state || 'Maharashtra', amount: 200 });
-        } catch (e) {}
+        } catch (e) {
+          console.debug('Failed to parse PT config:', e);
+        }
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load school HRM configuration.');

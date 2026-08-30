@@ -447,9 +447,10 @@ export const StudentDashboard = () => {
     };
   };
 
+  const attRateWidget = getStudentWidget('card.student.attendance_rate', 'Term Attendance Rate');
   const gpaCardWidget = getStudentWidget('card.student.gpa_standing', 'Current GPA Standing');
-  const attendanceCardWidget = getStudentWidget('card.student.attendance_rate', 'Term Attendance Rate');
   const feesCardWidget = getStudentWidget('card.student.fee_balance', 'Outstanding Fee Balance');
+  const rankCardWidget = getStudentWidget('card.student.class_rank', 'Class Rank Standing');
   const libraryCardWidget = getStudentWidget('card.student.library_loans', 'Active Library Loans');
 
   if (loading) {

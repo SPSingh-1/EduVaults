@@ -20,7 +20,9 @@ const Settings = () => {
       if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
         return parsed.href;
       }
-    } catch (e) {}
+    } catch {
+      // invalid URL format, fallback to default
+    }
     return '/logo.jpeg';
   };
 
@@ -106,7 +108,7 @@ const Settings = () => {
   };
 
   const getActionTypeStyle = (actionType) => {
-    let bgColor = '#6b7280';
+    let bgColor;
     
     switch (actionType) {
       case 'SETTINGS_UPDATE':

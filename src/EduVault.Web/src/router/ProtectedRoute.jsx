@@ -8,6 +8,7 @@ const roleRoutes = {
   student: '/student/dashboard',
   accountmanager: '/account/dashboard',
   librarian: '/library/dashboard',
+  receptionist: '/receptionist/dashboard',
 };
 
 export const ProtectedRoute = ({ allowedRoles }) => {

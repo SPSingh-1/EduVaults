@@ -80,11 +80,11 @@ const AccountDashboard = () => {
     }
   }, [mainGraphWidget?.chartType]);
 
-  let graphTitle = 'Monthly Fee Collection Trend (Last 6 Months)';
-  let graphSubtitle = 'Total student fee revenue received per month';
-  let graphData = stats?.monthlyFeeTrend || [];
-  let graphColor = '#10b981'; // Emerald
-  let graphTooltipLabel = 'Fee Collected';
+  let graphTitle;
+  let graphSubtitle;
+  let graphData;
+  let graphColor;
+  let graphTooltipLabel;
 
   if (mainGraphWidget?.metricSource === 'SalaryDisbursed' || mainGraphWidget?.widgetKey?.includes('salary')) {
     graphTitle = `${mainGraphWidget.title || 'Monthly Salary Outflow'} (Last 6 Months)`;
