@@ -14,6 +14,8 @@ const SchoolHrmSettings = () => {
   const { schoolId } = useParams();
   const navigate = useNavigate();
 
+  const [schools, setSchools] = useState([]);
+  const [activeSchoolId, setActiveSchoolId] = useState(schoolId || '');
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,24 +71,63 @@ const SchoolHrmSettings = () => {
   const [previewResult, setPreviewResult] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  // 1. Fetch schools list for switcher
   useEffect(() => {
-    loadAllData();
+    fetchSchoolsList();
+  }, []);
+
+  const fetchSchoolsList = async () => {
+    try {
+      const res = await apiClient.get('/super/schools');
+      const list = res.data || [];
+      setSchools(list);
+      if (!schoolId && list.length > 0) {
+        setActiveSchoolId(list[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to fetch schools list:', err);
+    }
+  };
+
+  // 2. Sync activeSchoolId if URL schoolId changes
+  useEffect(() => {
+    if (schoolId) {
+      setActiveSchoolId(schoolId);
+    }
   }, [schoolId]);
 
-  const loadAllData = async () => {
+  // 3. Load HRM data whenever activeSchoolId changes
+  useEffect(() => {
+    if (activeSchoolId) {
+      loadAllData(activeSchoolId);
+    } else {
+      setLoading(false);
+    }
+  }, [activeSchoolId]);
+
+  const handleSchoolChange = (newSchoolId) => {
+    setActiveSchoolId(newSchoolId);
+    navigate(`/super-admin/schools/${newSchoolId}/hrm`);
+  };
+
+  const loadAllData = async (targetSchoolId = activeSchoolId) => {
+    if (!targetSchoolId) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError('');
       const [ovRes, deptRes, desigRes, schedRes, leaveRes, salCompRes, pfRes, esiRes, ptRes] = await Promise.all([
-        apiClient.get(`/api/super/schools/${schoolId}/hrm/overview`),
-        apiClient.get(`/api/super/schools/${schoolId}/hrm/departments`),
-        apiClient.get(`/api/super/schools/${schoolId}/hrm/designations`),
-        apiClient.get(`/api/super/schools/${schoolId}/hrm/work-schedule`),
-        apiClient.get(`/api/super/schools/${schoolId}/hrm/leave-policies`),
-        apiClient.get(`/api/super/schools/${schoolId}/hrm/salary-components`),
-        apiClient.get(`/api/super/schools/${schoolId}/hrm/statutory/PF`),
-        apiClient.get(`/api/super/schools/${schoolId}/hrm/statutory/ESI`),
-        apiClient.get(`/api/super/schools/${schoolId}/hrm/statutory/PT`)
+        apiClient.get(`/super/schools/${targetSchoolId}/hrm/overview`),
+        apiClient.get(`/super/schools/${targetSchoolId}/hrm/departments`),
+        apiClient.get(`/super/schools/${targetSchoolId}/hrm/designations`),
+        apiClient.get(`/super/schools/${targetSchoolId}/hrm/work-schedule`),
+        apiClient.get(`/super/schools/${targetSchoolId}/hrm/leave-policies`),
+        apiClient.get(`/super/schools/${targetSchoolId}/hrm/salary-components`),
+        apiClient.get(`/super/schools/${targetSchoolId}/hrm/statutory/PF`),
+        apiClient.get(`/super/schools/${targetSchoolId}/hrm/statutory/ESI`),
+        apiClient.get(`/super/schools/${targetSchoolId}/hrm/statutory/PT`)
       ]);
 
       setOverview(ovRes.data);
@@ -135,10 +176,10 @@ const SchoolHrmSettings = () => {
   // Department Handlers
   const handleAddDept = async (e) => {
     e.preventDefault();
-    if (!newDeptName.trim()) return;
+    if (!newDeptName.trim() || !activeSchoolId) return;
     try {
       setSaving(true);
-      const res = await apiClient.post(`/api/super/schools/${schoolId}/hrm/departments`, { name: newDeptName });
+      const res = await apiClient.post(`/super/schools/${activeSchoolId}/hrm/departments`, { name: newDeptName });
       setDepartments([...departments, res.data]);
       setNewDeptName('');
       showNotification('Department added successfully.');
@@ -150,9 +191,9 @@ const SchoolHrmSettings = () => {
   };
 
   const handleDeleteDept = async (id) => {
-    if (!confirm('Are you sure you want to delete this department?')) return;
+    if (!confirm('Are you sure you want to delete this department?') || !activeSchoolId) return;
     try {
-      await apiClient.delete(`/api/super/schools/${schoolId}/hrm/departments/${id}`);
+      await apiClient.delete(`/super/schools/${activeSchoolId}/hrm/departments/${id}`);
       setDepartments(departments.filter(d => d.id !== id));
       showNotification('Department deleted.');
     } catch (err) {
@@ -163,10 +204,10 @@ const SchoolHrmSettings = () => {
   // Designation Handlers
   const handleAddDesig = async (e) => {
     e.preventDefault();
-    if (!newDesig.name.trim()) return;
+    if (!newDesig.name.trim() || !activeSchoolId) return;
     try {
       setSaving(true);
-      const res = await apiClient.post(`/api/super/schools/${schoolId}/hrm/designations`, newDesig);
+      const res = await apiClient.post(`/super/schools/${activeSchoolId}/hrm/designations`, newDesig);
       setDesignations([...designations, res.data]);
       setNewDesig({ name: '', code: '', departmentId: '' });
       showNotification('Designation created.');
@@ -178,9 +219,9 @@ const SchoolHrmSettings = () => {
   };
 
   const handleDeleteDesig = async (id) => {
-    if (!confirm('Delete this designation?')) return;
+    if (!confirm('Delete this designation?') || !activeSchoolId) return;
     try {
-      await apiClient.delete(`/api/super/schools/${schoolId}/hrm/designations/${id}`);
+      await apiClient.delete(`/super/schools/${activeSchoolId}/hrm/designations/${id}`);
       setDesignations(designations.filter(d => d.id !== id));
       showNotification('Designation removed.');
     } catch (err) {
@@ -191,9 +232,10 @@ const SchoolHrmSettings = () => {
   // Work Schedule Handler
   const handleSaveSchedule = async (e) => {
     e.preventDefault();
+    if (!activeSchoolId) return;
     try {
       setSaving(true);
-      await apiClient.put(`/api/super/schools/${schoolId}/hrm/work-schedule`, workSchedule);
+      await apiClient.put(`/super/schools/${activeSchoolId}/hrm/work-schedule`, workSchedule);
       showNotification('Work Schedule and Shift timings saved successfully.');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save work schedule');
@@ -205,10 +247,11 @@ const SchoolHrmSettings = () => {
   // Leave Policy Handler
   const handleSaveLeavePolicy = async (e) => {
     e.preventDefault();
+    if (!activeSchoolId) return;
     try {
       setSaving(true);
-      await apiClient.post(`/api/super/schools/${schoolId}/hrm/leave-policies`, newLeavePolicy);
-      const res = await apiClient.get(`/api/super/schools/${schoolId}/hrm/leave-policies`);
+      await apiClient.post(`/super/schools/${activeSchoolId}/hrm/leave-policies`, newLeavePolicy);
+      const res = await apiClient.get(`/super/schools/${activeSchoolId}/hrm/leave-policies`);
       setLeavePolicies(res.data || []);
       showNotification('Leave policy saved.');
     } catch (err) {
@@ -219,8 +262,9 @@ const SchoolHrmSettings = () => {
   };
 
   const handleDeleteLeavePolicy = async (id) => {
+    if (!activeSchoolId) return;
     try {
-      await apiClient.delete(`/api/super/schools/${schoolId}/hrm/leave-policies/${id}`);
+      await apiClient.delete(`/super/schools/${activeSchoolId}/hrm/leave-policies/${id}`);
       setLeavePolicies(leavePolicies.filter(l => l.id !== id));
       showNotification('Leave policy removed.');
     } catch (err) {
@@ -231,9 +275,10 @@ const SchoolHrmSettings = () => {
   // Salary Component Handler
   const handleAddSalaryComp = async (e) => {
     e.preventDefault();
+    if (!activeSchoolId) return;
     try {
       setSaving(true);
-      const res = await apiClient.post(`/api/super/schools/${schoolId}/hrm/salary-components`, newSalaryComp);
+      const res = await apiClient.post(`/super/schools/${activeSchoolId}/hrm/salary-components`, newSalaryComp);
       setSalaryComponents([...salaryComponents, res.data]);
       showNotification('Salary Component created.');
     } catch (err) {
@@ -245,9 +290,10 @@ const SchoolHrmSettings = () => {
 
   // Statutory Handler
   const handleSaveStatutory = async (type, isEnabled, dataObj) => {
+    if (!activeSchoolId) return;
     try {
       setSaving(true);
-      await apiClient.post(`/api/super/schools/${schoolId}/hrm/statutory/${type}`, {
+      await apiClient.post(`/super/schools/${activeSchoolId}/hrm/statutory/${type}`, {
         isEnabled,
         configurationJson: JSON.stringify(dataObj),
         remarks: `Updated via Super Admin console`
@@ -262,9 +308,10 @@ const SchoolHrmSettings = () => {
 
   // Run Safe Preview Simulation
   const handleRunPreview = async () => {
+    if (!activeSchoolId) return;
     try {
       setPreviewLoading(true);
-      const res = await apiClient.post(`/api/super/schools/${schoolId}/hrm/preview-calculation`, previewInput);
+      const res = await apiClient.post(`/super/schools/${activeSchoolId}/hrm/preview-calculation`, previewInput);
       setPreviewResult(res.data);
     } catch (err) {
       setError('Preview calculation failed: ' + (err.response?.data?.error || err.message));
@@ -277,24 +324,48 @@ const SchoolHrmSettings = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-16">
-      <Topbar title="Super Admin — School HRM Master Configuration" subtitle={`School ID: ${schoolId}`} />
+      <Topbar 
+        title="Super Admin — School HRM Master Configuration" 
+        subtitle={overview?.school?.name ? `${overview.school.name} (ID: ${activeSchoolId})` : (activeSchoolId ? `School ID: ${activeSchoolId}` : 'Select a school to configure')} 
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between mb-6">
-          <button 
-            onClick={() => navigate('/super-admin/schools')}
-            className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Schools Directory
-          </button>
+        {/* Navigation Breadcrumb & School Selector */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <button 
+              onClick={() => navigate('/super-admin/schools')}
+              className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to Schools
+            </button>
+
+            {/* School Selector Dropdown */}
+            {schools.length > 0 && (
+              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+                <Building2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span className="text-xs font-semibold text-slate-500 shrink-0">School:</span>
+                <select
+                  value={activeSchoolId}
+                  onChange={(e) => handleSchoolChange(e.target.value)}
+                  className="text-xs font-bold text-slate-800 bg-transparent border-0 focus:ring-0 focus:outline-none cursor-pointer pr-2"
+                >
+                  {schools.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.schoolCode || 'SCH'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
           
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
               Multi-Tenant Rule Engine Active
             </span>
             <button 
-              onClick={loadAllData}
+              onClick={() => loadAllData(activeSchoolId)}
               className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-800 bg-white px-2.5 py-1.5 rounded-xl border border-slate-200"
             >
               <RefreshCw className="w-3.5 h-3.5" /> Refresh
@@ -318,6 +389,22 @@ const SchoolHrmSettings = () => {
           </div>
         )}
 
+        {!activeSchoolId && !loading && (
+          <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-sm my-6">
+            <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-base font-bold text-slate-800 mb-1">No School Selected</h3>
+            <p className="text-xs text-slate-500 mb-4">Please select a school from the dropdown above or browse schools from the directory.</p>
+            <button
+              onClick={() => navigate('/super-admin/schools')}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+            >
+              Open Schools Directory
+            </button>
+          </div>
+        )}
+
+        {activeSchoolId && (
+        <>
         {/* School Overview Card */}
         <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
@@ -1002,6 +1089,8 @@ const SchoolHrmSettings = () => {
               </div>
             )}
           </div>
+        )}
+        </>
         )}
       </div>
     </div>

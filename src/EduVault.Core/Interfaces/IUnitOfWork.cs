@@ -77,6 +77,9 @@ namespace EduVault.Core.Interfaces
         // Security & Auth
         IRepository<PasswordResetToken> PasswordResetTokens { get; }
 
+        // Print Format Templates
+        IRepository<PrintTemplate> PrintTemplates { get; }
+
         Task<int> CompleteAsync();
     }
 }

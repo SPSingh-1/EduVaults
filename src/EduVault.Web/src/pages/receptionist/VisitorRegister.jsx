@@ -14,6 +14,7 @@ import {
   AlertCircle,
   X
 } from 'lucide-react';
+import { printRenderedDocument } from '../../components/print/PrintIframe';
 
 const VisitorRegister = () => {
   const [visitors, setVisitors] = useState([]);
@@ -414,7 +415,23 @@ const VisitorRegister = () => {
 
             <div className="flex gap-2">
               <button
-                onClick={() => window.print()}
+                onClick={() => {
+                  const fallback = `
+                    <div class="print-zone-thermal" style="padding: 10px; font-size: 11px; text-align: center;">
+                      <h3 style="margin: 0; font-size: 15px; font-weight: bold;">EduVault Campus</h3>
+                      <p style="margin: 2px 0 8px; font-size: 10px; color: #555;">Official Visitor Pass</p>
+                      <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 6px 0; margin-bottom: 8px; text-align: left;">
+                        <div><strong>Visitor:</strong> ${printableVisitor?.visitorName || ''}</div>
+                        <div><strong>Phone:</strong> ${printableVisitor?.phone || ''}</div>
+                        <div><strong>Purpose:</strong> ${printableVisitor?.purpose || ''}</div>
+                        <div><strong>Whom to Meet:</strong> ${printableVisitor?.whomToMeet || ''}</div>
+                        <div><strong>Check-In:</strong> ${new Date(printableVisitor?.checkInTime || Date.now()).toLocaleTimeString()}</div>
+                      </div>
+                      <p style="margin-top: 12px; font-size: 9px; color: #777;">Wear badge visibly at all times on campus.<br/>Return badge to reception upon checkout.</p>
+                    </div>
+                  `;
+                  printRenderedDocument('VisitorPass', printableVisitor?.id || '', fallback);
+                }}
                 className="btn-primary text-xs py-2 flex-1 justify-center"
               >
                 🖨️ Print Pass

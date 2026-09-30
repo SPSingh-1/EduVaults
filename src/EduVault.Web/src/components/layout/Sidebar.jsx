@@ -47,7 +47,8 @@ const Sidebar = ({ links, role }) => {
     teacher: 'Teacher Portal',
     student: 'Student Portal',
     accountmanager: 'Account & Finance',
-    librarian: 'Library Portal'
+    librarian: 'Library Portal',
+    receptionist: 'Front Desk & Reception'
   };
 
   const displayName = user ? `${user.firstName} ${user.lastName}` : '';
@@ -66,6 +67,8 @@ const Sidebar = ({ links, role }) => {
       navigate('/account/profile');
     } else if (role === 'librarian') {
       navigate('/library/profile');
+    } else if (role === 'receptionist') {
+      navigate('/receptionist/dashboard');
     }
   };
 
@@ -74,12 +77,12 @@ const Sidebar = ({ links, role }) => {
       {/* Backdrop for mobile */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 lg:hidden"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 lg:hidden no-print"
           onClick={closeSidebar}
         />
       )}
 
-      <aside className={`sidebar ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+      <aside className={`sidebar no-print ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="px-4 py-5 border-b border-white/10">
           <div className="flex items-center justify-between">
             <EduFlowLogo size={38} />

@@ -10,8 +10,27 @@ import {
   Printer,
   MessageSquare,
   User,
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  X
 } from 'lucide-react';
+import { printDirectHtml, printRenderedDocument } from '../../components/print/PrintIframe';
+
+function numberToWords(num) {
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const n = Math.floor(num || 0);
+  if (n === 0) return 'Zero Rupees Only';
+  function inWords(val) {
+    if (val < 20) return a[val];
+    if (val < 100) return b[Math.floor(val / 10)] + (val % 10 ? ' ' + a[val % 10] : '');
+    if (val < 1000) return a[Math.floor(val / 100)] + ' Hundred' + (val % 100 ? ' ' + inWords(val % 100) : '');
+    if (val < 100000) return inWords(Math.floor(val / 1000)) + ' Thousand' + (val % 1000 ? ' ' + inWords(val % 1000) : '');
+    if (val < 10000000) return inWords(Math.floor(val / 100000)) + ' Lakh' + (val % 100000 ? ' ' + inWords(val % 100000) : '');
+    return inWords(Math.floor(val / 10000000)) + ' Crore' + (val % 10000000 ? ' ' + inWords(val % 10000000) : '');
+  }
+  return inWords(n) + ' Rupees Only';
+}
 
 const CounterFeeDesk = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,29 +60,55 @@ const CounterFeeDesk = () => {
     searchInputRef.current?.focus();
   }, []);
 
-  // Search logic
-  useEffect(() => {
-    if (!searchQuery.trim() || searchQuery.length < 2) {
+  const [searchError, setSearchError] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const fetchStudents = async (queryText, signal) => {
+    if (!queryText.trim() || queryText.trim().length < 2) {
       setSearchResults([]);
+      setHasSearched(false);
+      setSearchError('');
       return;
     }
-    const timer = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const res = await apiClient.get(`/receptionist/search-student?q=${encodeURIComponent(searchQuery)}`);
-        setSearchResults(res.data || []);
-      } catch (err) {
-        console.error('Search error:', err);
-      } finally {
-        setSearching(false);
-      }
-    }, 250);
-    return () => clearTimeout(timer);
+    setSearching(true);
+    setSearchError('');
+    try {
+      const res = await apiClient.get(`/receptionist/search-student?q=${encodeURIComponent(queryText.trim())}`, { signal });
+      setSearchResults(res.data || []);
+      setHasSearched(true);
+    } catch (err) {
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
+      console.error('Search error:', err);
+      setSearchError(err.response?.data?.error || 'Unable to load students. Please ensure backend is active.');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      setHasSearched(false);
+      setSearchError('');
+      setSearching(false);
+      return () => controller.abort();
+    }
+
+    const timer = setTimeout(() => {
+      fetchStudents(searchQuery, controller.signal);
+    }, 200);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [searchQuery]);
 
   const handleSelectStudent = async (student) => {
     setSelectedStudent(student);
     setSearchResults([]);
+    setHasSearched(false);
     setLoadingDetails(true);
     try {
       const res = await apiClient.get(`/receptionist/student-details/${student.id}`);
@@ -108,6 +153,7 @@ const CounterFeeDesk = () => {
       });
 
       const receiptData = res.data.receipt || {
+        transactionId: res.data.transactionId,
         referenceNumber: res.data.referenceNumber,
         amount: res.data.amountPaid,
         totalBilled: res.data.totalBilled,
@@ -154,19 +200,75 @@ const CounterFeeDesk = () => {
 
         {/* Universal Search Card */}
         <div className="card space-y-3">
-          <label className="block text-xs font-semibold text-gray-700">Student Fee Quick Lookup</label>
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold text-gray-700">Student Fee Quick Lookup</label>
+            <span className="text-[11px] text-gray-400">Search by Name, STU Code, Phone or Class</span>
+          </div>
+          
           <div className="relative">
             <Search className="w-4 h-4 text-primary absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Type student name, roll number, or guardian mobile..."
+              placeholder="Type student name (e.g. Shashi), roll number, or guardian mobile..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="input pl-10 text-sm py-2.5"
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  fetchStudents(searchQuery);
+                }
+              }}
+              className="input pl-10 pr-10 text-sm py-2.5"
             />
-            {searching && <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">Searching...</span>}
+            {searching ? (
+              <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-primary font-medium">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Searching...</span>
+              </div>
+            ) : searchQuery ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchResults([]);
+                  setHasSearched(false);
+                  setSearchError('');
+                }}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100"
+                title="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            ) : null}
           </div>
+
+          {/* Search Error Alert */}
+          {searchError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                <span>{searchError}</span>
+              </div>
+              <button
+                onClick={() => fetchStudents(searchQuery)}
+                className="text-xs font-semibold text-rose-700 underline hover:no-underline"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* No Results Feedback */}
+          {hasSearched && !searching && searchResults.length === 0 && searchQuery.trim().length >= 2 && !searchError && (
+            <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl text-center space-y-1">
+              <p className="text-xs font-semibold text-amber-900">
+                No active students found matching "{searchQuery}".
+              </p>
+              <p className="text-[11px] text-amber-700">
+                Please check spelling or try searching with Admission Number, Roll No, or Guardian Mobile.
+              </p>
+            </div>
+          )}
 
           {/* Search Dropdown Results */}
           {searchResults.length > 0 && (
@@ -183,7 +285,9 @@ const CounterFeeDesk = () => {
                     </div>
                     <div>
                       <div className="font-semibold text-primary text-xs">{s.name}</div>
-                      <div className="text-[11px] text-gray-400">{s.className} • Guardian: {s.guardianName} ({s.guardianPhone})</div>
+                      <div className="text-[11px] text-gray-400">
+                        <span className="font-medium text-gray-600">{s.className}</span> • {s.studentId} • Guardian: {s.guardianName} ({s.guardianPhone})
+                      </div>
                     </div>
                   </div>
                   <span className="text-xs text-primary font-semibold">Select →</span>
@@ -433,7 +537,37 @@ const CounterFeeDesk = () => {
                       <span>Send WhatsApp Receipt to Parent</span>
                     </button>
                     <button
-                      onClick={() => window.print()}
+                      onClick={() => {
+                        const fallback = `
+                          <div class="print-zone-thermal" style="padding: 10px; font-size: 11px; text-align: center;">
+                            <h3 style="margin: 0; font-size: 15px; font-weight: bold;">EduVault School</h3>
+                            <p style="margin: 2px 0 8px; font-size: 10px; color: #555;">Official Fee Receipt</p>
+                            <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 6px 0; margin-bottom: 8px; text-align: left;">
+                              <div><strong>Receipt:</strong> ${paymentSuccessReceipt?.referenceNumber || 'N/A'}</div>
+                              <div><strong>Student:</strong> ${selectedStudent?.name || ''}</div>
+                              <div><strong>Adm No:</strong> ${selectedStudent?.admissionNumber || ''}</div>
+                              <div><strong>Class:</strong> ${selectedStudent?.className || ''}</div>
+                              <div><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')}</div>
+                            </div>
+                            <table style="width: 100%; font-size: 11px; margin-bottom: 8px;">
+                              <tr style="border-bottom: 1px solid #ddd;">
+                                <th style="text-align: left; padding: 3px 0;">Description</th>
+                                <th style="text-align: right; padding: 3px 0;">Amount</th>
+                              </tr>
+                              <tr>
+                                <td style="padding: 4px 0;">Fee Payment (${paymentMethod || 'Cash'})</td>
+                                <td style="text-align: right; font-weight: bold;">₹${(paymentSuccessReceipt?.amount || 0).toLocaleString()}</td>
+                              </tr>
+                            </table>
+                            <div style="border-top: 1px dashed #000; padding-top: 6px; text-align: right;">
+                              <div><strong>Paid Amount:</strong> ₹${(paymentSuccessReceipt?.amount || 0).toLocaleString()}</div>
+                              ${paymentSuccessReceipt?.remainingBalance !== undefined ? `<div><strong>Remaining Balance:</strong> ₹${paymentSuccessReceipt.remainingBalance.toLocaleString()}</div>` : ''}
+                            </div>
+                            <p style="margin-top: 12px; font-size: 9px; color: #777;">Thank you for your timely payment.<br/>Computer generated receipt.</p>
+                          </div>
+                        `;
+                        printRenderedDocument('FeeReceipt', paymentSuccessReceipt?.transactionId || paymentSuccessReceipt?.referenceNumber || '', fallback);
+                      }}
                       className="btn-outline text-xs py-2 justify-center"
                     >
                       <Printer className="w-4 h-4" />

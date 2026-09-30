@@ -60,10 +60,28 @@ namespace EduVault.Api.Controllers
         public async Task<IActionResult> GetExams()
         {
             var schoolId = GetSchoolId();
-            var classes = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
+            var classes = (await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId)).ToList();
             var classIds = classes.Select(c => c.Id).ToList();
 
-            var exams = await _unitOfWork.Exams.FindAsync(e => classIds.Contains(e.ClassId));
+            var exams = (await _unitOfWork.Exams.FindAsync(e => classIds.Contains(e.ClassId))).ToList();
+
+            // Auto-transition status to Completed when assessment date has passed
+            var todayUtc = DateTime.UtcNow.Date;
+            bool hasAutoUpdates = false;
+            foreach (var exam in exams)
+            {
+                if (exam.Date.Date < todayUtc && exam.Status != "Completed" && exam.Status != "COMPLETED")
+                {
+                    exam.Status = "Completed";
+                    _unitOfWork.Exams.Update(exam);
+                    hasAutoUpdates = true;
+                }
+            }
+            if (hasAutoUpdates)
+            {
+                await _unitOfWork.CompleteAsync();
+            }
+
             var subjects = await _unitOfWork.Subjects.FindAsync(s => s.SchoolId == schoolId);
             var teachers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "teacher");
 
@@ -71,6 +89,30 @@ namespace EduVault.Api.Controllers
                 var classObj = classes.FirstOrDefault(c => c.Id == e.ClassId);
                 var subject = subjects.FirstOrDefault(s => s.Id == e.SubjectId);
                 var proctor = teachers.FirstOrDefault(t => t.Id == e.ProctorId);
+
+                // Guarantee status reflects Completed if date has elapsed
+                var effectiveStatus = (e.Date.Date < todayUtc) ? "Completed" : e.Status;
+
+                // 3-Day Submission Deadline Rule:
+                // Exam paper must be submitted AT LEAST 3 days before Exam Date.
+                var deadlineDate = e.Date.Date.AddDays(-3);
+                var daysUntilExam = (e.Date.Date - todayUtc).TotalDays;
+                var isUploaded = !string.IsNullOrWhiteSpace(e.QuestionPaperUrl);
+                var isDeadlinePassed = todayUtc > deadlineDate && !isUploaded;
+
+                string paperStatus;
+                if (isUploaded)
+                {
+                    paperStatus = "Submitted";
+                }
+                else if (isDeadlinePassed)
+                {
+                    paperStatus = "DeadlineMissed";
+                }
+                else
+                {
+                    paperStatus = "Pending";
+                }
 
                 return new {
                     e.Id,
@@ -86,7 +128,16 @@ namespace EduVault.Api.Controllers
                     Time = e.Time ?? string.Empty,
                     ExamType = e.ExamType,
                     Proctor = proctor != null ? $"{proctor.FirstName} {proctor.LastName}" : "Unassigned",
-                    Status = e.Status
+                    Status = effectiveStatus,
+                    // Question Paper submission details
+                    QuestionPaperUrl = e.QuestionPaperUrl,
+                    QuestionPaperUploadedAt = e.QuestionPaperUploadedAt,
+                    QuestionPaperNotes = e.QuestionPaperNotes,
+                    DeadlineDate = deadlineDate.ToString("MMM dd, yyyy"),
+                    RawDeadlineDate = deadlineDate,
+                    DaysUntilExam = (int)daysUntilExam,
+                    PaperStatus = paperStatus,
+                    CanUpload = !isDeadlinePassed || User.IsInRole("schooladmin") || User.IsInRole("superadmin")
                 };
             });
 
@@ -101,13 +152,29 @@ namespace EduVault.Api.Controllers
             var classIds = classes.Select(c => c.Id).ToList();
 
             var exams = (await _unitOfWork.Exams.FindAsync(e => classIds.Contains(e.ClassId))).ToList();
-            var examIds = exams.Select(e => e.Id).ToList();
 
+            var todayUtc = DateTime.UtcNow.Date;
+            bool hasAutoUpdates = false;
+            foreach (var exam in exams)
+            {
+                if (exam.Date.Date < todayUtc && exam.Status != "Completed" && exam.Status != "COMPLETED")
+                {
+                    exam.Status = "Completed";
+                    _unitOfWork.Exams.Update(exam);
+                    hasAutoUpdates = true;
+                }
+            }
+            if (hasAutoUpdates)
+            {
+                await _unitOfWork.CompleteAsync();
+            }
+
+            var examIds = exams.Select(e => e.Id).ToList();
             var allResults = (await _unitOfWork.ExamResults.FindAsync(r => examIds.Contains(r.ExamId))).ToList();
 
-            int upcoming = exams.Count(e => e.Status == "SCHEDULED" || e.Status == "Draft" || e.Status == "Scheduled");
-            int ongoing = exams.Count(e => e.Status == "ONGOING" || e.Status == "Ongoing");
-            int completed = exams.Count(e => e.Status == "Completed" || e.Status == "COMPLETED");
+            int upcoming = exams.Count(e => (e.Status == "SCHEDULED" || e.Status == "Draft" || e.Status == "Scheduled") && e.Date.Date >= todayUtc);
+            int ongoing = exams.Count(e => (e.Status == "ONGOING" || e.Status == "Ongoing") && e.Date.Date >= todayUtc);
+            int completed = exams.Count(e => e.Status == "Completed" || e.Status == "COMPLETED" || e.Date.Date < todayUtc);
             int pendingApprovals = exams.Count(e => e.Status != "Completed" && allResults.Any(r => r.ExamId == e.Id && r.IsSubmitted));
 
             var totalStudents = (await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student")).Count();
@@ -120,6 +187,81 @@ namespace EduVault.Api.Controllers
                 pendingApprovals,
                 totalAssessments = exams.Count,
                 readyForReportCards = totalStudents
+            });
+        }
+
+        [HttpGet("classes/{classId}/students")]
+        public async Task<IActionResult> GetClassExamStudents(Guid classId, [FromQuery] string? examType = null)
+        {
+            var schoolId = GetSchoolId();
+            var classObj = await _unitOfWork.Classes.GetByIdAsync(classId);
+            if (classObj == null || classObj.SchoolId != schoolId)
+            {
+                return NotFound(new { error = "Class not found" });
+            }
+
+            var enrollments = await _unitOfWork.Enrollments.FindAsync(e => e.ClassId == classId && e.Status == "ACTIVE");
+            var studentIds = enrollments.Select(e => e.StudentId).Distinct().ToList();
+
+            var users = await _unitOfWork.Users.FindAsync(u => studentIds.Contains(u.Id));
+            var students = await _unitOfWork.Students.FindAsync(s => studentIds.Contains(s.UserId));
+
+            // Exams for this class (and filtered by cycle/examType if provided)
+            var classExams = (await _unitOfWork.Exams.FindAsync(e => e.ClassId == classId)).ToList();
+            if (!string.IsNullOrWhiteSpace(examType) && !string.Equals(examType, "ALL", StringComparison.OrdinalIgnoreCase))
+            {
+                classExams = classExams.Where(e => string.Equals(e.ExamType, examType, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+            var examIds = classExams.Select(e => e.Id).ToList();
+
+            var results = (await _unitOfWork.ExamResults.FindAsync(r => studentIds.Contains(r.StudentId) && examIds.Contains(r.ExamId))).ToList();
+
+            var list = studentIds.Select(id =>
+            {
+                var user = users.FirstOrDefault(u => u.Id == id);
+                var student = students.FirstOrDefault(s => s.UserId == id);
+                var studentResults = results.Where(r => r.StudentId == id).ToList();
+
+                decimal? totalObtained = studentResults.Any(r => r.MarksObtained.HasValue)
+                    ? studentResults.Where(r => r.MarksObtained.HasValue).Sum(r => r.MarksObtained!.Value)
+                    : null;
+                decimal? totalMaxMarks = classExams.Any() ? classExams.Count * 100m : null;
+
+                var evalStatus = "Pending Evaluation";
+                if (studentResults.Any())
+                {
+                    evalStatus = studentResults.Count >= classExams.Count ? "Completed" : "Partially Evaluated";
+                }
+
+                return new
+                {
+                    StudentId = id,
+                    AdmissionNumber = student?.AdmissionNumber ?? (student?.StudentId ?? "-"),
+                    Name = user != null ? $"{user.FirstName} {user.LastName}".Trim() : "Student",
+                    Email = user?.Email ?? "",
+                    GuardianName = !string.IsNullOrWhiteSpace(student?.FatherName) ? student.FatherName : (student?.GuardianName ?? "-"),
+                    GuardianPhone = !string.IsNullOrWhiteSpace(student?.FatherPhone) ? student.FatherPhone : (student?.GuardianPhone ?? "-"),
+                    TotalExams = classExams.Count,
+                    GradedExams = studentResults.Count(r => r.MarksObtained.HasValue),
+                    TotalMarksObtained = totalObtained,
+                    TotalMaxMarks = totalMaxMarks,
+                    Percentage = (totalObtained.HasValue && totalMaxMarks.HasValue && totalMaxMarks.Value > 0)
+                        ? Math.Round((totalObtained.Value / totalMaxMarks.Value) * 100m, 1)
+                        : (decimal?)null,
+                    EvaluationStatus = evalStatus
+                };
+            }).OrderBy(s => s.Name).ToList();
+
+            return Ok(new
+            {
+                ClassId = classId,
+                Grade = classObj.Grade,
+                Section = classObj.Section,
+                ClassName = $"Grade {classObj.Grade} ({classObj.Section})",
+                ExamType = examType ?? "All Cycles",
+                TotalExams = classExams.Count,
+                TotalStudents = list.Count,
+                Students = list
             });
         }
 
@@ -427,8 +569,6 @@ namespace EduVault.Api.Controllers
             var results = await _unitOfWork.ExamResults.FindAsync(r => r.ExamId == examId);
             foreach (var result in results)
             {
-                await CheckAndAutoPromoteStudent(result.StudentId, schoolId);
-
                 // Send WhatsApp result announcement to student parent
                 try
                 {
@@ -789,12 +929,10 @@ namespace EduVault.Api.Controllers
             {
                 if (failedCount >= 3)
                 {
-                    enrollment.Status = "RETAINED_REPEAT";
                     enrollment.AcademicOutcomeRemark = $"Failed in {failedCount} subjects. Critical Fail - Retained for repeat academic year.";
                 }
                 else
                 {
-                    enrollment.Status = "COMPARTMENT_PENDING";
                     enrollment.AcademicOutcomeRemark = $"Failed in {failedCount} subject(s). Eligible for Compartment / Supplementary re-examination.";
                 }
                 _unitOfWork.Enrollments.Update(enrollment);
@@ -802,107 +940,9 @@ namespace EduVault.Api.Controllers
                 return;
             }
 
-            // All exams passed! Promote.
-            enrollment.Status = "PROMOTED";
-            enrollment.AcademicOutcomeRemark = "Passed all subjects successfully.";
-
-            // Grade is stored as a string; parse it numerically so "5" -> "6" (a naive
-            // string "+ 1" would produce "51" and never match the next grade's class).
-            if (!int.TryParse(currentClass.Grade?.Trim(), out var currentGradeNum)) return; // non-numeric grade: cannot auto-promote
-            var nextGradeNum = currentGradeNum + 1;
-            var classesInSchool = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
-            var nextClassObj = classesInSchool.FirstOrDefault(c => int.TryParse(c.Grade?.Trim(), out var g) && g == nextGradeNum && c.Section.Equals(currentClass.Section, StringComparison.OrdinalIgnoreCase))
-                               ?? classesInSchool.FirstOrDefault(c => int.TryParse(c.Grade?.Trim(), out var g) && g == nextGradeNum);
-
-            if (nextClassObj == null) return; // Next grade is not set up yet
-
-            enrollment.ClassId = nextClassObj.Id;
-            enrollment.EnrollDate = DateTime.UtcNow;
-            enrollment.AcademicYear = $"{DateTime.UtcNow.Year}-{((DateTime.UtcNow.Year + 1) % 100):D2}";
+            // All exams passed: Record academic outcome on current enrollment for year-end promotion
+            enrollment.AcademicOutcomeRemark = "Passed all subjects successfully. Eligible for Next Grade Promotion.";
             _unitOfWork.Enrollments.Update(enrollment);
-
-            // Consolidate unpaid fees from the previous class
-            var unpaidInvoices = await _unitOfWork.Invoices.FindAsync(i => i.StudentId == studentId && i.Status != "Paid" && i.Status != "Cancelled");
-            decimal unpaidSum = unpaidInvoices.Sum(i => i.Amount);
-            foreach (var inv in unpaidInvoices)
-            {
-                _unitOfWork.Invoices.Remove(inv);
-            }
-
-            if (unpaidSum > 0)
-            {
-                var prevClassFeeStruct = new FeeStructure
-                {
-                    SchoolId = schoolId,
-                    Name = "Previous Class Outstanding Dues",
-                    Amount = unpaidSum,
-                    Frequency = "One-Time",
-                    Grade = "All Grades",
-                    StudentId = studentId
-                };
-                await _unitOfWork.FeeStructures.AddAsync(prevClassFeeStruct);
-                await _unitOfWork.CompleteAsync();
-
-                var prevClassInvoice = new StudentInvoice
-                {
-                    StudentId = studentId,
-                    FeeStructureId = prevClassFeeStruct.Id,
-                    Amount = unpaidSum,
-                    IssueDate = DateTime.UtcNow,
-                    DueDate = DateTime.UtcNow.AddDays(15),
-                    Status = "Pending"
-                };
-                await _unitOfWork.Invoices.AddAsync(prevClassInvoice);
-            }
-
-            // Apply new class fee structures
-            var feeStructures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId && !fs.StudentId.HasValue);
-            foreach (var fs in feeStructures)
-            {
-                var cleanGradeStr = fs.Grade?.Replace("Class ", "").Trim() ?? string.Empty;
-                string gradePart = cleanGradeStr;
-                string sectionPart = "";
-                
-                if (cleanGradeStr.Contains("-"))
-                {
-                    var parts = cleanGradeStr.Split('-', 2);
-                    gradePart = parts[0].Trim();
-                    sectionPart = parts[1].Trim();
-                }
-                else if (cleanGradeStr.Contains(" "))
-                {
-                    var parts = cleanGradeStr.Split(' ', 2);
-                    gradePart = parts[0].Trim();
-                    sectionPart = parts[1].Trim();
-                }
-
-                if (sectionPart.StartsWith("Section ", StringComparison.OrdinalIgnoreCase))
-                {
-                    sectionPart = sectionPart.Substring(8).Trim();
-                }
-
-                bool matchesGrade = gradePart.Equals(nextClassObj.Grade, StringComparison.OrdinalIgnoreCase) || fs.Grade.Equals("All Grades", StringComparison.OrdinalIgnoreCase);
-                bool matchesSection = string.IsNullOrEmpty(sectionPart) || nextClassObj.Section.Equals(sectionPart, StringComparison.OrdinalIgnoreCase) || nextClassObj.Section.Equals($"Section {sectionPart}", StringComparison.OrdinalIgnoreCase);
-
-                if (matchesGrade && matchesSection)
-                {
-                    decimal installmentAmount = Math.Round(fs.Amount / fs.Installments, 2);
-                    for (int step = 1; step <= fs.Installments; step++)
-                    {
-                        var invoice = new StudentInvoice
-                        {
-                            StudentId = studentId,
-                            FeeStructureId = fs.Id,
-                            Amount = installmentAmount,
-                            IssueDate = DateTime.UtcNow,
-                            DueDate = DateTime.UtcNow.AddDays(30 * step),
-                            Status = "Pending"
-                        };
-                        await _unitOfWork.Invoices.AddAsync(invoice);
-                    }
-                }
-            }
-
             await _unitOfWork.CompleteAsync();
         }
 
@@ -1027,6 +1067,145 @@ namespace EduVault.Api.Controllers
 
             return Ok(historyGrouped);
         }
+        // POST: /api/exams/{id}/upload-question-paper
+        [HttpPost("{id}/upload-question-paper")]
+        public async Task<IActionResult> UploadQuestionPaper(Guid id, [FromBody] UploadQuestionPaperRequest req)
+        {
+            var exam = await _unitOfWork.Exams.GetByIdAsync(id);
+            if (exam == null) return NotFound(new { error = "Exam schedule not found." });
+
+            var todayUtc = DateTime.UtcNow.Date;
+            var deadlineDate = exam.Date.Date.AddDays(-3);
+
+            // Check 3-Day Rule: Teacher must upload at least 3 days before the exam date
+            // (School Admin / Super Admin can override if an emergency arises)
+            var isTeacher = User.IsInRole("teacher");
+            if (isTeacher && todayUtc > deadlineDate)
+            {
+                var daysRemaining = (exam.Date.Date - todayUtc).TotalDays;
+                return BadRequest(new
+                {
+                    error = $"Submission Deadline Passed! Question papers must be uploaded at least 3 days before the exam ({deadlineDate:dd MMM yyyy}). Only {daysRemaining} day(s) remain until the exam date ({exam.Date:dd MMM yyyy}). Please contact School Administration to request an emergency override."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(req.FileUrl) && string.IsNullOrWhiteSpace(req.PaperContent))
+            {
+                return BadRequest(new { error = "Please provide a valid question paper document or formatted paper content." });
+            }
+
+            var userId = GetUserId();
+            exam.QuestionPaperUrl = req.FileUrl ?? req.PaperContent;
+            exam.QuestionPaperUploadedAt = DateTime.UtcNow;
+            exam.QuestionPaperUploadedByTeacherId = userId;
+            exam.QuestionPaperNotes = req.Notes;
+
+            _unitOfWork.Exams.Update(exam);
+            await _unitOfWork.CompleteAsync();
+
+            return Ok(new
+            {
+                message = "Question paper submitted successfully! School Administration has been notified.",
+                examId = exam.Id,
+                submittedAt = exam.QuestionPaperUploadedAt,
+                deadlineMet = todayUtc <= deadlineDate
+            });
+        }
+
+        [HttpPost("send-pending-paper-alerts")]
+        [Authorize(Roles = "schooladmin,superadmin,teacher")]
+        public async Task<IActionResult> SendPendingPaperAlerts()
+        {
+            var schoolId = GetSchoolId();
+            var todayUtc = DateTime.UtcNow.Date;
+            var exams = await _unitOfWork.Exams.GetAllAsync();
+
+            var pendingExams = exams
+                .Where(e => string.IsNullOrWhiteSpace(e.QuestionPaperUrl))
+                .Where(e => {
+                    var days = (e.Date.Date - todayUtc).TotalDays;
+                    return days <= 5 && days >= 0;
+                })
+                .ToList();
+
+            int alertsSent = 0;
+            var report = new List<object>();
+
+            foreach (var exam in pendingExams)
+            {
+                var daysLeft = (int)Math.Ceiling((exam.Date.Date - todayUtc).TotalDays);
+                var deadlineDate = exam.Date.Date.AddDays(-3);
+
+                var subject = await _unitOfWork.Subjects.GetByIdAsync(exam.SubjectId);
+                var cls = await _unitOfWork.Classes.GetByIdAsync(exam.ClassId);
+                var subjectName = subject?.Name ?? "Subject";
+                var className = cls != null ? $"{cls.Grade} - {cls.Section}" : "Class";
+
+                var classSubjects = await _unitOfWork.ClassSubjects.FindAsync(cs => cs.ClassId == exam.ClassId && cs.SubjectId == exam.SubjectId);
+                var assigned = classSubjects.FirstOrDefault(cs => cs.TeacherId.HasValue);
+
+                User? teacherUser = null;
+                if (assigned?.TeacherId != null)
+                {
+                    teacherUser = await _unitOfWork.Users.GetByIdAsync(assigned.TeacherId.Value);
+                }
+                else if (cls?.ClassTeacherId != null)
+                {
+                    teacherUser = await _unitOfWork.Users.GetByIdAsync(cls.ClassTeacherId.Value);
+                }
+
+                if (teacherUser != null)
+                {
+                    var teacherName = $"{teacherUser.FirstName} {teacherUser.LastName}".Trim();
+                    var emps = await _unitOfWork.Employees.FindAsync(e => e.UserId == teacherUser.Id);
+                    var teacherPhone = emps.FirstOrDefault()?.Phone;
+
+                    if (!string.IsNullOrWhiteSpace(teacherPhone))
+                    {
+                        var whatsappMsg = $"📋 *EXAM QUESTION PAPER PENDING REMINDER*\n" +
+                            $"Dear {teacherName},\n" +
+                            $"• *Exam:* {subjectName} ({className})\n" +
+                            $"• *Exam Date:* {exam.Date:dd/MM/yyyy}\n" +
+                            $"• *Days Remaining:* {daysLeft} Days\n" +
+                            $"• *Submission Deadline:* {deadlineDate:dd/MM/yyyy} (Strictly 3 days prior)\n\n" +
+                            $"⚠️ Submissions lock automatically 3 days prior to the exam. Please upload immediately via your EduVault Teacher Portal.";
+
+                        try
+                        {
+                            await _whatsAppService.SendMessageAsync(teacherPhone, whatsappMsg, cls?.SchoolId ?? schoolId);
+                            alertsSent++;
+                        }
+                        catch { }
+                    }
+
+                    report.Add(new
+                    {
+                        examId = exam.Id,
+                        subject = subjectName,
+                        className = className,
+                        examDate = exam.Date.ToString("yyyy-MM-dd"),
+                        deadlineDate = deadlineDate.ToString("yyyy-MM-dd"),
+                        teacher = teacherName,
+                        daysLeft = daysLeft
+                    });
+                }
+            }
+
+            return Ok(new
+            {
+                message = $"5-day countdown check executed. Sent {alertsSent} alerts for {pendingExams.Count} pending exams.",
+                alertsSent,
+                pendingCount = pendingExams.Count,
+                exams = report
+            });
+        }
+    }
+
+    public class UploadQuestionPaperRequest
+    {
+        public string? FileUrl { get; set; }
+        public string? PaperContent { get; set; }
+        public string? Notes { get; set; }
     }
 
     public class EnterStudentMarksRequest

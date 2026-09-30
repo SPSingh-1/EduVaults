@@ -779,8 +779,10 @@ const Teachers = () => {
                   }
                   for (let day = 1; day <= daysInMonth; day++) {
                     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const dateObj = new Date(year, month, day);
+                    const isSunday = dateObj.getDay() === 0;
                     const record = teacherAttendanceHistory.find(a => a.date === dateStr);
-                    calendarDays.push({ padding: false, day, dateStr, record, key: `day-${day}` });
+                    calendarDays.push({ padding: false, day, dateStr, isSunday, record, key: `day-${day}` });
                   }
 
                   const getStatusBadgeColor = (status) => {
@@ -816,8 +818,10 @@ const Teachers = () => {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">
-                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="py-2">{d}</div>)}
+                        <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-xs font-bold uppercase tracking-wider">
+                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                            <div key={d} className={`py-2 ${d === 'Sun' ? 'text-rose-500 font-extrabold' : 'text-gray-400'}`}>{d}</div>
+                          ))}
                         </div>
 
                         <div className="grid grid-cols-7 gap-1 sm:gap-2">
@@ -826,6 +830,21 @@ const Teachers = () => {
                               return <div key={item.key} className="h-16 bg-gray-50/30 rounded-xl border border-dashed border-gray-100" />;
                             }
                             const hasRecord = !!item.record;
+
+                            if (item.isSunday && !hasRecord) {
+                              return (
+                                <div
+                                  key={item.key}
+                                  className="h-16 rounded-xl border border-rose-200/80 bg-rose-50/40 flex flex-col justify-between p-2 text-left relative text-rose-700 shadow-3xs"
+                                >
+                                  <span className="text-xs font-bold text-rose-600">{item.day}</span>
+                                  <span className="text-[8px] sm:text-[9px] font-extrabold uppercase leading-none text-rose-500">
+                                    Sunday Off
+                                  </span>
+                                </div>
+                              );
+                            }
+
                             return (
                               <button
                                 key={item.key}

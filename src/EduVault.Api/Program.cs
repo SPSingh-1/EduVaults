@@ -12,6 +12,8 @@ using EduVault.Infrastructure.Repositories;
 using EduVault.Api.Services;
 using EduVault.Api.Configuration;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 // ─── 1. Centralized Environment Variable Resolution ────────────────────────
 // Search for the single authoritative .env file starting from AppContext and CWD up the tree
 var candidateDirectories = new List<string>
@@ -73,6 +75,14 @@ if (loadedEnvPath != null)
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Ensure WebRootPath exists to eliminate StaticFileMiddleware warning
+var webRoot = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+if (!Directory.Exists(webRoot))
+{
+    Directory.CreateDirectory(webRoot);
+}
+builder.Environment.WebRootPath = webRoot;
+
 // Normalize environment variables across naming conventions
 var rawJwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") 
     ?? Environment.GetEnvironmentVariable("Jwt__Secret") 
@@ -125,25 +135,41 @@ builder.Services.Configure<SuperAdminOptions>(options =>
     options.Password = rawSuperPass;
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 builder.Services.AddMemoryCache();
 
 // ─── 3. Database Context (PostgreSQL EF Core) ──────────────────────────────
 builder.Services.AddDbContext<EduVaultDbContext>(options =>
+{
     options.UseNpgsql(rawDbConn, npgsqlOptions =>
         npgsqlOptions.EnableRetryOnFailure(
             maxRetryCount: 5,
             maxRetryDelay: TimeSpan.FromSeconds(10),
             errorCodesToAdd: null
         )
-    ));
+    );
+    options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+});
 
 // ─── 4. Dependency Injection ──────────────────────────────────────────────
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IPayrollCalculationService, PayrollCalculationService>();
+builder.Services.AddScoped<ILeaveBalanceEngine, LeaveBalanceEngine>();
 builder.Services.AddScoped<WhatsAppService>();
+builder.Services.AddSingleton<QrCodeService>();
+builder.Services.AddSingleton<AadhaarSecurityService>();
+builder.Services.AddSingleton<SmartCsvParserService>();
+builder.Services.AddSingleton<CsvTemplateService>();
+builder.Services.AddHttpClient<AiPlannerService>();
+builder.Services.AddHostedService<AdmissionCleanupService>();
 builder.Services.AddHostedService<FeeAlertBackgroundService>();
+builder.Services.AddHostedService<ExamQuestionPaperAlertBackgroundService>();
 builder.Services.AddSingleton<IWhatsAppQueue, WhatsAppQueue>();
 builder.Services.AddHostedService<WhatsAppQueueWorker>();
 builder.Services.AddHttpClient();
@@ -209,6 +235,14 @@ builder.Services.AddRateLimiter(options =>
         opt.Window = TimeSpan.FromMinutes(1);
         opt.PermitLimit = 15;
         opt.QueueLimit = 5;
+    });
+
+    // Public Admission Form submission limiter (Max 10 submissions/hour per IP to prevent spam)
+    options.AddFixedWindowLimiter("admission-submit", opt =>
+    {
+        opt.Window = TimeSpan.FromHours(1);
+        opt.PermitLimit = 10;
+        opt.QueueLimit = 0;
     });
 });
 
@@ -364,6 +398,26 @@ using (var scope = app.Services.CreateScope())
                 );
                 CREATE INDEX IF NOT EXISTS "IX_PasswordResetTokens_TokenHash" ON "PasswordResetTokens" ("TokenHash");
 
+                CREATE TABLE IF NOT EXISTS "PrintTemplates" (
+                    "Id" uuid NOT NULL PRIMARY KEY,
+                    "SchoolId" uuid NULL REFERENCES "Schools" ("Id") ON DELETE CASCADE,
+                    "DocumentType" character varying(50) NOT NULL DEFAULT 'FeeReceipt',
+                    "TemplateName" character varying(150) NOT NULL DEFAULT 'Default Template',
+                    "Description" text NOT NULL DEFAULT '',
+                    "PaperSize" character varying(30) NOT NULL DEFAULT 'A4Single',
+                    "Orientation" character varying(20) NOT NULL DEFAULT 'Portrait',
+                    "LayoutConfigJson" text NOT NULL DEFAULT '',
+                    "HtmlContent" text NOT NULL DEFAULT '',
+                    "WasAiGenerated" boolean NOT NULL DEFAULT FALSE,
+                    "AiPromptUsed" text NOT NULL DEFAULT '',
+                    "IsSuperAdminMaster" boolean NOT NULL DEFAULT FALSE,
+                    "IsDefault" boolean NOT NULL DEFAULT FALSE,
+                    "IsActive" boolean NOT NULL DEFAULT TRUE,
+                    "CreatedAt" timestamp with time zone NOT NULL DEFAULT NOW(),
+                    "UpdatedAt" timestamp with time zone NULL
+                );
+                CREATE INDEX IF NOT EXISTS "IX_PrintTemplates_School_DocType_Default" ON "PrintTemplates" ("SchoolId", "DocumentType", "IsDefault");
+
                 ALTER TABLE "PasswordResetTokens" ADD COLUMN IF NOT EXISTS "TokenHash" text NOT NULL DEFAULT '';
                 ALTER TABLE "PasswordResetTokens" ADD COLUMN IF NOT EXISTS "ExpiresAt" timestamp with time zone NOT NULL DEFAULT NOW();
                 ALTER TABLE "PasswordResetTokens" ADD COLUMN IF NOT EXISTS "IsUsed" boolean NOT NULL DEFAULT FALSE;
@@ -378,6 +432,11 @@ using (var scope = app.Services.CreateScope())
                 ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "WhatsAppGatePassAlertsEnabled" boolean NOT NULL DEFAULT TRUE;
                 ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "WhatsAppAdmissionInquiryEnabled" boolean NOT NULL DEFAULT TRUE;
                 ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "WhatsAppTcNoticeEnabled" boolean NOT NULL DEFAULT TRUE;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "StudentPasswordPattern" text NULL;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "TeacherPasswordPattern" text NULL;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "ReceptionistPasswordPattern" text NULL;
+                ALTER TABLE "Schools" ADD COLUMN IF NOT EXISTS "AccountantPasswordPattern" text NULL;
+
                 ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "PreviousSchoolName" text NULL;
                 ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "PreviousTcNumber" text NULL;
                 ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "PreviousTcDate" text NULL;
@@ -386,6 +445,18 @@ using (var scope = app.Services.CreateScope())
                 ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "OutwardTcIssuedDate" timestamp with time zone NULL;
                 ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "TcReason" text NULL;
                 ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "TcConductRemark" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "IdentificationMark" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "BirthCertificateNumber" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "CasteCertificateNumber" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "BoardRegistrationNumber" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "InitialAdmissionClass" text NULL;
+                ALTER TABLE "Students" ADD COLUMN IF NOT EXISTS "LeavingClass" text NULL;
+
+                ALTER TABLE "Exams" ADD COLUMN IF NOT EXISTS "QuestionPaperUrl" text NULL;
+                ALTER TABLE "Exams" ADD COLUMN IF NOT EXISTS "QuestionPaperUploadedAt" timestamp with time zone NULL;
+                ALTER TABLE "Exams" ADD COLUMN IF NOT EXISTS "QuestionPaperUploadedByTeacherId" uuid NULL;
+                ALTER TABLE "Exams" ADD COLUMN IF NOT EXISTS "QuestionPaperUploaderUserId" uuid NULL;
+                ALTER TABLE "Exams" ADD COLUMN IF NOT EXISTS "QuestionPaperNotes" text NULL;
 
                 ALTER TABLE "Invoices" ADD COLUMN IF NOT EXISTS "LateFineAmount" numeric NOT NULL DEFAULT 0.0;
                 ALTER TABLE "Invoices" ADD COLUMN IF NOT EXISTS "PaidAmount" numeric NOT NULL DEFAULT 0.0;
@@ -442,6 +513,41 @@ using (var scope = app.Services.CreateScope())
             context.PlatformPlans.Add(standardPlan);
             context.SaveChanges();
             Console.WriteLine("[STARTUP] Seeded Platform Plan: Standard Plan");
+        }
+
+        // Seed missing core School Admin PageDefinitions
+        if (!context.PageDefinitions.Any(p => p.PageKey == "schooladmin.data_import"))
+        {
+            context.PageDefinitions.Add(new EduVault.Core.Entities.PageDefinition
+            {
+                PageKey = "schooladmin.data_import",
+                PageName = "Data Import Hub",
+                Module = "school_admin",
+                TargetRole = "schooladmin",
+                Icon = "UploadCloud",
+                Route = "/school-admin/data-import",
+                SortOrder = 3,
+                IsActive = true
+            });
+            context.SaveChanges();
+            Console.WriteLine("[STARTUP] Seeded PageDefinition: Data Import Hub");
+        }
+
+        if (!context.PageDefinitions.Any(p => p.PageKey == "schooladmin.ai_planner"))
+        {
+            context.PageDefinitions.Add(new EduVault.Core.Entities.PageDefinition
+            {
+                PageKey = "schooladmin.ai_planner",
+                PageName = "AI School Planner",
+                Module = "school_admin",
+                TargetRole = "schooladmin",
+                Icon = "CalendarDays",
+                Route = "/school-admin/ai-planner",
+                SortOrder = 4,
+                IsActive = true
+            });
+            context.SaveChanges();
+            Console.WriteLine("[STARTUP] Seeded PageDefinition: AI School Planner");
         }
 
         Console.WriteLine("[STARTUP] EduVault API bootstrap completed successfully.");

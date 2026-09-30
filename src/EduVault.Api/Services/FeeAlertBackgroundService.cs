@@ -53,34 +53,54 @@ namespace EduVault.Api.Services
 
                 var invoices = await unitOfWork.Invoices.FindAsync(i => i.Status != "Paid" && i.Status != "Cancelled");
                 var todayUtc = DateTime.UtcNow.Date;
-                var tenDaysFromNow = todayUtc.AddDays(10);
-                var oneDayFromNow = todayUtc.AddDays(1);
+                var threeDaysFromNow = todayUtc.AddDays(3);
+                var dueToday = todayUtc;
+                var fiveDaysOverdue = todayUtc.AddDays(-5);
 
-                var dueInTenDays = invoices.Where(i => i.DueDate.Date == tenDaysFromNow).ToList();
-                var dueInOneDay = invoices.Where(i => i.DueDate.Date == oneDayFromNow).ToList();
+                var dueInThreeDays = invoices.Where(i => i.DueDate.Date == threeDaysFromNow).ToList();
+                var dueTodayInvoices = invoices.Where(i => i.DueDate.Date == dueToday).ToList();
+                var overdueByFiveDays = invoices.Where(i => i.DueDate.Date == fiveDaysOverdue).ToList();
 
-                _logger.LogInformation($"Found {dueInTenDays.Count} invoices due in 10 days, and {dueInOneDay.Count} due in 1 day.");
+                _logger.LogInformation($"[FEE RECOVERY BOT] Found {dueInThreeDays.Count} due in 3 days, {dueTodayInvoices.Count} due today, and {overdueByFiveDays.Count} 5-days overdue.");
 
-                foreach (var inv in dueInTenDays)
+                // Tier 1: Day -3 Friendly advance notification
+                foreach (var inv in dueInThreeDays)
                 {
                     var student = await unitOfWork.Students.GetByIdAsync(inv.StudentId);
                     var user = student != null ? await unitOfWork.Users.GetByIdAsync(student.UserId) : null;
                     if (student != null && !string.IsNullOrEmpty(student.GuardianPhone))
                     {
                         var studentName = user != null ? $"{user.FirstName} {user.LastName}" : "your child";
-                        var msg = $"Dear Parent, this is a reminder that the school fee of Rs. {inv.Amount} for {studentName} is due in 10 days ({inv.DueDate:yyyy-MM-dd}). Please pay on time. Thank you!";
+                        var invRef = inv.Id.ToString()[..8].ToUpper();
+                        var msg = $"🔔 *Fee Reminder (Due in 3 Days)*\nDear Parent, kindly note that the school fee invoice #{invRef} of Rs. {inv.Amount} for {studentName} is due on {inv.DueDate:dd/MM/yyyy}. Please ensure timely settlement to avoid late fee charges.\nThank you!";
                         await whatsappService.SendMessageAsync(student.GuardianPhone, msg, user?.SchoolId);
                     }
                 }
 
-                foreach (var inv in dueInOneDay)
+                // Tier 2: Day 0 Due Today urgency notice
+                foreach (var inv in dueTodayInvoices)
                 {
                     var student = await unitOfWork.Students.GetByIdAsync(inv.StudentId);
                     var user = student != null ? await unitOfWork.Users.GetByIdAsync(student.UserId) : null;
                     if (student != null && !string.IsNullOrEmpty(student.GuardianPhone))
                     {
                         var studentName = user != null ? $"{user.FirstName} {user.LastName}" : "your child";
-                        var msg = $"Dear Parent, URGENT reminder: the school fee of Rs. {inv.Amount} for {studentName} is due tomorrow ({inv.DueDate:yyyy-MM-dd}). Please submit it to avoid overdue penalties. Thank you!";
+                        var invRef = inv.Id.ToString()[..8].ToUpper();
+                        var msg = $"⚠️ *URGENT: Fee Due Today*\nDear Parent, today ({inv.DueDate:dd/MM/yyyy}) is the due date for {studentName}'s fee of Rs. {inv.Amount} (Invoice #{invRef}). Please pay online or at the school accounts desk today to avoid late fine.\nThank you!";
+                        await whatsappService.SendMessageAsync(student.GuardianPhone, msg, user?.SchoolId);
+                    }
+                }
+
+                // Tier 3: Day +5 Overdue Recovery Notice
+                foreach (var inv in overdueByFiveDays)
+                {
+                    var student = await unitOfWork.Students.GetByIdAsync(inv.StudentId);
+                    var user = student != null ? await unitOfWork.Users.GetByIdAsync(student.UserId) : null;
+                    if (student != null && !string.IsNullOrEmpty(student.GuardianPhone))
+                    {
+                        var studentName = user != null ? $"{user.FirstName} {user.LastName}" : "your child";
+                        var invRef = inv.Id.ToString()[..8].ToUpper();
+                        var msg = $"🚨 *Fee Overdue Notice*\nDear Parent, {studentName}'s fee invoice #{invRef} of Rs. {inv.Amount} was due on {inv.DueDate:dd/MM/yyyy} and is now overdue. Applicable late fines may be added. Please settle the dues immediately at the accounts counter or online.\nThank you!";
                         await whatsappService.SendMessageAsync(student.GuardianPhone, msg, user?.SchoolId);
                     }
                 }

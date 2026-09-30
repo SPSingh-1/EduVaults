@@ -1,0 +1,26 @@
+FirstName,LastName,DateOfBirth,Gender,Class,Section,AdmissionNo,RollNumber,FatherName,FatherPhone,MotherName,City,Pincode,Address,BloodGroup
+Aarav,Sharma,2016-04-12,Male,1,A,ADM-2026-001,1,Rajesh Sharma,9876543210,Sunita Sharma,Jaipur,302001,Sector 4 Malviya Nagar,B+
+Diya,Patel,2015-08-22,Female,2,A,ADM-2026-002,2,Kiran Patel,9823456781,Meena Patel,Ahmedabad,380015,Vastrapur Main Road,O+
+Vihaan,Verma,2014-02-14,Male,3,A,ADM-2026-003,3,Sanjay Verma,9812345678,Pooja Verma,Delhi,110001,Connaught Place Block B,A+
+Ananya,Gupta,2013-11-05,Female,4,A,ADM-2026-004,4,Amit Gupta,9834567890,Ritu Gupta,Noida,201301,Sector 62 B-45,AB+
+Kabir,Singh,2012-07-19,Male,5,A,ADM-2026-005,5,Harpreet Singh,9845678901,Jaspreet Kaur,Chandigarh,160017,Sector 17 Market,B+
+Rhea,Mehta,2011-09-30,Female,6,A,ADM-2026-006,6,Vikas Mehta,9856789012,Neha Mehta,Mumbai,400050,Bandra West Hill Road,O-
+Ishaan,Reddy,2010-05-18,Male,7,A,ADM-2026-007,7,Venkat Reddy,9867890123,Lakshmi Reddy,Hyderabad,500034,Banjara Hills Road 12,A-
+Sara,Khan,2009-12-01,Female,8,A,ADM-2026-008,8,Imran Khan,9878901234,Farzana Khan,Lucknow,226001,Hazratganj Main Market,B+
+Arjun,Nair,2008-03-25,Male,9,A,ADM-2026-009,9,Ramesh Nair,9889012345,Geetha Nair,Bengaluru,560001,MG Road Brigade Towers,O+
+Myra,Iyer,2007-10-10,Female,10,A,ADM-2026-010,10,Sundaram Iyer,9890123456,Padma Iyer,Chennai,600004,Mylapore Tank Square,A+
+Aditya,Joshi,2006-06-15,Male,11,A,ADM-2026-011,11,Mahesh Joshi,9811122233,Kavita Joshi,Pune,411004,Deccan Gymkhana,B+
+Tanvi,Bose,2005-01-20,Female,12,A,ADM-2026-012,12,Subhash Bose,9822233344,Moushumi Bose,Kolkata,700029,Gariahat Southern Ave,AB-
+Advait,Mishra,2019-09-08,Male,Play Group,A,ADM-2026-013,1,Pradeep Mishra,9833344455,Shweta Mishra,Indore,452001,Vijay Nagar Scheme 54,O+
+Kiara,Chopra,2018-03-17,Female,Nursery,A,ADM-2026-014,2,Alok Chopra,9844455566,Divya Chopra,Gurugram,122002,DLF Phase 2 Cyber City,B+
+Reyansh,Saxena,2017-06-29,Male,LKG,A,ADM-2026-015,3,Gaurav Saxena,9855566677,Deepika Saxena,Bhopal,462003,Arera Colony E-3,A+
+Saanvi,Deshmukh,2016-12-11,Female,UKG,A,ADM-2026-016,4,Nitin Deshmukh,9866677788,Archana Deshmukh,Nagpur,440010,Dharampeth West,O+
+Dev,Bhatia,2015-05-04,Male,1,B,ADM-2026-017,13,Kunal Bhatia,9877788899,Simran Bhatia,Jaipur,302017,Mansarovar Sector 7,B+
+Anvi,Trivedi,2014-08-16,Female,2,B,ADM-2026-018,14,Hemant Trivedi,9888899900,Bhavna Trivedi,Surat,395007,Adajan Honey Park Road,A+
+Yash,Kulkarni,2013-04-23,Male,3,B,ADM-2026-019,15,Anand Kulkarni,9899900011,Manjusha Kulkarni,Thane,400602,Naupada Gokhale Road,O+
+Prisha,Agarwal,2012-10-09,Female,4,B,ADM-2026-020,16,Mohit Agarwal,9812398765,Sangeeta Agarwal,Kanpur,208001,Civil Lines VIP Road,B+
+Atharv,Rawat,2011-07-27,Male,5,B,ADM-2026-021,17,Birendra Rawat,9823487654,Kamla Rawat,Dehradun,248001,Rajpur Road Jakhan,A+
+Isha,Chauhan,2010-02-19,Female,6,B,ADM-2026-022,18,Vikram Chauhan,9834576543,Madhu Chauhan,Shimla,171001,Mall Road Lower Bazar,O+
+Rohan,Pandey,2009-09-14,Male,7,B,ADM-2026-023,19,Suresh Pandey,9845665432,Mamta Pandey,Patna,800001,Kankarbagh Colony,B+
+Navya,Malhotra,2008-11-21,Female,8,B,ADM-2026-024,20,Ashok Malhotra,9856754321,Anita Malhotra,Amritsar,143001,Lawrence Road,A+
+Vivaan,Sengupta,2007-08-03,Male,9,B,ADM-2026-025,21,Debabrata Sengupta,9867843210,Rupanjana Sengupta,Kolkata,700019,Ballygunge Circular Rd,O+

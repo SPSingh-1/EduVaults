@@ -15,8 +15,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.RateLimiting;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.AspNetCore.RateLimiting;
-using System.ComponentModel.DataAnnotations;
 
 namespace EduVault.Api.Controllers
 {
@@ -142,7 +140,7 @@ namespace EduVault.Api.Controllers
                 permissions = allPages.Select(page =>
                 {
                     var saved = savedPerms.FirstOrDefault(p => p.PageDefinitionId == page.Id);
-                    bool defaultView = IsDefaultVisibleForRole(user.Role, page.Module);
+                    bool defaultView = savedPerms.Any() ? false : IsDefaultVisibleForRole(user.Role, page.Module);
                     return new EduVault.Core.DTOs.PagePermissionDto
                     {
                         PageKey   = page.PageKey,

@@ -7,12 +7,19 @@ import {
   Settings, 
   LifeBuoy, 
   Megaphone,
-  ShieldCheck
+  ShieldCheck,
+  Wrench,
+  Printer,
+  CalendarDays,
+  Layers
 } from 'lucide-react';
 
 const superLinks = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/super-admin/dashboard' },
   { icon: School, label: 'Schools', path: '/super-admin/schools' },
+  { icon: CalendarDays, label: 'AI Academic Planner', path: '/super-admin/ai-planner' },
+  { icon: Printer, label: 'Print Format Studio', path: '/super-admin/format-studio' },
+  { icon: Wrench, label: 'HRM & Payroll Config', path: '/super-admin/hrm' },
   { icon: ShieldCheck, label: 'Access Control (RBAC)', path: '/super-admin/access-control' },
   { icon: CreditCard, label: 'Subscriptions', path: '/super-admin/subscriptions' },
   { icon: Settings, label: 'Platform Settings', path: '/super-admin/settings' },

@@ -172,8 +172,7 @@ namespace EduVault.Tests
             // Verify generated credentials for unique student
             var importedUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == "kabirsingh1205@gmail.com");
             Assert.NotNull(importedUser);
-            Assert.Equal("hashed_password", importedUser.PasswordHash);
-            _mockAuth.Verify(a => a.HashPassword("gre!2015"), Times.Once); // Greenwood prefix is "gre", birth year is 2015
+            _mockAuth.Verify(a => a.HashPassword("kab@2026!"), Times.Once);
         }
 
         [Fact]

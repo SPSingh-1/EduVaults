@@ -360,10 +360,23 @@ namespace EduVault.Api.Controllers
                 return Forbid();
             }
 
-            if (invoice.Status == "Paid") return BadRequest(new { error = "Invoice is already paid" });
-
             decimal totalPayable = invoice.Amount + invoice.LateFineAmount;
-            decimal remainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount);
+
+            // Calculate actual paid from successful transactions table
+            var allPaidTxns = (await _unitOfWork.Transactions
+                .FindAsync(t => t.InvoiceId == invoice.Id && (t.Status == "success" || t.Status == "SUCCESS" || t.Status == "Paid")))
+                .Sum(t => t.Amount);
+            decimal realPaid = Math.Max(invoice.PaidAmount, allPaidTxns);
+            decimal remainingBalance = Math.Max(0, totalPayable - realPaid);
+
+            if (remainingBalance <= 0 || invoice.Status == "Paid")
+            {
+                invoice.Status = "Paid";
+                invoice.PaidAmount = totalPayable;
+                _unitOfWork.Invoices.Update(invoice);
+                await _unitOfWork.CompleteAsync();
+                return BadRequest(new { error = "Invoice is already fully paid. No further payment required." });
+            }
 
             decimal payAmount = (request.Amount.HasValue && request.Amount.Value > 0) 
                 ? Math.Min(request.Amount.Value, remainingBalance) 
@@ -647,7 +660,21 @@ namespace EduVault.Api.Controllers
             if (invoice == null) return NotFound(new { error = "Invoice not found" });
 
             decimal totalPayable = invoice.Amount + invoice.LateFineAmount;
-            decimal remainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount);
+
+            var allPaidTxns = (await _unitOfWork.Transactions
+                .FindAsync(t => t.InvoiceId == invoice.Id && (t.Status == "success" || t.Status == "SUCCESS" || t.Status == "Paid")))
+                .Sum(t => t.Amount);
+            decimal realPaid = Math.Max(invoice.PaidAmount, allPaidTxns);
+            decimal remainingBalance = Math.Max(0, totalPayable - realPaid);
+
+            if (remainingBalance <= 0 || invoice.Status == "Paid")
+            {
+                invoice.Status = "Paid";
+                invoice.PaidAmount = totalPayable;
+                _unitOfWork.Invoices.Update(invoice);
+                await _unitOfWork.CompleteAsync();
+                return BadRequest(new { error = "No pending payment amount due for this invoice. It is already fully paid." });
+            }
 
             decimal payAmount = (request.Amount.HasValue && request.Amount.Value > 0)
                 ? Math.Min(request.Amount.Value, remainingBalance)
@@ -1466,6 +1493,580 @@ namespace EduVault.Api.Controllers
         public int GracePeriodDays { get; set; } = 5;
         public decimal LateFeePerDay { get; set; } = 50.0m;
         public Guid? FeeStructureId { get; set; }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAYMENT REPORTS CONTROLLER — 5 filtered reporting endpoints for school admin
+// ─────────────────────────────────────────────────────────────────────────────
+namespace EduVault.Api.Controllers
+{
+    [ApiController]
+    [Route("api/billing/reports")]
+    [Authorize(Roles = "schooladmin,accountmanager")]
+    public class PaymentReportsController : ControllerBase
+    {
+        private readonly IUnitOfWork _unitOfWork;
+
+        public PaymentReportsController(IUnitOfWork unitOfWork)
+        {
+            _unitOfWork = unitOfWork;
+        }
+
+        private Guid GetSchoolId()
+        {
+            var schoolIdStr = User.FindFirst("schoolId")?.Value;
+            if (string.IsNullOrEmpty(schoolIdStr)) throw new UnauthorizedAccessException("School ID missing in token");
+            return Guid.Parse(schoolIdStr);
+        }
+
+        private static bool IsSuccess(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return false;
+            return status.Equals("success", StringComparison.OrdinalIgnoreCase) ||
+                   status.Equals("paid", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // =====================================================================
+        // REPORT 1: Transaction Log — every transaction in date range
+        // GET /api/billing/reports/transactions
+        // =====================================================================
+        [HttpGet("transactions")]
+        public async Task<IActionResult> GetTransactionReport(
+            [FromQuery] string? dateFrom,
+            [FromQuery] string? dateTo,
+            [FromQuery] Guid? classId,
+            [FromQuery] Guid? studentId,
+            [FromQuery] string? paymentMethod,
+            [FromQuery] string? upiProvider)
+        {
+            var schoolId = GetSchoolId();
+
+            // Parse date range
+            DateTime? from = dateFrom != null ? DateTime.TryParse(dateFrom, out var df) ? df.Date : (DateTime?)null : null;
+            DateTime? to   = dateTo   != null ? DateTime.TryParse(dateTo,   out var dt) ? dt.Date.AddDays(1).AddTicks(-1) : (DateTime?)null : null;
+
+            // Load all school students
+            var studentUsers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student");
+
+            // Filter by classId if provided
+            if (classId.HasValue)
+            {
+                var enrollments = await _unitOfWork.Enrollments.FindAsync(e => e.ClassId == classId.Value && e.Status == "ACTIVE");
+                var classStudentIds = enrollments.Select(e => e.StudentId).ToHashSet();
+                studentUsers = studentUsers.Where(u => classStudentIds.Contains(u.Id)).ToList();
+            }
+
+            // Filter by specific studentId
+            if (studentId.HasValue)
+                studentUsers = studentUsers.Where(u => u.Id == studentId.Value).ToList();
+
+            var studentIds = studentUsers.Select(u => u.Id).ToList();
+            var invoices   = await _unitOfWork.Invoices.FindAsync(i => studentIds.Contains(i.StudentId));
+            var invoiceIds = invoices.Select(i => i.Id).ToList();
+            var transactions = await _unitOfWork.Transactions.FindAsync(t => invoiceIds.Contains(t.InvoiceId));
+            var feeStructures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId);
+
+            // Load class info for each student
+            var allEnrollments = await _unitOfWork.Enrollments.FindAsync(e => studentIds.Contains(e.StudentId) && e.Status == "ACTIVE");
+            var allClasses     = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
+
+            // Apply filters
+            var filtered = transactions.AsEnumerable();
+
+            if (from.HasValue) filtered = filtered.Where(t => t.TransactionDate >= from.Value);
+            if (to.HasValue)   filtered = filtered.Where(t => t.TransactionDate <= to.Value);
+
+            if (!string.IsNullOrWhiteSpace(paymentMethod) && paymentMethod != "All")
+            {
+                if (paymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase))
+                    filtered = filtered.Where(t => (t.PaymentMethod ?? "").Equals("Cash", StringComparison.OrdinalIgnoreCase));
+                else if (paymentMethod.Equals("Online", StringComparison.OrdinalIgnoreCase))
+                    filtered = filtered.Where(t => !(t.PaymentMethod ?? "").Equals("Cash", StringComparison.OrdinalIgnoreCase));
+                else if (paymentMethod.Equals("Bank", StringComparison.OrdinalIgnoreCase))
+                    filtered = filtered.Where(t => (t.PaymentMethod ?? "").Equals("Bank", StringComparison.OrdinalIgnoreCase) ||
+                                                   (t.PaymentMethod ?? "").Equals("NEFT", StringComparison.OrdinalIgnoreCase) ||
+                                                   (t.PaymentMethod ?? "").Equals("RTGS", StringComparison.OrdinalIgnoreCase));
+                else if (paymentMethod.Equals("UPI", StringComparison.OrdinalIgnoreCase))
+                    filtered = filtered.Where(t => (t.PaymentMethod ?? "").Contains("upi", StringComparison.OrdinalIgnoreCase) ||
+                                                   (t.PaymentMethod ?? "").Contains("paytm", StringComparison.OrdinalIgnoreCase) ||
+                                                   (t.PaymentMethod ?? "").Contains("phonepe", StringComparison.OrdinalIgnoreCase) ||
+                                                   (t.PaymentMethod ?? "").Contains("google", StringComparison.OrdinalIgnoreCase) ||
+                                                   (t.PaymentMethod ?? "").Contains("bhim", StringComparison.OrdinalIgnoreCase) ||
+                                                   (t.PaymentMethod ?? "").Contains("navi", StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(upiProvider) && upiProvider != "All")
+                filtered = filtered.Where(t => (t.PaymentMethod ?? "").Contains(upiProvider, StringComparison.OrdinalIgnoreCase));
+
+            var result = filtered.Select(t =>
+            {
+                var invoice   = invoices.FirstOrDefault(i => i.Id == t.InvoiceId);
+                var student   = invoice != null ? studentUsers.FirstOrDefault(u => u.Id == invoice.StudentId) : null;
+                var feeStruct = invoice != null ? feeStructures.FirstOrDefault(fs => fs.Id == invoice.FeeStructureId) : null;
+                var enrollment = student != null ? allEnrollments.FirstOrDefault(e => e.StudentId == student.Id) : null;
+                var cls       = enrollment != null ? allClasses.FirstOrDefault(c => c.Id == enrollment.ClassId) : null;
+                return new
+                {
+                    referenceNumber = t.ReferenceNumber,
+                    studentName     = student != null ? $"{student.FirstName} {student.LastName}" : "Unknown",
+                    className       = cls != null ? $"Class {cls.Grade}-{cls.Section}" : "N/A",
+                    feeName         = feeStruct?.Name ?? "School Fee",
+                    date            = t.TransactionDate.ToString("dd MMM yyyy, hh:mm tt"),
+                    paymentMethod   = t.PaymentMethod ?? "N/A",
+                    amount          = t.Amount,
+                    status          = (t.Status ?? "SUCCESS").ToUpper()
+                };
+            }).OrderByDescending(t => t.date).ToList();
+
+            return Ok(new
+            {
+                transactions = result,
+                grandTotal   = result.Where(t => IsSuccess(t.status)).Sum(t => t.amount),
+                totalCount   = result.Count
+            });
+        }
+
+        // =====================================================================
+        // REPORT 2: Pending Payments by Class (or specific student)
+        // GET /api/billing/reports/pending-by-class
+        // =====================================================================
+        [HttpGet("pending-by-class")]
+        public async Task<IActionResult> GetPendingByClass(
+            [FromQuery] Guid? classId,
+            [FromQuery] Guid? studentId,
+            [FromQuery] string? dateFrom,
+            [FromQuery] string? dateTo)
+        {
+            var schoolId = GetSchoolId();
+
+            var allStudentUsers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student");
+            var allStudentIds   = allStudentUsers.Select(u => u.Id).ToList();
+            var allEnrollments  = await _unitOfWork.Enrollments.FindAsync(e => allStudentIds.Contains(e.StudentId) && e.Status == "ACTIVE");
+            var allClasses      = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
+            var allStudents     = await _unitOfWork.Students.FindAsync(s => allStudentIds.Contains(s.UserId));
+
+            IEnumerable<EduVault.Core.Entities.User> studentUsers = allStudentUsers;
+
+            // Filter: specific student takes priority over class
+            if (studentId.HasValue)
+            {
+                studentUsers = allStudentUsers.Where(u => u.Id == studentId.Value);
+            }
+            else if (classId.HasValue)
+            {
+                var classEnrollments = allEnrollments.Where(e => e.ClassId == classId.Value);
+                var classStudentIds  = classEnrollments.Select(e => e.StudentId).ToHashSet();
+                studentUsers = allStudentUsers.Where(u => classStudentIds.Contains(u.Id));
+            }
+
+            var studentIdList = studentUsers.Select(u => u.Id).ToList();
+            var invoices      = await _unitOfWork.Invoices.FindAsync(i => studentIdList.Contains(i.StudentId));
+            var invoiceIds    = invoices.Select(i => i.Id).ToList();
+            // Load ALL transactions to calculate actual paid amounts (don't rely on invoice.PaidAmount)
+            var allTransactions = await _unitOfWork.Transactions.FindAsync(t => invoiceIds.Contains(t.InvoiceId));
+
+            DateTime? from = dateFrom != null ? DateTime.TryParse(dateFrom, out var df) ? df.Date : (DateTime?)null : null;
+            DateTime? to   = dateTo   != null ? DateTime.TryParse(dateTo,   out var dt) ? dt.Date.AddDays(1).AddTicks(-1) : (DateTime?)null : null;
+
+            var pendingStudents = studentUsers.Select(student =>
+            {
+                var studentInvoices = invoices.Where(i => i.StudentId == student.Id).ToList();
+                // Match invoices issued or due in the date range
+                if (from.HasValue) studentInvoices = studentInvoices.Where(i => i.IssueDate >= from.Value || i.DueDate >= from.Value).ToList();
+                if (to.HasValue)   studentInvoices = studentInvoices.Where(i => i.IssueDate <= to.Value).ToList();
+
+                if (!studentInvoices.Any()) return null;
+
+                // Calculate actual paid per invoice from successful transactions
+                var invoicesWithBalance = studentInvoices.Select(inv => {
+                    var paidViaTransactions = allTransactions
+                        .Where(t => t.InvoiceId == inv.Id && IsSuccess(t.Status))
+                        .Sum(t => t.Amount);
+                    var remaining = Math.Max(0, inv.Amount - paidViaTransactions);
+                    return new { inv, paidViaTransactions, remaining };
+                }).ToList();
+
+                // Pending: invoices where remaining > 0
+                var pendingInvoices = invoicesWithBalance.Where(x => x.remaining > 0).ToList();
+                if (!pendingInvoices.Any()) return null;
+
+                var enrollment  = allEnrollments.FirstOrDefault(e => e.StudentId == student.Id);
+                var cls         = enrollment != null ? allClasses.FirstOrDefault(c => c.Id == enrollment.ClassId) : null;
+                var profile     = allStudents.FirstOrDefault(s => s.UserId == student.Id);
+
+                var totalBilled  = studentInvoices.Sum(i => i.Amount);
+                var totalPaid    = invoicesWithBalance.Sum(x => Math.Min(x.inv.Amount, x.paidViaTransactions));
+                var pendingAmt   = pendingInvoices.Sum(x => x.remaining);
+                var nearestDue   = pendingInvoices.OrderBy(x => x.inv.DueDate).FirstOrDefault()?.inv.DueDate;
+                var daysOverdue  = nearestDue.HasValue && nearestDue.Value < DateTime.UtcNow
+                    ? (int)(DateTime.UtcNow - nearestDue.Value).TotalDays : 0;
+
+                return (object)new
+                {
+                    studentName    = $"{student.FirstName} {student.LastName}",
+                    rollNo         = profile?.StudentId ?? "N/A",
+                    className      = cls != null ? $"Class {cls.Grade}-{cls.Section}" : "N/A",
+                    totalBilled    = totalBilled,
+                    totalPaid      = totalPaid,
+                    pendingAmount  = pendingAmt,
+                    nearestDueDate = nearestDue?.ToString("dd MMM yyyy") ?? "N/A",
+                    daysOverdue    = daysOverdue,
+                    invoiceCount   = pendingInvoices.Count
+                };
+            }).Where(s => s != null).ToList();
+
+            return Ok(new
+            {
+                students      = pendingStudents,
+                totalStudents = pendingStudents.Count,
+                totalPending  = pendingStudents.Cast<dynamic>().Sum(s => (decimal)s.pendingAmount)
+            });
+        }
+
+        // =====================================================================
+        // REPORT 3: Completed Payments by Class (or specific student)
+        // GET /api/billing/reports/completed-by-class
+        // =====================================================================
+        [HttpGet("completed-by-class")]
+        public async Task<IActionResult> GetCompletedByClass(
+            [FromQuery] Guid? classId,
+            [FromQuery] Guid? studentId,
+            [FromQuery] string? dateFrom,
+            [FromQuery] string? dateTo)
+        {
+            var schoolId = GetSchoolId();
+
+            var allStudentUsers = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student");
+            var allStudentIds   = allStudentUsers.Select(u => u.Id).ToList();
+            var allEnrollments  = await _unitOfWork.Enrollments.FindAsync(e => allStudentIds.Contains(e.StudentId) && e.Status == "ACTIVE");
+            var allClasses      = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
+            var allStudentProfiles = await _unitOfWork.Students.FindAsync(s => allStudentIds.Contains(s.UserId));
+
+            IEnumerable<EduVault.Core.Entities.User> studentUsers = allStudentUsers;
+
+            // Filter: specific student takes priority over class
+            if (studentId.HasValue)
+            {
+                studentUsers = allStudentUsers.Where(u => u.Id == studentId.Value);
+            }
+            else if (classId.HasValue)
+            {
+                var classEnrollments = allEnrollments.Where(e => e.ClassId == classId.Value);
+                var classStudentIds  = classEnrollments.Select(e => e.StudentId).ToHashSet();
+                studentUsers = allStudentUsers.Where(u => classStudentIds.Contains(u.Id));
+            }
+
+            var studentIdList  = studentUsers.Select(u => u.Id).ToList();
+            var invoices       = await _unitOfWork.Invoices.FindAsync(i => studentIdList.Contains(i.StudentId));
+            var invoiceIds     = invoices.Select(i => i.Id).ToList();
+            var feeStructures  = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId);
+            // Load ALL transactions — don't rely on invoice.PaidAmount
+            var allTransactions = await _unitOfWork.Transactions.FindAsync(t => invoiceIds.Contains(t.InvoiceId));
+
+            DateTime? from = dateFrom != null ? DateTime.TryParse(dateFrom, out var df) ? df.Date : (DateTime?)null : null;
+            DateTime? to   = dateTo   != null ? DateTime.TryParse(dateTo,   out var dt) ? dt.Date.AddDays(1).AddTicks(-1) : (DateTime?)null : null;
+
+            var completedStudents = studentUsers.Select(student =>
+            {
+                var studentInvoices = invoices.Where(i => i.StudentId == student.Id).ToList();
+                if (!studentInvoices.Any()) return null;
+
+                // Per invoice: calculate actual paid from successful transactions
+                var invoicesWithBalance = studentInvoices.Select(inv => {
+                    var txns = allTransactions.Where(t => t.InvoiceId == inv.Id && IsSuccess(t.Status));
+                    var paidViaTransactions = txns.Sum(t => t.Amount);
+                    var remaining = Math.Max(0, inv.Amount - paidViaTransactions);
+                    var lastTxnDate = txns.Any() ? txns.Max(t => t.TransactionDate) : (DateTime?)null;
+                    return new { inv, paidViaTransactions, remaining, lastTxnDate };
+                }).ToList();
+
+                // Completed: invoices fully covered by transactions
+                var completedInvoices = invoicesWithBalance.Where(x => x.remaining == 0 && x.paidViaTransactions > 0).ToList();
+
+                // Date filter on last transaction date
+                if (from.HasValue) completedInvoices = completedInvoices.Where(x => (x.lastTxnDate.HasValue && x.lastTxnDate.Value >= from.Value) || x.inv.IssueDate >= from.Value).ToList();
+                if (to.HasValue)   completedInvoices = completedInvoices.Where(x => (x.lastTxnDate.HasValue && x.lastTxnDate.Value <= to.Value) || x.inv.IssueDate <= to.Value).ToList();
+
+                if (!completedInvoices.Any()) return null;
+
+                var enrollment = allEnrollments.FirstOrDefault(e => e.StudentId == student.Id);
+                var cls        = enrollment != null ? allClasses.FirstOrDefault(c => c.Id == enrollment.ClassId) : null;
+                var profile    = allStudentProfiles.FirstOrDefault(s => s.UserId == student.Id);
+
+                var feeTypes   = completedInvoices
+                    .Select(x => feeStructures.FirstOrDefault(fs => fs.Id == x.inv.FeeStructureId)?.Name ?? "School Fee")
+                    .Distinct().ToList();
+
+                var totalCollected = completedInvoices.Sum(x => Math.Min(x.inv.Amount, x.paidViaTransactions));
+                var lastPaid       = completedInvoices.OrderByDescending(x => x.lastTxnDate).FirstOrDefault()?.lastTxnDate;
+
+                return (object)new
+                {
+                    studentName  = $"{student.FirstName} {student.LastName}",
+                    rollNo       = profile?.StudentId ?? "N/A",
+                    className    = cls != null ? $"Class {cls.Grade}-{cls.Section}" : "N/A",
+                    totalPaid    = totalCollected,
+                    invoiceCount = completedInvoices.Count,
+                    feeTypes     = string.Join(", ", feeTypes),
+                    lastPaidDate = lastPaid?.ToString("dd MMM yyyy") ?? "N/A"
+                };
+            }).Where(s => s != null).ToList();
+
+            return Ok(new
+            {
+                students       = completedStudents,
+                totalStudents  = completedStudents.Count,
+                totalCollected = completedStudents.Cast<dynamic>().Sum(s => (decimal)s.totalPaid)
+            });
+        }
+
+        // =====================================================================
+        // REPORT 4: Student Detail Ledger
+        // GET /api/billing/reports/student-detail
+        // =====================================================================
+        [HttpGet("student-detail")]
+        public async Task<IActionResult> GetStudentDetail(
+            [FromQuery] Guid? studentId,
+            [FromQuery] string? dateFrom,
+            [FromQuery] string? dateTo)
+        {
+            var schoolId = GetSchoolId();
+
+            if (!studentId.HasValue)
+                return BadRequest(new { error = "studentId is required for this report." });
+
+            var student = await _unitOfWork.Users.GetByIdAsync(studentId.Value);
+            if (student == null || student.SchoolId != schoolId)
+                return NotFound(new { error = "Student not found." });
+
+            var profile      = await _unitOfWork.Students.GetByIdAsync(studentId.Value);
+            var allEnrollments = await _unitOfWork.Enrollments.FindAsync(e => e.StudentId == studentId.Value && e.Status == "ACTIVE");
+            var enrollment   = allEnrollments.FirstOrDefault();
+            var cls          = enrollment != null ? await _unitOfWork.Classes.GetByIdAsync(enrollment.ClassId) : null;
+            var feeStructures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId);
+
+            DateTime? from = dateFrom != null ? DateTime.TryParse(dateFrom, out var df) ? df.Date : (DateTime?)null : null;
+            DateTime? to   = dateTo   != null ? DateTime.TryParse(dateTo,   out var dt) ? dt.Date.AddDays(1).AddTicks(-1) : (DateTime?)null : null;
+
+            var allInvoices  = await _unitOfWork.Invoices.FindAsync(i => i.StudentId == studentId.Value);
+            var invoiceIds   = allInvoices.Select(i => i.Id).ToList();
+            var allTxns      = await _unitOfWork.Transactions.FindAsync(t => invoiceIds.Contains(t.InvoiceId));
+
+            // Filter transactions by date
+            var filteredTxns = allTxns.AsEnumerable();
+            if (from.HasValue) filteredTxns = filteredTxns.Where(t => t.TransactionDate >= from.Value);
+            if (to.HasValue)   filteredTxns = filteredTxns.Where(t => t.TransactionDate <= to.Value);
+
+            // Calculate actual paid per invoice from successful transactions (don't rely on invoice.PaidAmount)
+            var invoiceList = allInvoices.Select(i =>
+            {
+                var fs = feeStructures.FirstOrDefault(f => f.Id == i.FeeStructureId);
+                var paidViaTransactions = allTxns
+                    .Where(t => t.InvoiceId == i.Id && IsSuccess(t.Status))
+                    .Sum(t => t.Amount);
+                var dueAmt = Math.Max(0, i.Amount - paidViaTransactions);
+                var invoicePaid = Math.Min(i.Amount, paidViaTransactions);
+                return new
+                {
+                    feeName    = fs?.Name ?? "School Fee",
+                    amount     = i.Amount,
+                    paidAmount = invoicePaid,
+                    dueAmount  = dueAmt,
+                    dueDate    = i.DueDate.ToString("dd MMM yyyy"),
+                    issueDate  = i.IssueDate.ToString("dd MMM yyyy"),
+                    status     = dueAmt == 0 && paidViaTransactions > 0 ? "PAID"
+                               : paidViaTransactions > 0 ? "PARTIAL"
+                               : "PENDING"
+                };
+            }).OrderBy(i => i.issueDate).ToList();
+
+            var txnList = filteredTxns.Select(t =>
+            {
+                var inv = allInvoices.FirstOrDefault(i => i.Id == t.InvoiceId);
+                var fs  = inv != null ? feeStructures.FirstOrDefault(f => f.Id == inv.FeeStructureId) : null;
+                return new
+                {
+                    date          = t.TransactionDate.ToString("dd MMM yyyy, hh:mm tt"),
+                    referenceNo   = t.ReferenceNumber,
+                    amount        = t.Amount,
+                    paymentMethod = t.PaymentMethod ?? "N/A",
+                    feeName       = fs?.Name ?? "School Fee",
+                    status        = (t.Status ?? "SUCCESS").ToUpper()
+                };
+            }).OrderByDescending(t => t.date).ToList();
+
+            // Summary: calculated from transactions, not invoice.PaidAmount
+            var successTxns  = allTxns.Where(t => IsSuccess(t.Status));
+            var totalBilled  = allInvoices.Sum(i => i.Amount);
+            var totalPaidAmt = successTxns.Sum(t => t.Amount);
+            var advancePaid  = Math.Max(0, totalPaidAmt - totalBilled);
+
+            return Ok(new
+            {
+                studentInfo = new
+                {
+                    name          = $"{student.FirstName} {student.LastName}",
+                    rollNo        = profile?.StudentId ?? "N/A",
+                    className     = cls != null ? $"Class {cls.Grade}-{cls.Section}" : "N/A",
+                    email         = student.Email,
+                    guardianPhone = profile?.GuardianPhone ?? "N/A"
+                },
+                invoices     = invoiceList,
+                transactions = txnList,
+                summary = new
+                {
+                    totalBilled = totalBilled,
+                    totalPaid   = totalPaidAmt,
+                    advancePaid = advancePaid,
+                    totalDue    = Math.Max(0, totalBilled - totalPaidAmt),
+                    txnCount    = txnList.Count
+                }
+            });
+        }
+
+        // =====================================================================
+        // REPORT 5: Collection Summary (class-wise, fee-wise, month-wise)
+        // GET /api/billing/reports/collection-summary
+        // =====================================================================
+        [HttpGet("collection-summary")]
+        public async Task<IActionResult> GetCollectionSummary(
+            [FromQuery] string? dateFrom,
+            [FromQuery] string? dateTo,
+            [FromQuery] Guid? classId)
+        {
+            var schoolId = GetSchoolId();
+
+            DateTime? from = dateFrom != null ? DateTime.TryParse(dateFrom, out var df) ? df.Date : (DateTime?)null : null;
+            DateTime? to   = dateTo   != null ? DateTime.TryParse(dateTo,   out var dt) ? dt.Date.AddDays(1).AddTicks(-1) : (DateTime?)null : null;
+
+            var studentUsers  = await _unitOfWork.Users.FindAsync(u => u.SchoolId == schoolId && u.Role == "student");
+            var allStudentIds = studentUsers.Select(u => u.Id).ToList();
+            var allEnrollments = await _unitOfWork.Enrollments.FindAsync(e => allStudentIds.Contains(e.StudentId) && e.Status == "ACTIVE");
+            var allClasses    = await _unitOfWork.Classes.FindAsync(c => c.SchoolId == schoolId);
+            var feeStructures = await _unitOfWork.FeeStructures.FindAsync(fs => fs.SchoolId == schoolId);
+
+            IEnumerable<Guid> targetStudentIds = allStudentIds;
+            if (classId.HasValue)
+            {
+                var classEnrollments = allEnrollments.Where(e => e.ClassId == classId.Value);
+                targetStudentIds = classEnrollments.Select(e => e.StudentId).Distinct();
+            }
+
+            var invoices               = await _unitOfWork.Invoices.FindAsync(i => targetStudentIds.Contains(i.StudentId));
+            var invoiceIds             = invoices.Select(i => i.Id).ToList();
+            var allInvoiceTransactions = await _unitOfWork.Transactions.FindAsync(t => invoiceIds.Contains(t.InvoiceId));
+
+            // Date-filtered transactions for collection amounts
+            var dateFilteredTxns = allInvoiceTransactions.AsEnumerable();
+            if (from.HasValue) dateFilteredTxns = dateFilteredTxns.Where(t => t.TransactionDate >= from.Value);
+            if (to.HasValue)   dateFilteredTxns = dateFilteredTxns.Where(t => t.TransactionDate <= to.Value);
+
+            // Class-wise breakdown
+            var classwise = allClasses.Select(cls =>
+            {
+                var classEnrollments  = allEnrollments.Where(e => e.ClassId == cls.Id);
+                var classStudentIds   = classEnrollments.Select(e => e.StudentId).ToHashSet();
+                var classInvoices     = invoices.Where(i => classStudentIds.Contains(i.StudentId)).ToList();
+                var classInvoiceIds   = classInvoices.Select(i => i.Id).ToHashSet();
+                var classTxns         = dateFilteredTxns.Where(t => classInvoiceIds.Contains(t.InvoiceId) && IsSuccess(t.Status));
+
+                // Calculate actual pending: Invoice amount minus successful payments on that invoice
+                var totalPending = classInvoices.Sum(inv =>
+                {
+                    var paid = allInvoiceTransactions.Where(t => t.InvoiceId == inv.Id && IsSuccess(t.Status)).Sum(t => t.Amount);
+                    return Math.Max(0, inv.Amount - paid);
+                });
+
+                return new
+                {
+                    className      = $"Class {cls.Grade}-{cls.Section}",
+                    grade          = cls.Grade,
+                    section        = cls.Section,
+                    totalCollected = classTxns.Sum(t => t.Amount),
+                    totalPending   = totalPending,
+                    studentCount   = classStudentIds.Count
+                };
+            }).Where(c => c.totalCollected > 0 || c.totalPending > 0 || c.studentCount > 0)
+              .OrderBy(c => {
+                  var gStr = (c.grade ?? "").Trim().ToLower();
+                  if (gStr.Contains("play")) return -4;
+                  if (gStr.Contains("nur")) return -3;
+                  if (gStr.Contains("lkg")) return -2;
+                  if (gStr.Contains("ukg")) return -1;
+                  var digits = new string(gStr.Where(char.IsDigit).ToArray());
+                  return int.TryParse(digits, out var g) && g > 0 ? g : 999;
+              }).ThenBy(c => c.section).Select(c => new
+              {
+                  c.className,
+                  c.totalCollected,
+                  c.totalPending,
+                  c.studentCount
+              }).ToList();
+
+            // Fee-type-wise breakdown
+            var feewise = feeStructures.Select(fs =>
+            {
+                var fsInvoices   = invoices.Where(i => i.FeeStructureId == fs.Id).ToList();
+                var fsInvoiceIds = fsInvoices.Select(i => i.Id).ToHashSet();
+                var fsTxns       = dateFilteredTxns.Where(t => fsInvoiceIds.Contains(t.InvoiceId) && IsSuccess(t.Status));
+                var fsPending    = fsInvoices.Sum(inv =>
+                {
+                    var paid = allInvoiceTransactions.Where(t => t.InvoiceId == inv.Id && IsSuccess(t.Status)).Sum(t => t.Amount);
+                    return Math.Max(0, inv.Amount - paid);
+                });
+
+                return new
+                {
+                    feeName        = fs.Name,
+                    frequency      = fs.Frequency,
+                    totalCollected = fsTxns.Sum(t => t.Amount),
+                    totalPending   = fsPending
+                };
+            }).Where(f => f.totalCollected > 0 || f.totalPending > 0)
+              .OrderByDescending(f => f.totalCollected).ToList();
+
+            // Month-wise breakdown (last 12 months)
+            var monthwise = Enumerable.Range(0, 12).Select(offset =>
+            {
+                var d = DateTime.UtcNow.AddMonths(-offset);
+                var monthStart = new DateTime(d.Year, d.Month, 1);
+                var monthEnd   = monthStart.AddMonths(1).AddTicks(-1);
+                var monthTxns  = allInvoiceTransactions.Where(t => t.TransactionDate >= monthStart && t.TransactionDate <= monthEnd && IsSuccess(t.Status));
+                var monthInvoices = invoices.Where(i => i.DueDate >= monthStart && i.DueDate <= monthEnd).ToList();
+                var monthPending = monthInvoices.Sum(inv =>
+                {
+                    var paid = allInvoiceTransactions.Where(t => t.InvoiceId == inv.Id && IsSuccess(t.Status)).Sum(t => t.Amount);
+                    return Math.Max(0, inv.Amount - paid);
+                });
+
+                return new
+                {
+                    month     = monthStart.ToString("MMM yyyy"),
+                    collected = monthTxns.Sum(t => t.Amount),
+                    pending   = monthPending
+                };
+            }).Reverse().ToList();
+
+            var grandCollected = dateFilteredTxns.Where(t => IsSuccess(t.Status)).Sum(t => t.Amount);
+            var grandPending   = invoices.Sum(inv =>
+            {
+                var paid = allInvoiceTransactions.Where(t => t.InvoiceId == inv.Id && IsSuccess(t.Status)).Sum(t => t.Amount);
+                return Math.Max(0, inv.Amount - paid);
+            });
+
+            return Ok(new
+            {
+                classwise,
+                feewise,
+                monthwise,
+                grandTotal = new
+                {
+                    totalCollected = grandCollected,
+                    totalPending   = grandPending
+                }
+            });
+        }
     }
 }
 

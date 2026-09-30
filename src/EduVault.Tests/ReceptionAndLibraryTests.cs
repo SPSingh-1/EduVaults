@@ -21,6 +21,7 @@ namespace EduVault.Tests
         private readonly EduVaultDbContext _context;
         private readonly IUnitOfWork _unitOfWork;
         private readonly Mock<WhatsAppService> _mockWhatsApp;
+        private readonly Mock<IAuthService> _mockAuthService;
         private readonly Guid _schoolA = Guid.NewGuid();
         private readonly Guid _schoolB = Guid.NewGuid();
 
@@ -35,6 +36,8 @@ namespace EduVault.Tests
             var mockConfig = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
             var mockScopeFactory = new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
             _mockWhatsApp = new Mock<WhatsAppService>(mockConfig.Object, new System.Net.Http.HttpClient(), mockScopeFactory.Object);
+            _mockAuthService = new Mock<IAuthService>();
+            _mockAuthService.Setup(a => a.HashPassword(It.IsAny<string>())).Returns("HashedMockPassword123!");
         }
 
         // ==========================================
@@ -134,7 +137,7 @@ namespace EduVault.Tests
         [Fact]
         public async Task Receptionist_Visitor_Lifecycle_CheckIn_And_CheckOut()
         {
-            var controller = new ReceptionistController(_unitOfWork, _context, _mockWhatsApp.Object);
+            var controller = new ReceptionistController(_unitOfWork, _context, _mockWhatsApp.Object, _mockAuthService.Object);
             controller.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext
@@ -172,7 +175,7 @@ namespace EduVault.Tests
         [Fact]
         public async Task Receptionist_GatePass_Issue_Creates_Valid_Pass()
         {
-            var controller = new ReceptionistController(_unitOfWork, _context, _mockWhatsApp.Object);
+            var controller = new ReceptionistController(_unitOfWork, _context, _mockWhatsApp.Object, _mockAuthService.Object);
             controller.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext
@@ -208,7 +211,8 @@ namespace EduVault.Tests
             await _context.SaveChangesAsync();
 
             var calcService = new PayrollCalculationService(_context);
-            var hrmController = new HrmController(_unitOfWork, _context, calcService);
+            var leaveEngine = new LeaveBalanceEngine(_context);
+            var hrmController = new HrmController(_unitOfWork, _context, calcService, leaveEngine);
             hrmController.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext

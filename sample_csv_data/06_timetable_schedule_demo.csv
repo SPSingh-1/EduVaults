@@ -1,0 +1,31 @@
+Day,PeriodNumber,StartTime,EndTime,Grade,Section,Subject,TeacherName,Room
+Monday,1,08:30,09:15,1,A,English,Amitabh Sen,Room 3
+Monday,2,09:15,10:00,1,A,Mathematics,Swati Bansal,Room 3
+Monday,3,10:15,11:00,1,A,Hindi,Sunita Verma,Room 3
+Monday,4,11:00,11:45,1,A,Science,Prashant Jadhav,Room 3
+Monday,5,12:15,13:00,1,A,Drawing & Art,Ritu Bhardwaj,Room 3
+Monday,6,13:00,13:45,1,A,Physical Education,Harish Rawat,Room 3
+Tuesday,1,08:30,09:15,1,A,Mathematics,Swati Bansal,Room 3
+Tuesday,2,09:15,10:00,1,A,English,Amitabh Sen,Room 3
+Tuesday,3,10:15,11:00,1,A,General Knowledge,Bhavna Nair,Room 3
+Tuesday,4,11:00,11:45,1,A,Hindi,Sunita Verma,Room 3
+Tuesday,5,12:15,13:00,1,A,Computer Science,Deepak Chawla,Room 3
+Tuesday,6,13:00,13:45,1,A,Science,Prashant Jadhav,Room 3
+Wednesday,1,08:30,09:15,1,A,Science,Prashant Jadhav,Room 3
+Wednesday,2,09:15,10:00,1,A,Social Studies,Kavita Menon,Room 3
+Wednesday,3,10:15,11:00,1,A,Mathematics,Swati Bansal,Room 3
+Wednesday,4,11:00,11:45,1,A,English,Amitabh Sen,Room 3
+Wednesday,5,12:15,13:00,1,A,Drawing & Art,Ritu Bhardwaj,Room 3
+Wednesday,6,13:00,13:45,1,A,Physical Education,Harish Rawat,Room 3
+Thursday,1,08:30,09:15,1,A,Hindi,Sunita Verma,Room 3
+Thursday,2,09:15,10:00,1,A,Mathematics,Swati Bansal,Room 3
+Thursday,3,10:15,11:00,1,A,English,Amitabh Sen,Room 3
+Thursday,4,11:00,11:45,1,A,Science,Prashant Jadhav,Room 3
+Thursday,5,12:15,13:00,1,A,Computer Science,Deepak Chawla,Room 3
+Thursday,6,13:00,13:45,1,A,Library & Reading,Amitabh Sen,Room 3
+Friday,1,08:30,09:15,1,A,Social Studies,Kavita Menon,Room 3
+Friday,2,09:15,10:00,1,A,Mathematics,Swati Bansal,Room 3
+Friday,3,10:15,11:00,1,A,Hindi,Sunita Verma,Room 3
+Friday,4,11:00,11:45,1,A,General Knowledge,Bhavna Nair,Room 3
+Friday,5,12:15,13:00,1,A,Physical Education,Harish Rawat,Room 3
+Friday,6,13:00,13:45,1,A,English,Amitabh Sen,Room 3

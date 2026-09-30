@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduVault ERP — Presentation for City International School</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: #111827;
+      --bg-glass: rgba(17, 24, 39, 0.88);
+      --accent-blue: #3b82f6;
+      --accent-indigo: #6366f1;
+      --accent-purple: #8b5cf6;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --accent-cyan: #06b6d4;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+      --border-light: rgba(255, 255, 255, 0.1);
+      --border-focus: rgba(99, 102, 241, 0.6);
+      --glow-indigo: rgba(99, 102, 241, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      user-select: none;
+    }
+
+    /* Top Control Bar */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 58px;
+      background: rgba(9, 13, 22, 0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 100;
+    }
+
+    .brand-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      color: #fff;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 0 16px rgba(79, 70, 229, 0.4);
+    }
+
+    .school-tag {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-left: 1px solid var(--border-light);
+      padding-left: 12px;
+    }
+
+    .school-tag span {
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    .top-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border-light);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: #1f2937;
+      border-color: var(--border-focus);
+      transform: translateY(-1px);
+    }
+
+    .btn.active {
+      background: #4f46e5;
+      border-color: #6366f1;
+      color: white;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4f46e5, #3b82f6);
+      border: none;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.92;
+      box-shadow: 0 0 16px rgba(99, 102, 241, 0.5);
+    }
+
+    .slide-counter {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      border: 1px solid var(--border-light);
+    }
+
+    /* Presentation Slide Stage */
+    .presentation-deck {
+      position: absolute;
+      top: 58px;
+      bottom: 50px;
+      left: 0;
+      right: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.5) 0%, rgba(9, 13, 22, 0.95) 75%);
+    }
+
+    .slide {
+      position: absolute;
+      width: 94vw;
+      max-width: 1440px;
+      height: 84vh;
+      display: none;
+      opacity: 0;
+      transform: scale(0.98) translateY(10px);
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 24px 32px;
+      border-radius: 20px;
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-light);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }
+
+    .slide.active {
+      display: flex;
+      flex-direction: column;
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+
+    /* Slide Header */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 12px;
+    }
+
+    .slide-eyebrow {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .slide-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .slide-pills {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pill {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-light);
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .pill.green {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+
+    .pill.blue {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.4);
+      color: #60a5fa;
+    }
+
+    .pill.purple {
+      background: rgba(139, 92, 246, 0.15);
+      border-color: rgba(139, 92, 246, 0.4);
+      color: #c084fc;
+    }
+
+    .pill.amber {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+    }
+
+    /* Slide Body Grid: Big Image + Callout Points */
+    .slide-content-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+      height: calc(100% - 70px);
+      align-items: stretch;
+    }
+
+    .slide-content-grid.reverse {
+      grid-template-columns: 340px 1fr;
+    }
+
+    .slide-content-full {
+      height: calc(100% - 70px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Image Display Frame */
+    .image-frame {
+      position: relative;
+      background: #0d131f;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .image-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 12px;
+      transition: transform 0.3s ease;
+    }
+
+    .image-frame:hover img {
+      transform: scale(1.015);
+    }
+
+    .frame-badge {
+      position: absolute;
+      bottom: 14px;
+      left: 16px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #f1f5f9;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Value Callout Side-panel */
+    .value-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      justify-content: center;
+    }
+
+    .value-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 14px 16px;
+      transition: all 0.2s ease;
+    }
+
+    .value-card:hover {
+      background: rgba(30, 41, 59, 0.95);
+      border-color: var(--border-focus);
+      transform: translateX(-3px);
+    }
+
+    .value-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .value-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .icon-emerald { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .icon-blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .icon-purple { background: rgba(139, 92, 246, 0.2); color: #c084fc; }
+    .icon-amber { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .icon-rose { background: rgba(244, 63, 94, 0.2); color: #fb7185; }
+
+    .value-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .value-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.45;
+    }
+
+    .value-highlight {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    /* Title Slide Specifics */
+    .hero-slide {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+
+    .hero-tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      border-radius: 9999px;
+      color: #818cf8;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 18px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero-heading {
+      font-size: 46px;
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 14px;
+      letter-spacing: -1px;
+    }
+
+    .hero-heading span.gradient-text {
+      background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-sub {
+      font-size: 18px;
+      color: #94a3b8;
+      max-width: 740px;
+      line-height: 1.5;
+      margin-bottom: 30px;
+    }
+
+    .hero-badges-row {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 36px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .hero-badge-card {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hero-badge-card .num {
+      font-size: 20px;
+      font-weight: 800;
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .hero-badge-card .txt {
+      font-size: 12px;
+      color: #cbd5e1;
+      text-align: left;
+      line-height: 1.25;
+    }
+
+    /* Bottom Status & Controls */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: rgba(9, 13, 22, 0.95);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 100;
+    }
+
+    .progress-track {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      width: 100%;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #6366f1, #a855f7);
+      width: 10%;
+      transition: width 0.3s ease;
+    }
+
+    .keyboard-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .kbd {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Presenter Notes Drawer */
+    .notes-drawer {
+      position: fixed;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      width: 90vw;
+      max-width: 1100px;
+      background: #0f172a;
+      border: 1px solid #4f46e5;
+      box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(99, 102, 241, 0.3);
+      border-radius: 14px 14px 0 0;
+      padding: 16px 24px;
+      z-index: 99;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .notes-drawer.open {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .notes-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .notes-badge {
+      font-size: 11px;
+      font-weight: 800;
+      background: #4f46e5;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .notes-content {
+      font-size: 14.5px;
+      color: #f1f5f9;
+      line-height: 1.5;
+    }
+
+    .notes-content strong {
+      color: #38bdf8;
+    }
+
+    /* Print styling for PDF export */
+    @media print {
+      body {
+        overflow: visible !important;
+        background: #090d16 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .top-bar, .bottom-bar, .notes-drawer {
+        display: none !important;
+      }
+      .presentation-deck {
+        position: static !important;
+        display: block !important;
+        background: none !important;
+      }
+      .slide {
+        position: relative !important;
+        display: flex !important;
+        opacity: 1 !important;
+        transform: none !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        page-break-after: always;
+        break-after: page;
+        border: none !important;
+        box-shadow: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation & Actions -->
+  <header class="top-bar">
+    <div class="brand-pill">
+      <div class="logo-badge">EduVault ERP</div>
+      <div class="school-tag">Special Demonstration for <span>City International School</span></div>
+    </div>
+
+    <div class="top-controls">
+      <span class="slide-counter" id="slideIndicator">01 / 10</span>
+      <button class="btn" id="btnNotes" title="Toggle Developer Script / Notes (Shortcut: N)">
+        🎙️ Speaker Notes (N)
+      </button>
+      <button class="btn" id="btnFullscreen" title="Toggle Full Screen (Shortcut: F)">
+        ⛶ Fullscreen (F)
+      </button>
+      <button class="btn btn-primary" onclick="window.print()" title="Print or Save Presentation as PDF">
+        🖨️ Export PDF
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Slide Deck Stage -->
+  <main class="presentation-deck">
+
+    <!-- SLIDE 1: COVER SLIDE -->
+    <section class="slide active" data-slide="1">
+      <div class="hero-slide">
+        <div class="hero-tagline">
+          ✨ Next-Gen All-in-One Cloud ERP for City International School
+        </div>
+        <h1 class="hero-heading">
+          Stop Manual School Operations.<br>
+          Run City International on <span class="gradient-text">Auto-Pilot</span>.
+        </h1>
+        <p class="hero-sub">
+          A high-speed, zero-clutter digital campus management system designed for leadership peace-of-mind, 100% fee transparency, and instant parent delight.
+        </p>
+
+        <div class="hero-badges-row">
+          <div class="hero-badge-card">
+            <span class="num">01 Click</span>
+            <span class="txt">Fee Collection &<br>Defaulter Notice</span>
+          </div>
+          <div class="hero-badge-card">
+            <span class="num">10 Sec</span>
+            <span class="txt">Daily Attendance &<br>Parent Alert</span>
+          </div>
+          <div class="hero-badge-card">
+            <span class="num">100%</span>
+            <span class="txt">Auto CBSE / State<br>Exam Report Cards</span>
+          </div>
+          <div class="hero-badge-card">
+            <span class="num">48 Hrs</span>
+            <span class="txt">Zero-Loss Migration<br>From Existing Records</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+          <button class="btn btn-primary" style="padding: 10px 24px; font-size: 15px;" onclick="nextSlide()">
+            Start Demonstration ➔
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: THE REAL CHALLENGE -->
+    <section class="slide" data-slide="2">
+      <header class="slide-header">
+        <div>
+          <div class="slide-eyebrow">🔴 The Ground Reality</div>
+          <h2 class="slide-title">Where Do Schools Lose 100+ Hours & Lakhs in Revenue Every Month?</h2>
+        </div>
+        <div class="slide-pills">
+          <span class="pill amber">⚠️ Traditional Hassles</span>
+          <span class="pill green">💡 EduVault Solution</span>
+        </div>
+      </header>
+
+      <div class="slide-content-grid reverse">
+        <div class="value-panel">
+          <div class="value-card" style="border-left: 3px solid #ef4444;">
+            <div class="value-header">
+              <span class="value-icon icon-rose">❌</span>
+              <h4 class="value-title">Fee Recovery Lag</h4>
+            </div>
+            <p class="value-desc">
+              Registers & Excel don't remind parents. <span class="value-highlight">10-15% of fee collections get delayed</span> for months, hurting school cash-flow.
+            </p>
+          </div>
+
+          <div class="value-card" style="border-left: 3px solid #f59e0b;">
+            <div class="value-header">
+              <span class="value-icon icon-amber">⏳</span>
+              <h4 class="value-title">Teacher Exam Burnout</h4>
+            </div>
+            <p class="value-desc">
+              Before PTMs, teachers spend <span class="value-highlight">10 days making manual report cards</span> and doing calculations instead of teaching students.
+            </p>
+          </div>
+
+          <div class="value-card" style="border-left: 3px solid #3b82f6;">
+            <div class="value-header">
+              <span class="value-icon icon-blue">📱</span>
+              <h4 class="value-title">Fragmented WhatsApp Groups</h4>
+            </div>
+            <p class="value-desc">
+              Circulars get lost in chaotic WhatsApp groups. Parents constantly complain of missing school announcements.
+            </p>
+          </div>
+        </div>
+
+        <div class="image-frame">
+          <img src="./multi_school_system_mockup.png" alt="Multi-school comparison" onerror="this.src='multi_school_system_mockup.png'">
+          <div class="frame-badge">
+            <span class="live-dot"></span> City International Centralized Campus Management
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: COMMAND CENTER (DASHBOARD) -->
+    <section class="slide" data-slide="3">
+      <header class="slide-header">
+        <div>
+          <div class="slide-eyebrow">📊 Module 01: Principal Control Tower</div>
+          <h2 class="slide-title">Complete School Operations on a Single Live Screen</h2>
+        </div>
+        <div class="slide-pills">
+          <span class="pill blue">⚡ Real-time Metrics</span>
+          <span class="pill green">🔒 Role-based Access</span>
+        </div>
+      </header>
+
+      <div class="slide-content-grid">
+        <div class="image-frame">
+          <img src="./school_admin_dashboard_overview.png" alt="School Admin Dashboard" onerror="this.src='school_admin_dashboard_overview.png'">
+          <div class="frame-badge">
+            <span class="live-dot"></span> Live Principal & Trustee Oversight Dashboard
+          </div>
+        </div>
+
+        <div class="value-panel">
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-emerald">💰</span>
+              <h4 class="value-title">Instant Financial Pulse</h4>
+            </div>
+            <p class="value-desc">
+              Today's fee collection, this month's revenue, and total pending balances <span class="value-highlight">updated in real-time</span> without asking accountants.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-blue">👥</span>
+              <h4 class="value-title">Attendance Ratio at 9:00 AM</h4>
+            </div>
+            <p class="value-desc">
+              Know the exact percentage of students and teachers present across every class the moment the bell rings.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-purple">📱</span>
+              <h4 class="value-title">Mobile Accessible Anywhere</h4>
+            </div>
+            <p class="value-desc">
+              Principal and Trustees can check school status whether they are at their office, at home, or traveling.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: SMART FEE MANAGEMENT -->
+    <section class="slide" data-slide="4">
+      <header class="slide-header">
+        <div>
+          <div class="slide-eyebrow">💳 Module 02: Smart Counter Fee Desk</div>
+          <h2 class="slide-title">1-Click Fee Receipt, Instant Due Tracking & Auto Defaulters</h2>
+        </div>
+        <div class="slide-pills">
+          <span class="pill green">💵 30% Faster Recovery</span>
+          <span class="pill amber">📄 Print Receipts</span>
+        </div>
+      </header>
+
+      <div class="slide-content-grid">
+        <div class="image-frame">
+          <img src="./fee_payment_mockup.png" alt="Fee Payment Desk" onerror="this.src='fee_payment_mockup.png'">
+          <div class="frame-badge">
+            <span class="live-dot"></span> Smart Fee Desk: Cash, UPI, Cheque & Partial Payments
+          </div>
+        </div>
+
+        <div class="value-panel">
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-emerald">⚡</span>
+              <h4 class="value-title">5-Second Counter Receipt</h4>
+            </div>
+            <p class="value-desc">
+              Search by Student Roll No or Name. Tuition, Transport, and Term dues <span class="value-highlight">auto-breakdown with 1-click branded print</span>.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-rose">🚨</span>
+              <h4 class="value-title">1-Click Defaulter List</h4>
+            </div>
+            <p class="value-desc">
+              Filter class-wise unpaid balances in 1 second. No manual register tallying or spreadsheet cross-checking required.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-amber">📲</span>
+              <h4 class="value-title">Zero Cash Discrepancy</h4>
+            </div>
+            <p class="value-desc">
+              Every rupee collected at the counter has an uneditable audit trail. Protects school from revenue leakage.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: 10-SECOND ATTENDANCE -->
+    <section class="slide" data-slide="5">
+      <header class="slide-header">
+        <div>
+          <div class="slide-eyebrow">⏱️ Module 03: Effortless Attendance</div>
+          <h2 class="slide-title">10-Second Digital Roll Call from Any Smartphone</h2>
+        </div>
+        <div class="slide-pills">
+          <span class="pill blue">📱 Smartphone Ready</span>
+          <span class="pill purple">🔔 Instant Alerts</span>
+        </div>
+      </header>
+
+      <div class="slide-content-grid">
+        <div class="image-frame">
+          <img src="./simple_attendance_mockup.png" alt="Simple Attendance" onerror="this.src='simple_attendance_mockup.png'">
+          <div class="frame-badge">
+            <span class="live-dot"></span> Fast Tap-to-Mark Roll Call Interface
+          </div>
+        </div>
+
+        <div class="value-panel">
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-blue">👆</span>
+              <h4 class="value-title">Default 'All Present'</h4>
+            </div>
+            <p class="value-desc">
+              Teachers don't waste 20 minutes calling every name. All students are marked present; <span class="value-highlight">teacher taps only the 2 absentees</span> and submits.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-emerald">💬</span>
+              <h4 class="value-title">Instant Parent Notification</h4>
+            </div>
+            <p class="value-desc">
+              Absence alerts trigger automatically to parent portals/phones, eliminating proxy bunking and keeping parents assured.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-purple">📈</span>
+              <h4 class="value-title">Zero Paper Register Cost</h4>
+            </div>
+            <p class="value-desc">
+              Saves ₹25,000+ annually on printing physical attendance registers across all sections and classes.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: EXAMS & REPORT CARDS -->
+    <section class="slide" data-slide="6">
+      <header class="slide-header">
+        <div>
+          <div class="slide-eyebrow">📝 Module 04: Academics & Gradebook</div>
+          <h2 class="slide-title">Exam Marks to Beautiful Report Cards in Under 1 Minute</h2>
+        </div>
+        <div class="slide-pills">
+          <span class="pill purple">🎓 CBSE / State Aligned</span>
+          <span class="pill green">🖨️ PDF Generation</span>
+        </div>
+      </header>
+
+      <div class="slide-content-grid">
+        <div class="image-frame">
+          <img src="./teacher_marks_entry.png" alt="Teacher Marks Entry" onerror="this.src='teacher_marks_entry.png'">
+          <div class="frame-badge">
+            <span class="live-dot"></span> Teacher Gradebook & Exam Matrix Engine
+          </div>
+        </div>
+
+        <div class="value-panel">
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-purple">⚡</span>
+              <h4 class="value-title">Auto Grade & Percentages</h4>
+            </div>
+            <p class="value-desc">
+              Teachers enter theory and practical marks. EduVault <span class="value-highlight">auto-calculates totals, grades (A1, B2), percentage, and ranks</span>.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-emerald">🏆</span>
+              <h4 class="value-title">City International Branded Cards</h4>
+            </div>
+            <p class="value-desc">
+              Official school logo, principal signature block, teacher remarks, and attendance summary formatted in clean print-ready templates.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-blue">🛡️</span>
+              <h4 class="value-title">Principal Approval Workflow</h4>
+            </div>
+            <p class="value-desc">
+              Marks entered by teachers require Principal review and 1-click lock before publishing to parents.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: ZERO-EFFORT DATA MIGRATION -->
+    <section class="slide" data-slide="7">
+      <header class="slide-header">
+        <div>
+          <div class="slide-eyebrow">📂 Onboarding & Migration</div>
+          <h2 class="slide-title">Zero Manual Work: 100% Existing School Data Uploaded in 48 Hours</h2>
+        </div>
+        <div class="slide-pills">
+          <span class="pill green">🆓 Free Migration</span>
+          <span class="pill blue">📑 Excel / CSV Import</span>
+        </div>
+      </header>
+
+      <div class="slide-content-grid">
+        <div class="image-frame">
+          <img src="./bulk_student_import.png" alt="Bulk Student Import" onerror="this.src='bulk_student_import.png'">
+          <div class="frame-badge">
+            <span class="live-dot"></span> Bulk CSV & Excel Onboarding Pipeline
+          </div>
+        </div>
+
+        <div class="value-panel">
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-emerald">🚀</span>
+              <h4 class="value-title">1,000+ Students in 60 Seconds</h4>
+            </div>
+            <p class="value-desc">
+              No clerk needs to sit and re-type records. Upload your current student Excel sheet and <span class="value-highlight">entire student directory is live</span>.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-blue">🛡️</span>
+              <h4 class="value-title">Engineers Do It For You</h4>
+            </div>
+            <p class="value-desc">
+              Our engineering team personally validates your data headers, cleans discrepancies, and migrates fee structures <span class="value-highlight">at ZERO extra charge</span>.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-purple">🎯</span>
+              <h4 class="value-title">Immediate Student Dossier</h4>
+            </div>
+            <p class="value-desc">
+              Instant 360-degree student profile with blood group, parent contact, past dues, and academic performance history.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: DEDICATED TEACHER & PARENT PORTALS -->
+    <section class="slide" data-slide="8">
+      <header class="slide-header">
+        <div>
+          <div class="slide-eyebrow">📱 User Experience</div>
+          <h2 class="slide-title">Clean, Modern Portals for Teachers, Parents & Students</h2>
+        </div>
+        <div class="slide-pills">
+          <span class="pill cyan">🌐 Web & Mobile</span>
+          <span class="pill green">🔔 Announcements</span>
+        </div>
+      </header>
+
+      <div class="slide-content-grid">
+        <div class="image-frame">
+          <img src="./announcements_mockup.png" alt="Announcements and Notices" onerror="this.src='announcements_mockup.png'">
+          <div class="frame-badge">
+            <span class="live-dot"></span> Instant Circulars, Homework & Parent Bulletin
+          </div>
+        </div>
+
+        <div class="value-panel">
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-blue">📢</span>
+              <h4 class="value-title">One-Click School Circulars</h4>
+            </div>
+            <p class="value-desc">
+              Publish holidays, exam timetables, or urgent weather advisories <span class="value-highlight">directly to all parent dashboards</span> in 2 seconds.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-purple">👩‍🏫</span>
+              <h4 class="value-title">Teacher Self-Service</h4>
+            </div>
+            <p class="value-desc">
+              Teachers can view assigned classes, enter marks, submit leave applications, and view their payroll slips privately.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-emerald">⭐</span>
+              <h4 class="value-title">Elevates School Brand</h4>
+            </div>
+            <p class="value-desc">
+              Parents feel proud that City International School provides high-tech digital portals equivalent to metro convent schools.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 9: BANK-GRADE CLOUD SECURITY -->
+    <section class="slide" data-slide="9">
+      <header class="slide-header">
+        <div>
+          <div class="slide-eyebrow">🔒 Security & Reliability</div>
+          <h2 class="slide-title">Bank-Grade Cloud Encryption & Zero-Data-Loss Architecture</h2>
+        </div>
+        <div class="slide-pills">
+          <span class="pill emerald">🛡️ 256-Bit SSL</span>
+          <span class="pill blue">☁️ Auto Daily Backups</span>
+        </div>
+      </header>
+
+      <div class="slide-content-grid">
+        <div class="image-frame">
+          <img src="./security_roles_mockup.png" alt="Security and Role Isolation" onerror="this.src='security_roles_mockup.png'">
+          <div class="frame-badge">
+            <span class="live-dot"></span> Role-Based Security: Teachers cannot see Fees, Staff cannot edit Grades
+          </div>
+        </div>
+
+        <div class="value-panel">
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-emerald">🔒</span>
+              <h4 class="value-title">Role-Based Access Control</h4>
+            </div>
+            <p class="value-desc">
+              Teachers can only see their classes. Accountants only see fee desks. <span class="value-highlight">Full financial control stays strictly with Leadership</span>.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-blue">💾</span>
+              <h4 class="value-title">Automatic Cloud Backups</h4>
+            </div>
+            <p class="value-desc">
+              If an office computer breaks down or gets a virus, zero data is lost. Log in from any laptop and school operations continue instantly.
+            </p>
+          </div>
+
+          <div class="value-card">
+            <div class="value-header">
+              <span class="value-icon icon-purple">⚡</span>
+              <h4 class="value-title">Blazing 2-Second Speed</h4>
+            </div>
+            <p class="value-desc">
+              Built on modern Next-Gen web architecture. No hanging, no laggy servers during peak morning roll calls.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: PROPOSAL FOR CITY INTERNATIONAL -->
+    <section class="slide" data-slide="10">
+      <header class="slide-header">
+        <div>
+          <div class="slide-eyebrow">🤝 Partnership Offer</div>
+          <h2 class="slide-title">Special Pilot Proposal for City International School</h2>
+        </div>
+        <div class="slide-pills">
+          <span class="pill green">🎁 Zero-Risk Guarantee</span>
+        </div>
+      </header>
+
+      <div class="slide-content-full">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 1100px; margin-bottom: 28px;">
+          
+          <div class="value-card" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); padding: 24px;">
+            <div style="font-size: 32px; margin-bottom: 12px;">🆓</div>
+            <h3 style="font-size: 18px; color: #34d399; margin-bottom: 8px;">7-Day Free Sandbox Pilot</h3>
+            <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5;">
+              We set up City International School's custom portal today. Test it for 7 days with your real staff — <strong>Zero commitment required</strong>.
+            </p>
+          </div>
+
+          <div class="value-card" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.3); padding: 24px;">
+            <div style="font-size: 32px; margin-bottom: 12px;">📁</div>
+            <h3 style="font-size: 18px; color: #60a5fa; margin-bottom: 8px;">100% Free Data Migration</h3>
+            <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5;">
+              Our dedicated engineering team imports all your students, fee heads, and classes from Excel within 48 hours without any error.
+            </p>
+          </div>
+
+          <div class="value-card" style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); padding: 24px;">
+            <div style="font-size: 32px; margin-bottom: 12px;">👨‍💻</div>
+            <h3 style="font-size: 18px; color: #c084fc; margin-bottom: 8px;">Direct Developer Support</h3>
+            <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5;">
+              No call centers or 3-day support tickets. As the lead software developer, I personally assist your staff on WhatsApp & phone.
+            </p>
+          </div>
+
+        </div>
+
+        <div style="text-align: center; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.15); border-radius: 14px; padding: 18px 36px; max-width: 800px;">
+          <h4 style="font-size: 16px; color: #f8fafc; margin-bottom: 6px;">
+            Cost is less than a student's single monthly pencil budget — starting under ₹2 per student/day.
+          </h4>
+          <p style="font-size: 13px; color: #94a3b8;">
+            Ready to experience a live test with City International School's own sample class?
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Presenter Script / Hinglish Notes Drawer -->
+  <aside class="notes-drawer" id="notesDrawer">
+    <div class="notes-header">
+      <span class="notes-badge">🎙️ Developer Speaker Script (Hinglish)</span>
+      <button class="btn" style="padding: 2px 8px; font-size: 11px;" onclick="toggleNotes()">Close [N]</button>
+    </div>
+    <div class="notes-content" id="notesText">
+      <!-- Injected dynamically based on active slide -->
+    </div>
+  </aside>
+
+  <!-- Bottom Navigation & Controls -->
+  <footer class="bottom-bar">
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="keyboard-hint">
+      <span>Use <span class="kbd">←</span> <span class="kbd">→</span> or <span class="kbd">Space</span> to navigate</span>
+      <span>|</span>
+      <span>Press <span class="kbd">N</span> for Speaker Notes</span>
+      <span>|</span>
+      <span>Press <span class="kbd">F</span> for Fullscreen</span>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      <button class="btn" id="btnPrev" onclick="prevSlide()">◀ Previous</button>
+      <button class="btn btn-primary" id="btnNext" onclick="nextSlide()">Next Slide ▶</button>
+    </div>
+  </footer>
+
+  <script>
+    const slideNotes = {
+      1: "<strong>Opening Words:</strong> 'Good morning Sir/Ma'am! Mera naam [Aapka Naam] hai. Main ek software developer hoon aur maine City International School jaise progressive institutes ke liye EduVault ko design kiya hai. Sir, hum software bechne nahi, school ka 100 ghante ka manual load khatam karne aaye hain. Aaiye 5 minute me dekhte hain yeh kaise kaam karta hai.'",
+      2: "<strong>Pain Points Script:</strong> 'Sir, har school me 3 sabse badi dikkat hoti hai: 1st - Fee time par nahi aati kyunki register me track nahi rehta kiski baaki hai. 2nd - PTM se pehle teachers 10 din tak raat ko jag kar report cards banate hain. 3rd - Parents complain karte hain ki WhatsApp par notice miss ho gaya. EduVault in teeno problems ko 100% automate kar deta hai.'",
+      3: "<strong>Dashboard Script:</strong> 'Sir, yeh raha aapka Principal Control Tower. Subah aate hi aapko 1 screen par pata chal jata hai ki aaj school me kitni fee aayi, kitne bache aur teachers present hain, aur kitna balance baaki hai. Aapko register mangwane ki koi zarurat nahi hai, sab live aapke mobile ya laptop par hai.'",
+      4: "<strong>Fee Desk Script:</strong> 'Sir, school ki sabse badi power hai Fee Module. Dekhiye — sirf student ka Roll Number dala, tuition, transport sab auto calculate ho gaya. 1 click par instant receipt print ho gayi. Aur sabse kamaal ki cheez — 1 click me pure school ki Defaulter List nikal aati hai ki kis student par kitna pending hai.'",
+      5: "<strong>Attendance Script:</strong> 'Sir, teachers ko 20 minute register me line khichne ki zarurat nahi hai. Class kholi, sabhi bache by-default Present hote hain. Jo absent hai sirf us par tap kiya aur Submit! 10 second me attendance lag gayi aur parent ke portal par alert chala gaya.'",
+      6: "<strong>Report Card Script:</strong> 'Sir, exam ke time teachers ne sirf marks daale. EduVault ne automatically total, percentage, CBSE grades aur class rank generate kar diya. Aur 1 click me City International School ke logo aur principal signature ke saath print-ready report card PDF ready!'",
+      7: "<strong>Migration Script:</strong> 'Sir, aapko purane data ki bilkul chinta nahi karni. Aapke paas jo bhi Excel ya register data hai, hamari engineering team 48 hours me 100% free migrate karke degi. Aapke staff ko 1 bhi bacha manually enter nahi karna padega.'",
+      8: "<strong>Portals Script:</strong> 'Sir, isme Teachers, Parents aur Students teeno ke alag mobile-friendly portals hain. Koi bhi emergency holiday ya circular aap yahan se post karenge, to 1 second me sabhi parents ko unke portal par mil jayega. Isse school ki brand image convent schools jaisi ban jati hai.'",
+      9: "<strong>Security Script:</strong> 'Sir, register me paani gir sakta hai ya kharab ho sakta hai, lekin EduVault cloud par 100% safe hai. Daily auto-backup hota hai. Agar school ka computer kharab bhi ho jaye, to dusre laptop me login karke 1 second me sara data wapas aa jata hai.'",
+      10: "<strong>Closing Script:</strong> 'Sir, hum chahte hain ki aap bina kisi risk ke ise test karein. Hum City International School ke liye 7-Day Free Test Pilot banate hain. Aapki ek class ka data daal kar aap aur aapke accountant 2 din chala kar dekhein. Agar pasand aaye tab baat karenge. Kya main aaj sham ko aapka test login ready kar doon?'"
+    };
+
+    let currentSlide = 1;
+    const totalSlides = 10;
+
+    const slides = document.querySelectorAll('.slide');
+    const slideIndicator = document.getElementById('slideIndicator');
+    const progressFill = document.getElementById('progressFill');
+    const notesText = document.getElementById('notesText');
+    const notesDrawer = document.getElementById('notesDrawer');
+    const btnNotes = document.getElementById('btnNotes');
+
+    function updateSlide(slideNum) {
+      if (slideNum < 1) slideNum = 1;
+      if (slideNum > totalSlides) slideNum = totalSlides;
+      currentSlide = slideNum;
+
+      slides.forEach(s => s.classList.remove('active'));
+      const activeSlide = document.querySelector(`.slide[data-slide="${currentSlide}"]`);
+      if (activeSlide) activeSlide.classList.add('active');
+
+      slideIndicator.textContent = `${String(currentSlide).padStart(2, '0')} / ${String(totalSlides).padStart(2, '0')}`;
+      progressFill.style.width = `${(currentSlide / totalSlides) * 100}%`;
+
+      notesText.innerHTML = slideNotes[currentSlide] || "Speak with confidence!";
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        updateSlide(currentSlide + 1);
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        updateSlide(currentSlide - 1);
+      }
+    }
+
+    function toggleNotes() {
+      notesDrawer.classList.toggle('open');
+      btnNotes.classList.toggle('active');
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.warn("Fullscreen request failed", err);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'Backspace' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key.toLowerCase() === 'n') {
+        toggleNotes();
+      } else if (e.key.toLowerCase() === 'f') {
+        toggleFullscreen();
+      }
+    });
+
+    btnNotes.addEventListener('click', toggleNotes);
+    document.getElementById('btnFullscreen').addEventListener('click', toggleFullscreen);
+
+    updateSlide(1);
+  </script>
+</body>
+</html>

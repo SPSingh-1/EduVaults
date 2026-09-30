@@ -37,7 +37,7 @@ const Topbar = ({ title, subtitle, actions }) => {
   };
 
   return (
-    <div className="sticky top-0 lg:top-0 z-40 bg-[#f4f6fb]/90 backdrop-blur-md -mx-4 px-4 lg:-mx-6 lg:px-6 py-4 -mt-4 lg:-mt-6 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-gray-100/30 shadow-2xs">
+    <div className="topbar no-print sticky top-0 lg:top-0 z-40 bg-[#f4f6fb]/90 backdrop-blur-md -mx-4 px-4 lg:-mx-6 lg:px-6 py-4 -mt-4 lg:-mt-6 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-gray-100/30 shadow-2xs">
       <div className="flex items-center gap-2.5 min-w-0">
         <button
           onClick={openSidebar}

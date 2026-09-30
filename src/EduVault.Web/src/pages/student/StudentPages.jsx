@@ -46,6 +46,7 @@ import {
   ChevronDown,
   CalendarDays
 } from 'lucide-react';
+import { printRenderedDocument } from '../../components/print/PrintIframe';
 
 const getTodayStr = () => {
   const d = new Date();
@@ -257,10 +258,29 @@ export const StudentDashboard = () => {
   const [selectedExamType, setSelectedExamType] = useState('Semester Examination');
   const [dashboardTab, setDashboardTab] = useState('overview');
   const [historyList, setHistoryList] = useState([]);
+  const [selectedHistoryExamType, setSelectedHistoryExamType] = useState('');
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [detailedProfile, setDetailedProfile] = useState(null);
-  const [selectedHistoryExamType, setSelectedHistoryExamType] = useState('');
   const [printingCardIndex, setPrintingCardIndex] = useState(null);
+  const [siblings, setSiblings] = useState([]);
+  const [switchingSibling, setSwitchingSibling] = useState(false);
+
+  const handleSwitchSibling = async (targetStudentId) => {
+    setSwitchingSibling(true);
+    try {
+      const res = await apiClient.post(`/academics/student/switch-sibling/${targetStudentId}`);
+      if (res.data?.token) {
+        localStorage.setItem('eduvault_token', res.data.token);
+        localStorage.setItem('eduvault_user', JSON.stringify(res.data.user));
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Failed to switch sibling:', err);
+      alert(err.response?.data?.error || 'Failed to switch student account.');
+    } finally {
+      setSwitchingSibling(false);
+    }
+  };
 
   const fetchHistory = async () => {
     setLoadingHistory(true);
@@ -342,13 +362,16 @@ export const StudentDashboard = () => {
     const loadDashboardData = async () => {
       try {
         // Load all data in parallel for fast first paint
-        const [profRes, etRes, billRes, attRes, remarksRes] = await Promise.all([
+        const [profRes, etRes, billRes, attRes, remarksRes, sibRes] = await Promise.all([
           apiClient.get('/academics/student/profile').catch(() => null),
           apiClient.get('/academics/exam-types').catch(() => ({ data: [] })),
           apiClient.get('/billing/invoices').catch(() => ({ data: [] })),
           apiClient.get('/academics/attendance/my').catch(() => ({ data: [] })),
           expressClient.get('/remarks').catch(() => ({ data: [] })),
+          apiClient.get('/academics/student/siblings').catch(() => ({ data: [] })),
         ]);
+
+        if (sibRes?.data) setSiblings(sibRes.data);
 
         const activeEnrollDate = profRes?.data?.enrollDate;
         setProfile(profRes?.data || JSON.parse(localStorage.getItem('eduvault_user')));
@@ -462,6 +485,45 @@ export const StudentDashboard = () => {
       <div className="no-print">
         <Topbar title="Student Dashboard Overview" subtitle={`Welcome back, ${profile?.firstName || 'Student'}. Here's your live academic summary.`} />
       </div>
+
+      {/* 👨‍👩‍👧‍👦 Multi-Sibling Switcher Bar (Parent Portal) */}
+      {siblings && siblings.length > 1 && (
+        <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 border border-indigo-200/60 rounded-2xl p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs no-print">
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+              👨‍👩‍👧
+            </span>
+            <div>
+              <span className="text-2xs font-bold uppercase tracking-wider text-indigo-700 block">
+                Parent Portal • Multi-Child Switcher
+              </span>
+              <span className="text-xs font-semibold text-slate-700">
+                Viewing profile for: <strong className="text-slate-900">{profile?.firstName} {profile?.lastName}</strong> ({profile?.class || 'Grade'} - {profile?.section || 'Sec'})
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-2xs text-slate-500 font-semibold">Switch Child:</span>
+            {siblings.map((sib) => (
+              <button
+                key={sib.studentId}
+                disabled={sib.isCurrent || switchingSibling}
+                onClick={() => handleSwitchSibling(sib.studentId)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                  sib.isCurrent
+                    ? 'bg-indigo-600 text-white shadow-xs cursor-default'
+                    : 'bg-white hover:bg-indigo-50 text-slate-700 border border-slate-200 shadow-2xs hover:border-indigo-300'
+                }`}
+              >
+                <span>{sib.firstName}</span>
+                <span className="text-3xs opacity-80">({sib.className})</span>
+                {sib.isCurrent && <span className="text-3xs">● Active</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Dashboard Sub-Tabs */}
       <div className="flex no-print">
@@ -1185,11 +1247,14 @@ export const StudentAttendance = () => {
   }
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dateObj = new Date(year, month, day);
+    const isSunday = dateObj.getDay() === 0;
     const record = attendanceList.find(a => a.date === dateStr);
     calendarDays.push({
       padding: false,
       day,
       dateStr,
+      isSunday,
       record,
       key: `day-${day}`
     });
@@ -1246,8 +1311,10 @@ export const StudentAttendance = () => {
           </div>
 
           <div className="max-w-[440px] mx-auto w-full flex-1 flex flex-col justify-center">
-            <div className="grid grid-cols-7 gap-3 mb-3 text-center text-xs font-bold text-gray-400 uppercase tracking-wider font-display shrink-0">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="py-1">{d}</div>)}
+            <div className="grid grid-cols-7 gap-3 mb-3 text-center text-xs font-bold uppercase tracking-wider font-display shrink-0">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                <div key={d} className={`py-1 ${d === 'Sun' ? 'text-rose-500 font-extrabold' : 'text-gray-400'}`}>{d}</div>
+              ))}
             </div>
 
             {loading ? (
@@ -1261,6 +1328,20 @@ export const StudentAttendance = () => {
 
                   const hasRecord = !!cd.record;
                   const isSelected = selectedRecord && cd.record && selectedRecord.date === cd.record.date;
+
+                  if (cd.isSunday && !hasRecord) {
+                    return (
+                      <div
+                        key={cd.key}
+                        title="Sunday - Weekly Off"
+                        className="aspect-square rounded-full flex flex-col items-center justify-center border border-rose-200/80 bg-rose-50/40 text-rose-500 text-xs font-semibold cursor-default select-none shadow-3xs"
+                      >
+                        <span className="text-xs sm:text-sm font-semibold text-rose-600">{cd.day}</span>
+                        <span className="text-[7px] uppercase font-black text-rose-400">Off</span>
+                      </div>
+                    );
+                  }
+
                   return (
                     <button
                       key={cd.key}
@@ -1376,8 +1457,22 @@ export const StudentResults = () => {
     }
   }, [selectedExamType]);
 
-  const handlePrint = () => {
-    window.print();
+  const [printingReport, setPrintingReport] = useState(false);
+
+  const handlePrint = async () => {
+    setPrintingReport(true);
+    try {
+      const studentRecordId = profile?.id || profile?.Id || profile?.StudentId || 'current';
+      const printed = await printRenderedDocument('ReportCard', studentRecordId, '', { examType: selectedExamType });
+      if (!printed) {
+        window.print();
+      }
+    } catch (err) {
+      console.warn('Print template error, falling back to page print:', err);
+      window.print();
+    } finally {
+      setPrintingReport(false);
+    }
   };
 
   const examDropdown = (
@@ -1439,8 +1534,12 @@ export const StudentResults = () => {
           <Topbar title="Academic Performance" subtitle="Academic Records › Final Results" />
           <div className="flex flex-col gap-2.5 mb-5 bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
             {examDropdown}
-            <button onClick={handlePrint} className="btn-primary text-xs flex items-center justify-center gap-1.5 py-2.5 select-none active:scale-95 transition-all w-full">
-              <Printer className="w-4.5 h-4.5" /> Download PDF Report Card
+            <button 
+              onClick={handlePrint} 
+              disabled={printingReport}
+              className="btn-primary text-xs flex items-center justify-center gap-1.5 py-2.5 select-none active:scale-95 transition-all w-full"
+            >
+              <Printer className="w-4.5 h-4.5" /> {printingReport ? 'Generating Marksheet...' : 'Download PDF Report Card'}
             </button>
           </div>
         </div>
@@ -1449,8 +1548,12 @@ export const StudentResults = () => {
           <Topbar title="Academic Performance" subtitle="Academic Records › Final Results" actions={
             <div className="flex items-center gap-3">
               {examDropdown}
-              <button onClick={handlePrint} className="btn-primary text-xs flex items-center gap-1.5 select-none active:scale-95 transition-all">
-                <Printer className="w-4 h-4" /> Download PDF Report Card
+              <button 
+                onClick={handlePrint} 
+                disabled={printingReport}
+                className="btn-primary text-xs flex items-center gap-1.5 select-none active:scale-95 transition-all"
+              >
+                <Printer className="w-4 h-4" /> {printingReport ? 'Generating Marksheet...' : 'Download PDF Report Card'}
               </button>
             </div>
           } />
@@ -3093,6 +3196,29 @@ export const StudentExams = () => {
 };
 
 
+const CLIENT_DEFAULT_HOLIDAYS = [
+  { _id: 'h1', title: 'Republic Day', date: '2026-01-26', endDate: '2026-01-26', category: 'NATIONAL', description: 'National celebration of Republic Day of India. Flag hoisting ceremony.' },
+  { _id: 'h2', title: 'Maha Shivratri', date: '2026-02-15', endDate: '2026-02-15', category: 'FESTIVAL', description: 'School holiday on account of Maha Shivratri.' },
+  { _id: 'h3', title: 'Holi Festival', date: '2026-03-04', endDate: '2026-03-05', category: 'FESTIVAL', description: 'School closed for Holi and Dhulandi celebrations.' },
+  { _id: 'h4', title: 'Eid-ul-Fitr', date: '2026-03-20', endDate: '2026-03-20', category: 'FESTIVAL', description: 'School holiday for Eid-ul-Fitr observance.' },
+  { _id: 'h5', title: 'Good Friday', date: '2026-04-03', endDate: '2026-04-03', category: 'RESTRICTED', description: 'School closed for Good Friday.' },
+  { _id: 'h6', title: 'Ambedkar Jayanti', date: '2026-04-14', endDate: '2026-04-14', category: 'NATIONAL', description: 'Commemoration of Dr. B.R. Ambedkar Jayanti.' },
+  { _id: 'h7', title: 'Mahavir Jayanti', date: '2026-04-15', endDate: '2026-04-15', category: 'FESTIVAL', description: 'School holiday on account of Mahavir Jayanti.' },
+  { _id: 'h8', title: 'Summer Vacation', date: '2026-05-18', endDate: '2026-06-30', category: 'ACADEMIC', description: 'Annual summer vacation for students and faculty.' },
+  { _id: 'h9', title: 'Muharram', date: '2026-06-26', endDate: '2026-06-26', category: 'FESTIVAL', description: 'Gazetted school holiday for Muharram.' },
+  { _id: 'h10', title: 'Independence Day', date: '2026-08-15', endDate: '2026-08-15', category: 'NATIONAL', description: 'Independence Day celebration. Flag hoisting at 8:00 AM.' },
+  { _id: 'h11', title: 'Raksha Bandhan', date: '2026-08-28', endDate: '2026-08-28', category: 'FESTIVAL', description: 'School closed for Raksha Bandhan festival.' },
+  { _id: 'h12', title: 'Janmashtami', date: '2026-09-04', endDate: '2026-09-04', category: 'FESTIVAL', description: 'School holiday on Sri Krishna Janmashtami.' },
+  { _id: 'h13', title: 'Eid-e-Milad', date: '2026-09-25', endDate: '2026-09-25', category: 'FESTIVAL', description: 'School holiday for Milad-un-Nabi.' },
+  { _id: 'h14', title: 'Mahatma Gandhi Jayanti', date: '2026-10-02', endDate: '2026-10-02', category: 'NATIONAL', description: 'National Holiday in honor of Mahatma Gandhi.' },
+  { _id: 'h15', title: 'Dussehra Break', date: '2026-10-20', endDate: '2026-10-23', category: 'FESTIVAL', description: 'School closed for Vijayadashami Dussehra festivities.' },
+  { _id: 'h16', title: 'Diwali & Chhath Vacation', date: '2026-11-08', endDate: '2026-11-15', category: 'FESTIVAL', description: 'Deepawali, Govardhan Puja, Bhai Dooj and Chhath Puja holidays.' },
+  { _id: 'h17', title: 'Guru Nanak Jayanti', date: '2026-11-24', endDate: '2026-11-24', category: 'RESTRICTED', description: 'School holiday on Guru Nanak Gurpurab.' },
+  { _id: 'h18', title: 'Winter Vacation & Christmas', date: '2026-12-25', endDate: '2027-01-05', category: 'ACADEMIC', description: 'Winter break and Christmas holidays.' },
+  { _id: 'h19', title: 'Republic Day', date: '2027-01-26', endDate: '2027-01-26', category: 'NATIONAL', description: 'National celebration of Republic Day of India.' },
+  { _id: 'h20', title: 'Holi Festival', date: '2027-03-23', endDate: '2027-03-24', category: 'FESTIVAL', description: 'Festival of colours holiday.' }
+];
+
 // --- Student Holiday Calendar Component ---
 export const StudentHolidays = () => {
   const [holidays, setHolidays] = useState([]);
@@ -3106,13 +3232,19 @@ export const StudentHolidays = () => {
     setLoading(true);
     try {
       const res = await expressClient.get('/holidays');
-      setHolidays(res.data || []);
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        setHolidays(res.data);
+      } else {
+        setHolidays(CLIENT_DEFAULT_HOLIDAYS);
+      }
     } catch (err) {
-      console.error('Failed to fetch holidays:', err);
+      console.warn('Failed to fetch holidays, using statutory calendar:', err);
+      setHolidays(CLIENT_DEFAULT_HOLIDAYS);
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchHolidays();
@@ -3142,6 +3274,8 @@ export const StudentHolidays = () => {
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dateObj = new Date(year, month, day);
+    const isSunday = dateObj.getDay() === 0;
     const matchedHoliday = holidays.find(h => {
       const hStart = h.date;
       const hEnd = h.endDate || h.date;
@@ -3151,6 +3285,7 @@ export const StudentHolidays = () => {
       padding: false,
       day,
       dateStr,
+      isSunday,
       holiday: matchedHoliday,
       key: `day-${day}`
     });
@@ -3158,6 +3293,8 @@ export const StudentHolidays = () => {
 
   const getCategoryBadge = (cat) => {
     switch (cat) {
+      case 'WEEKLY_OFF':
+        return { bg: 'bg-rose-500/10 text-rose-700 border-rose-200', badge: '☀️ Weekly Off', dot: 'bg-rose-500' };
       case 'NATIONAL':
         return { bg: 'bg-orange-500/10 text-orange-700 border-orange-200', badge: '🇮🇳 National Holiday', dot: 'bg-orange-500' };
       case 'FESTIVAL':
@@ -3227,12 +3364,15 @@ export const StudentHolidays = () => {
         {/* Left 2 Cols: Monthly Calendar View */}
         <div className="lg:col-span-2 card bg-white shadow-sm border border-slate-200/80 rounded-2xl p-6">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-bold font-display text-primary">
                 {monthNames[month]} {year}
               </h2>
-              <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 font-bold text-slate-600 border border-slate-200">
-                {calendarDays.filter(d => !d.padding && d.holiday).length} Holidays This Month
+              <span className="text-xs px-2.5 py-1 rounded-full bg-purple-50 font-bold text-purple-700 border border-purple-200">
+                🎉 {calendarDays.filter(d => !d.padding && d.holiday).length} Declared Holidays
+              </span>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-rose-50 font-bold text-rose-700 border border-rose-200">
+                ☀️ {calendarDays.filter(d => !d.padding && d.isSunday).length} Sundays (Off)
               </span>
             </div>
 
@@ -3262,9 +3402,9 @@ export const StudentHolidays = () => {
           </div>
 
           {/* Days of Week Header */}
-          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold uppercase tracking-wider">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-              <div key={d} className="py-2">{d}</div>
+              <div key={d} className={`py-2 ${d === 'Sun' ? 'text-rose-500 font-black' : 'text-slate-400'}`}>{d}</div>
             ))}
           </div>
 
@@ -3277,9 +3417,17 @@ export const StudentHolidays = () => {
 
               const isToday = cell.dateStr === getTodayStr();
               const hasHoliday = !!cell.holiday;
-              const isSelected = selectedHoliday && (cell.holiday?._id === selectedHoliday._id || cell.dateStr === selectedHoliday.date);
+              const isSunday = cell.isSunday;
+              const isSelected = selectedHoliday && (
+                (cell.holiday && (cell.holiday?._id === selectedHoliday._id || cell.dateStr === selectedHoliday.date)) ||
+                (!cell.holiday && isSunday && selectedHoliday.date === cell.dateStr)
+              );
 
-              const categoryStyle = hasHoliday ? getCategoryBadge(cell.holiday.category) : null;
+              const categoryStyle = hasHoliday
+                ? getCategoryBadge(cell.holiday.category)
+                : isSunday
+                ? getCategoryBadge('WEEKLY_OFF')
+                : null;
 
               return (
                 <button
@@ -3288,6 +3436,15 @@ export const StudentHolidays = () => {
                   onClick={() => {
                     if (hasHoliday) {
                       setSelectedHoliday(cell.holiday);
+                    } else if (isSunday) {
+                      setSelectedHoliday({
+                        _id: `sunday-${cell.dateStr}`,
+                        title: 'Sunday - Weekly Off',
+                        date: cell.dateStr,
+                        endDate: cell.dateStr,
+                        category: 'WEEKLY_OFF',
+                        description: 'Official weekly holiday. Campus, classes, and regular academic operations remain closed.'
+                      });
                     }
                   }}
                   className={`h-24 p-2 rounded-xl border text-left transition-all relative flex flex-col justify-between ${
@@ -3295,6 +3452,8 @@ export const StudentHolidays = () => {
                       ? 'ring-2 ring-primary ring-offset-2 border-primary shadow-md'
                       : hasHoliday
                       ? `${categoryStyle.bg} border-2 hover:scale-[1.02] shadow-2xs cursor-pointer`
+                      : isSunday
+                      ? 'bg-rose-50/35 border-rose-200/70 hover:bg-rose-50/80 hover:border-rose-300 shadow-3xs cursor-pointer'
                       : isToday
                       ? 'bg-blue-50/40 border-blue-300 hover:bg-blue-50'
                       : 'bg-white border-slate-100 hover:bg-slate-50'
@@ -3302,13 +3461,19 @@ export const StudentHolidays = () => {
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className={`text-xs font-black ${
-                      isToday ? 'w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center' : 'text-slate-700'
+                      isToday
+                        ? 'w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center'
+                        : isSunday
+                        ? 'text-rose-600'
+                        : 'text-slate-700'
                     }`}>
                       {cell.day}
                     </span>
-                    {hasHoliday && (
+                    {hasHoliday ? (
                       <span className={`w-2 h-2 rounded-full ${categoryStyle.dot}`} />
-                    )}
+                    ) : isSunday ? (
+                      <span className="w-2 h-2 rounded-full bg-rose-400" />
+                    ) : null}
                   </div>
 
                   {hasHoliday ? (
@@ -3318,6 +3483,15 @@ export const StudentHolidays = () => {
                       </div>
                       <span className="text-[9px] font-semibold opacity-80 block truncate mt-0.5 text-primary">
                         👉 Click for details
+                      </span>
+                    </div>
+                  ) : isSunday ? (
+                    <div className="mt-1">
+                      <div className="text-[10px] font-black text-rose-600 leading-tight">
+                        Weekly Off
+                      </div>
+                      <span className="text-[9px] text-rose-500/80 font-semibold block truncate mt-0.5">
+                        Sunday Holiday
                       </span>
                     </div>
                   ) : (

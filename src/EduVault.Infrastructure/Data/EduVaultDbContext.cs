@@ -40,6 +40,9 @@ namespace EduVault.Infrastructure.Data
         public DbSet<SchoolPlanConfiguration> SchoolPlanConfigurations { get; set; }
         public DbSet<UpgradeRequest> UpgradeRequests { get; set; }
         public DbSet<ReportApproval> ReportApprovals { get; set; }
+        public DbSet<AnnualSchoolPlan> AnnualSchoolPlans { get; set; }
+        public DbSet<SchoolPlanEvent> SchoolPlanEvents { get; set; }
+        public DbSet<PrintTemplate> PrintTemplates { get; set; }
 
         // RBAC
         public DbSet<PageDefinition> PageDefinitions { get; set; }
@@ -70,6 +73,9 @@ namespace EduVault.Infrastructure.Data
         public DbSet<EmploymentType> EmploymentTypes { get; set; }
         public DbSet<WorkSchedule> WorkSchedules { get; set; }
         public DbSet<LeavePolicy> LeavePolicies { get; set; }
+        public DbSet<LeaveTransaction> LeaveTransactions { get; set; }     // Immutable leave balance audit ledger
+        public DbSet<LeaveBalance> LeaveBalances { get; set; }             // Computed balance snapshots
+        public DbSet<HolidayCalendar> HolidayCalendars { get; set; }       // School-defined holidays
         public DbSet<SalaryComponent> SalaryComponents { get; set; }
         public DbSet<SalaryStructure> SalaryStructures { get; set; }
         public DbSet<SalaryStructureComponent> SalaryStructureComponents { get; set; }
@@ -86,6 +92,9 @@ namespace EduVault.Infrastructure.Data
 
         // Security & Password Reset
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+
+        // Data Import Center Audit Logs
+        public DbSet<DataImportLog> DataImportLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -508,6 +517,12 @@ namespace EduVault.Infrastructure.Data
             modelBuilder.Entity<AdmissionInquiryEntry>()
                 .HasIndex(ai => new { ai.SchoolId, ai.CreatedAt });
 
+            modelBuilder.Entity<AdmissionInquiryEntry>()
+                .HasIndex(ai => new { ai.SchoolId, ai.FatherPhone, ai.TargetClass });
+
+            modelBuilder.Entity<AdmissionInquiryEntry>()
+                .HasIndex(ai => ai.ApplicationId);
+
             // Unified HRM: Employee
             modelBuilder.Entity<Employee>()
                 .HasOne(e => e.School)
@@ -596,6 +611,56 @@ namespace EduVault.Infrastructure.Data
 
             modelBuilder.Entity<PasswordResetToken>()
                 .HasIndex(p => p.TokenHash);
+
+            // AI Annual School Planner
+            modelBuilder.Entity<AnnualSchoolPlan>()
+                .HasOne(p => p.School)
+                .WithMany()
+                .HasForeignKey(p => p.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<AnnualSchoolPlan>()
+                .HasIndex(p => new { p.SchoolId, p.AcademicYear });
+
+            modelBuilder.Entity<SchoolPlanEvent>()
+                .HasOne(e => e.Plan)
+                .WithMany(p => p.Events)
+                .HasForeignKey(e => e.PlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SchoolPlanEvent>()
+                .HasOne(e => e.School)
+                .WithMany()
+                .HasForeignKey(e => e.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SchoolPlanEvent>()
+                .HasIndex(e => new { e.SchoolId, e.StartDate });
+
+            // Print Format Templates
+            modelBuilder.Entity<PrintTemplate>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.DocumentType).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.PaperSize).HasMaxLength(30).IsRequired();
+                entity.Property(e => e.HtmlContent).HasColumnType("text");
+                entity.Property(e => e.LayoutConfigJson).HasColumnType("text");
+                entity.HasOne(e => e.School)
+                    .WithMany()
+                    .HasForeignKey(e => e.SchoolId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => new { e.SchoolId, e.DocumentType, e.IsDefault });
+            });
+
+            modelBuilder.Entity<Exam>(entity =>
+            {
+                entity.HasOne(e => e.QuestionPaperUploader)
+                    .WithMany()
+                    .HasForeignKey(e => e.QuestionPaperUploadedByTeacherId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
         }
     }
 }

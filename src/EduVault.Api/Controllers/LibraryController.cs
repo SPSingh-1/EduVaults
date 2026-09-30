@@ -15,7 +15,7 @@ namespace EduVault.Api.Controllers
 {
     [ApiController]
     [Route("api/library")]
-    [Authorize(Roles = "librarian,Librarian,schooladmin,SchoolAdmin")]
+    [Authorize(Roles = "librarian,Librarian,schooladmin,SchoolAdmin,superadmin,SuperAdmin")]
     public class LibraryController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -29,6 +29,19 @@ namespace EduVault.Api.Controllers
 
         private Guid GetSchoolId()
         {
+            if (User.IsInRole("superadmin") || User.IsInRole("SuperAdmin"))
+            {
+                var qSchoolId = HttpContext.Request.Query["schoolId"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(qSchoolId) && Guid.TryParse(qSchoolId, out var saSchoolId))
+                    return saSchoolId;
+
+                var hSchoolId = HttpContext.Request.Headers["X-School-Id"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(hSchoolId) && Guid.TryParse(hSchoolId, out var headerSchoolId))
+                    return headerSchoolId;
+
+                throw new UnauthorizedAccessException("Super Admin must provide schoolId via query parameter (?schoolId=...) or X-School-Id header.");
+            }
+
             var schoolIdStr = User.FindFirst("schoolId")?.Value;
             if (string.IsNullOrEmpty(schoolIdStr)) throw new UnauthorizedAccessException("School ID missing in token");
             return Guid.Parse(schoolIdStr);

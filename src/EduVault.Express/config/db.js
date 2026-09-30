@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
 const config = require('./env');
+
+// Set DNS servers to resolve MongoDB Atlas SRV records on Windows without ISP ECONNREFUSED issues
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+  // Ignore if already set
+}
 
 const connectDB = async () => {
   try {
@@ -9,7 +17,7 @@ const connectDB = async () => {
     const conn = await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`MongoDB connection warning: ${error.message}. Auxiliary service running in degraded mode.`);
+    console.log(`[INFO] MongoDB offline (${error.message}). Auxiliary service running in local fallback mode.`);
   }
 };
 

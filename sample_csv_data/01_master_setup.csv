@@ -1,0 +1,20 @@
+Section,Room,GradeLevel,RoomCapacity,Department,Subject,ExamType
+A,Room 1,Play Group,10,Languages,Hindi,Unit Test 1
+B,Room 2,Nursery,20,Science,English,Mid Term 1
+C,Room 3,LKG,30,Mathematics,Mathematics,Mid Term 2
+D,Room 4,UKG,40,Social Sciences,Science,Half Yearly Examination
+E,Room 5,1,50,Commerce,Social Studies,Unit Test 3
+F,Room 6,2,60,Arts & Humanities,Physics,Pre-Board Examination
+,Room 7,3,70,Computer Science & IT,Chemistry,Final Annual Examination
+,Room 8,4,80,Physical Education & Sports,Biology,
+,Room 9,5,,,Computer Science,
+,Room 10,6,,,Economics,
+,,7,,,Accountancy,
+,,8,,,Business Studies,
+,,9,,,History,
+,,10,,,Geography,
+,,11,,,Political Science,
+,,12,,,Sanskrit,
+,,,,,General Knowledge,
+,,,,,Drawing & Art,
+,,,,,Physical Education,

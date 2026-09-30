@@ -14,6 +14,7 @@ import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import Maintenance from './pages/auth/Maintenance';
+import AdmissionForm from './pages/public/AdmissionForm';
 
 // Layouts
 import SuperAdminLayout from './layouts/SuperAdminLayout';
@@ -33,6 +34,7 @@ import Support from './pages/super-admin/Support';
 import SuperAdminNotices from './pages/super-admin/Notices';
 import AccessControl from './pages/super-admin/AccessControl';
 import SchoolHrmSettings from './pages/super-admin/SchoolHrmSettings';
+import SuperPrintGallery from './pages/super-admin/SuperPrintGallery';
 
 // School Admin Pages
 import SchoolAdminDashboard from './pages/school-admin/Dashboard';
@@ -45,10 +47,15 @@ import Exams from './pages/school-admin/Exams';
 import Admissions from './pages/school-admin/Admissions';
 import Setup from './pages/school-admin/Setup';
 import Reports from './pages/school-admin/Reports';
+import PaymentReports from './pages/school-admin/PaymentReports';
 import SchoolAdminProfile from './pages/school-admin/Profile';
 import Tickets from './pages/school-admin/Tickets';
 import AccountManagerRegister from './pages/school-admin/AccountManagerRegister';
 import LibrarianRegister from './pages/school-admin/LibrarianRegister';
+import DataImport from './pages/school-admin/DataImport';
+import AiPlanner from './pages/school-admin/AiPlanner';
+import PrintFormatStudio from './pages/school-admin/PrintFormatStudio';
+import StudentDossier from './pages/school-admin/StudentDossier';
 
 // Account Manager Pages (HRM & Financial Management)
 import AccountDashboard from './pages/account/AccountDashboard';
@@ -77,6 +84,8 @@ import CounterFeeDesk from './pages/receptionist/CounterFeeDesk';
 import GatePassDesk from './pages/receptionist/GatePassDesk';
 import AdmissionLeads from './pages/receptionist/AdmissionLeads';
 import ReceptionistRegister from './pages/school-admin/ReceptionistRegister';
+import HRMModule from './pages/school-admin/HRMModule';
+import StaffDeskModule from './pages/school-admin/StaffDeskModule';
 
 // Teacher Pages
 import {
@@ -131,6 +140,7 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/demo" element={<Demo />} />
               <Route path="/maintenance" element={<Maintenance />} />
+              <Route path="/apply/:schoolCode" element={<AdmissionForm />} />
 
               {/* Super Admin */}
               <Route element={<ProtectedRoute allowedRoles={['superadmin']} />}>
@@ -139,6 +149,10 @@ export default function App() {
                   <Route path="dashboard" element={<SuperAdminDashboard />} />
                   <Route path="schools" element={<Schools />} />
                   <Route path="schools/:schoolId/hrm" element={<SchoolHrmSettings />} />
+                  <Route path="hrm" element={<SchoolHrmSettings />} />
+                  <Route path="ai-planner" element={<AiPlanner />} />
+                  <Route path="format-studio" element={<SuperPrintGallery />} />
+                  <Route path="print-gallery" element={<Navigate to="/super-admin/format-studio" replace />} />
                   <Route path="subscriptions" element={<Subscriptions />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="access-control" element={<AccessControl />} />
@@ -154,6 +168,10 @@ export default function App() {
                   <Route path="dashboard" element={<SchoolAdminDashboard />} />
                   <Route path="admission" element={<Admissions />} />
                   <Route path="admissions" element={<Admissions />} />
+                  <Route path="student-dossier" element={<StudentDossier />} />
+                  <Route path="data-import" element={<DataImport />} />
+                  <Route path="ai-planner" element={<AiPlanner />} />
+                  <Route path="format-studio" element={<PrintFormatStudio />} />
                   <Route path="students" element={<Students />} />
                   <Route path="teachers" element={<Teachers />} />
                   <Route path="account-managers" element={<AccountManagerRegister />} />
@@ -161,10 +179,13 @@ export default function App() {
                   <Route path="receptionists" element={<ReceptionistRegister />} />
                   <Route path="classes" element={<Classes />} />
                   <Route path="fees" element={<Fees />} />
+                  <Route path="payment-reports" element={<PaymentReports />} />
                   <Route path="exams" element={<Exams />} />
                   <Route path="reports" element={<Reports />} />
                   <Route path="notices" element={<Notices />} />
                   <Route path="tickets" element={<Tickets />} />
+                  <Route path="staff-desk" element={<StaffDeskModule />} />
+                  <Route path="hrm" element={<HRMModule roleContext="schooladmin" />} />
                   <Route path="setup" element={<Setup />} />
                   <Route path="profile" element={<SchoolAdminProfile />} />
                 </Route>
@@ -180,6 +201,7 @@ export default function App() {
                 <Route path="/account" element={<AccountManagerLayout />}>
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<AccountDashboard />} />
+                  <Route path="hrm" element={<HRMModule roleContext="accountant" />} />
                   <Route path="employees" element={<EmployeeDirectory />} />
                   <Route path="fee-rules" element={<FeeRules />} />
                   <Route path="billing" element={<SchoolBilling />} />

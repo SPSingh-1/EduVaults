@@ -29,6 +29,7 @@ namespace EduVault.Core.Entities
         public string? TwilioWhatsAppFromNumber { get; set; }
         
         public string? WhatsAppProvider { get; set; } // "twilio", "meta", "custom"
+        public bool UseSharedWhatsApp { get; set; } = false; // Super Admin shared WhatsApp gateway fallback
         public string? MetaAccessToken { get; set; }
         public string? MetaPhoneNumberId { get; set; }
         public string? MetaWhatsAppFromNumber { get; set; }
@@ -54,6 +55,19 @@ namespace EduVault.Core.Entities
         public bool WhatsAppGatePassAlertsEnabled { get; set; } = true;
         public bool WhatsAppAdmissionInquiryEnabled { get; set; } = true;
         public bool WhatsAppTcNoticeEnabled { get; set; } = true;
+
+        // Dynamic Role-Based Password Generation Patterns
+        public string? StudentPasswordPattern { get; set; } = "stu@currentyear!";
+        public string? TeacherPasswordPattern { get; set; } = "tea@currentyear!";
+        public string? ReceptionistPasswordPattern { get; set; } = "rec@currentyear!";
+        public string? AccountantPasswordPattern { get; set; } = "acc@currentyear!";
+
+        // Academic Session & Batch Promotion Timeline Settings
+        public string? CurrentAcademicSession { get; set; } = "2025-26";
+        public DateTime? SessionStartDate { get; set; }
+        public DateTime? SessionEndDate { get; set; }
+        public DateTime? PromotionOpensDate { get; set; }
+        public string? NextAcademicSession { get; set; } = "2026-27";
 
         // Navigation properties
         public virtual ICollection<User> Users { get; set; } = new List<User>();

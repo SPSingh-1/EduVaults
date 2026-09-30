@@ -20,6 +20,7 @@ import {
   TrendingUp,
   TrendingDown
 } from 'lucide-react';
+import { printRenderedDocument } from '../../components/print/PrintIframe';
 
 const Salaries = () => {
   const [activeTab, setActiveTab] = useState('generate'); // 'generate', 'history'
@@ -179,6 +180,34 @@ const Salaries = () => {
             >
               <Sparkles className="w-3.5 h-3.5" />
               {generating ? 'Calculating...' : 'Run Auto-Payroll'}
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const from = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+                  const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
+                  const to = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                  const response = await apiClient.get(`/tallyexport/download-xml?from=${from}&to=${to}`, {
+                    responseType: 'blob'
+                  });
+                  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/xml' }));
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', `Tally_Vouchers_${selectedYear}_${selectedMonth}.xml`);
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                  setSuccess('Tally XML vouchers exported successfully!');
+                  setTimeout(() => setSuccess(''), 4000);
+                } catch (err) {
+                  setError('Failed to export Tally XML vouchers.');
+                }
+              }}
+              className="px-4 py-2 bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/40 text-purple-200 text-xs font-black uppercase tracking-wider rounded-xl transition flex items-center gap-1.5 shadow-sm"
+              title="Export Month Vouchers to TallyPrime / Busy XML"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Tally XML</span>
             </button>
           </div>
         </div>
@@ -494,7 +523,72 @@ const Salaries = () => {
                 </div>
               </div>
               <button
-                onClick={() => window.print()}
+                onClick={() => {
+                  const fallback = `
+                    <div class="print-zone-a5" style="padding: 16px; font-family: sans-serif; font-size: 12px; color: #1e293b;">
+                      <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div>
+                          <h2 style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a;">EduVault Academy</h2>
+                          <p style="margin: 3px 0 0; font-size: 11px; color: #64748b;">Confidential Monthly Pay Advice</p>
+                        </div>
+                        <div style="text-align: right; font-size: 11px;">
+                          <strong>Payslip #:</strong> PAY-${viewingSlip.id}<br/>
+                          <strong>Period:</strong> ${viewingSlip.period || 'Current Month'}
+                        </div>
+                      </div>
+
+                      <table style="width: 100%; margin-bottom: 16px; font-size: 11px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                        <tr>
+                          <td style="padding: 6px 10px;"><strong>Employee:</strong> ${viewingSlip.employeeName || 'Staff Member'}</td>
+                          <td style="padding: 6px 10px;"><strong>Emp Code:</strong> ${viewingSlip.employeeCode || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 6px 10px;"><strong>Designation:</strong> ${viewingSlip.designation || 'Staff'}</td>
+                          <td style="padding: 6px 10px;"><strong>Disbursed Via:</strong> ${viewingSlip.paymentMode || 'Bank Transfer'}</td>
+                        </tr>
+                      </table>
+
+                      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11px;">
+                        <thead>
+                          <tr style="background: #f1f5f9; border-bottom: 1px solid #cbd5e1;">
+                            <th style="text-align: left; padding: 6px 8px;">Earnings</th>
+                            <th style="text-align: right; padding: 6px 8px;">Amount</th>
+                            <th style="text-align: left; padding: 6px 8px;">Deductions</th>
+                            <th style="text-align: right; padding: 6px 8px;">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 6px 8px;">Basic Salary</td>
+                            <td style="text-align: right; padding: 6px 8px; font-family: monospace;">₹${(viewingSlip.basicPay || 0).toLocaleString()}</td>
+                            <td style="padding: 6px 8px;">Provident Fund / Tax</td>
+                            <td style="text-align: right; padding: 6px 8px; font-family: monospace;">₹${(viewingSlip.deductions || 0).toLocaleString()}</td>
+                          </tr>
+                          <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 6px 8px;">Allowances</td>
+                            <td style="text-align: right; padding: 6px 8px; font-family: monospace;">₹${(viewingSlip.allowances || 0).toLocaleString()}</td>
+                            <td style="padding: 6px 8px;">LWP (${viewingSlip.lwpDays || 0} days)</td>
+                            <td style="text-align: right; padding: 6px 8px; font-family: monospace; color: #e11d48;">-₹${(viewingSlip.lwpDeduction || 0).toLocaleString()}</td>
+                          </tr>
+                        </tbody>
+                        <tfoot>
+                          <tr style="background: #f8fafc; font-weight: bold; border-top: 1px solid #cbd5e1;">
+                            <td style="padding: 8px;">Total Gross</td>
+                            <td style="text-align: right; padding: 8px; font-family: monospace;">₹${((viewingSlip.basicPay || 0) + (viewingSlip.allowances || 0)).toLocaleString()}</td>
+                            <td style="padding: 8px;">Net Disbursed</td>
+                            <td style="text-align: right; padding: 8px; font-size: 13px; font-family: monospace; color: #0f172a;">₹${(viewingSlip.netPay || 0).toLocaleString()}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+
+                      <div style="margin-top: 24px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                        <span>Generated by EduVault ERP</span>
+                        <span>Employer Signature: __________________</span>
+                      </div>
+                    </div>
+                  `;
+                  printRenderedDocument('SalarySlip', viewingSlip.id, fallback);
+                }}
                 className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition flex items-center gap-2"
               >
                 <Printer className="w-3.5 h-3.5" />

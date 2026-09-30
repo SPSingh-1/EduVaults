@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Commercial & Technical Proposal — City International School | EduVault ERP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0f172a;
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --emerald: #059669;
+      --amber: #d97706;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-500: #64748b;
+      --gray-700: #334155;
+      --gray-900: #0f172a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #f1f5f9;
+      color: var(--gray-700);
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .proposal-wrapper {
+      max-width: 920px;
+      margin: 0 auto;
+      background: #ffffff;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--gray-200);
+    }
+
+    /* Action Ribbon (hidden on print) */
+    .action-ribbon {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .action-ribbon .status-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #38bdf8;
+    }
+
+    .action-ribbon .status-tag::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      background: #38bdf8;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #38bdf8;
+    }
+
+    .btn-print {
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-print:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    /* Proposal Container */
+    .proposal-content {
+      padding: 48px 56px;
+    }
+
+    /* Header & Letterhead */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 28px;
+      border-bottom: 2px solid var(--gray-100);
+      margin-bottom: 32px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #2563eb, #0f172a);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-title h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--gray-900);
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-title span {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .doc-meta {
+      text-align: right;
+      font-size: 13px;
+      color: var(--gray-500);
+    }
+
+    .doc-meta strong {
+      color: var(--gray-900);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+
+    /* Recipient Details */
+    .recipient-box {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-left: 4px solid var(--accent);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+    }
+
+    .recipient-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .recipient-grid h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--gray-500);
+      margin-bottom: 6px;
+    }
+
+    .recipient-grid p {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-900);
+    }
+
+    .subject-line {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--gray-900);
+      padding: 14px 0;
+      border-bottom: 1px solid var(--gray-200);
+      margin-bottom: 24px;
+    }
+
+    .subject-line span {
+      color: var(--accent);
+    }
+
+    /* Body Text */
+    .letter-body p {
+      font-size: 14.5px;
+      color: var(--gray-700);
+      margin-bottom: 16px;
+      text-align: justify;
+    }
+
+    .section-heading {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--gray-900);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 32px 0 16px 0;
+      padding-bottom: 8px;
+      border-bottom: 1.5px solid var(--gray-200);
+    }
+
+    .section-heading span.num {
+      width: 24px;
+      height: 24px;
+      background: var(--accent);
+      color: #ffffff;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    /* Feature Grid */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .feature-card {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .feature-card:hover {
+      border-color: var(--accent);
+      background: #ffffff;
+    }
+
+    .feature-card .feat-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 6px;
+    }
+
+    .feature-card .feat-icon {
+      font-size: 18px;
+    }
+
+    .feature-card p {
+      font-size: 12.5px;
+      color: var(--gray-500);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    /* Commercial Table */
+    .pricing-table-wrapper {
+      margin: 20px 0 28px 0;
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    table.pricing-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    table.pricing-table th {
+      background: var(--gray-900);
+      color: #ffffff;
+      padding: 14px 18px;
+      font-size: 12.5px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    table.pricing-table td {
+      padding: 16px 18px;
+      font-size: 13.5px;
+      border-bottom: 1px solid var(--gray-200);
+      color: var(--gray-700);
+    }
+
+    table.pricing-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .price-highlight {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--emerald);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .price-unit {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-500);
+    }
+
+    .badge-included {
+      background: #dcfce7;
+      color: #166534;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    .badge-free {
+      background: #e0f2fe;
+      color: #0369a1;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    /* Deliverables List */
+    .benefits-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 16px 0 24px 0;
+    }
+
+    .benefits-list li {
+      font-size: 13px;
+      color: var(--gray-700);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .benefits-list li::before {
+      content: "✓";
+      color: var(--emerald);
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    /* Roadmap Timeline */
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 18px 0 28px 0;
+    }
+
+    .timeline-step {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-top: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .timeline-step .day-badge {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .timeline-step h4 {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 6px;
+    }
+
+    .timeline-step p {
+      font-size: 12px;
+      color: var(--gray-500);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    /* Sign-off Section */
+    .sign-section {
+      margin-top: 40px;
+      padding-top: 28px;
+      border-top: 2px solid var(--gray-200);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+    }
+
+    .sign-box {
+      border: 1px dashed var(--gray-300);
+      border-radius: 10px;
+      padding: 20px;
+      background: var(--gray-50);
+    }
+
+    .sign-box h5 {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      margin-bottom: 40px;
+    }
+
+    .sign-line {
+      border-bottom: 1.5px solid var(--gray-300);
+      margin-bottom: 8px;
+    }
+
+    .sign-meta {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-900);
+    }
+
+    .sign-sub {
+      font-size: 11px;
+      color: var(--gray-500);
+    }
+
+    /* Footer */
+    .proposal-footer {
+      margin-top: 36px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--gray-500);
+      border-top: 1px solid var(--gray-200);
+      padding-top: 20px;
+    }
+
+    /* Print Optimization */
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+        color: #000000;
+      }
+      .action-ribbon {
+        display: none !important;
+      }
+      .proposal-wrapper {
+        box-shadow: none;
+        border: none;
+        max-width: 100%;
+        border-radius: 0;
+      }
+      .proposal-content {
+        padding: 20px 24px;
+      }
+      .feature-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      @page {
+        margin: 12mm 15mm;
+        size: A4 portrait;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="proposal-wrapper">
+    <!-- Action Bar for Screen Viewing -->
+    <div class="action-ribbon">
+      <div class="status-tag">
+        <span>Formal Commercial Proposal — City International School</span>
+      </div>
+      <button class="btn-print" onclick="window.print()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+        Print / Save as PDF
+      </button>
+    </div>
+
+    <div class="proposal-content">
+      <!-- Header -->
+      <div class="header-bar">
+        <div class="brand-logo">
+          <div class="brand-badge">EV</div>
+          <div class="brand-title">
+            <h1>EduVault ERP</h1>
+            <span>Next-Gen Cloud School OS</span>
+          </div>
+        </div>
+        <div class="doc-meta">
+          <div>Ref No: <strong>EV/PROP/2026-09/CIS-01</strong></div>
+          <div>Date: <strong>15th September 2026</strong></div>
+          <div>Validity: <strong>30 Days</strong></div>
+        </div>
+      </div>
+
+      <!-- Recipient -->
+      <div class="recipient-box">
+        <div class="recipient-grid">
+          <div>
+            <h3>Addressed To:</h3>
+            <p>The Respected Principal</p>
+            <p style="color: var(--accent); font-weight: 700;">City International School</p>
+            <p style="font-weight: 400; font-size: 13px; color: var(--gray-500);">Administration & Academic Council</p>
+          </div>
+          <div>
+            <h3>From:</h3>
+            <p>EduVault EdTech Solutions Pvt. Ltd.</p>
+            <p style="font-weight: 400; font-size: 13px; color: var(--gray-500);">Institutional Partnerships & Enterprise Deployment Team</p>
+            <p style="font-weight: 400; font-size: 13px; color: var(--gray-500);">Email: solutions@eduvault.edu | Web: https://eduvault.edu</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subject -->
+      <div class="subject-line">
+        Subject: <span>Commercial & Technical Proposal</span> for Deployment of EduVault Cloud School ERP System
+      </div>
+
+      <!-- Letter Opening -->
+      <div class="letter-body">
+        <p><strong>Respected Principal Ma'am / Sir,</strong></p>
+        <p>
+          We express our sincere gratitude for the valuable time and courteous reception extended to our team during the live interactive product demonstration of <strong>EduVault School ERP</strong> for City International School. We are thrilled by the encouraging feedback received from your academic and administrative leadership regarding our unified architecture, automated fee management, and parent communication tools.
+        </p>
+        <p>
+          In accordance with your request during the demo session, we are pleased to submit our formal commercial proposal and complete functional deliverable breakdown tailored exclusively for City International School.
+        </p>
+      </div>
+
+      <!-- Section 1: Complete Feature Matrix -->
+      <div class="section-heading">
+        <span class="num">1</span> Comprehensive ERP Feature Suite (Included in Plan)
+      </div>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feat-header">
+            <span class="feat-icon">💰</span>
+            <span>Walk-in Fee Counter & Receipts</span>
+          </div>
+          <p>Instant spot fee collection (Cash/UPI/Cheque), partial/full settlement, automated 80mm thermal slip & A4 twin-copy printing, student dues tracking, and day-end audit reports.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feat-header">
+            <span class="feat-icon">💬</span>
+            <span>Automated WhatsApp Parent Engine</span>
+          </div>
+          <p>Instant WhatsApp delivery of fee payment receipts, upcoming fee due alerts, daily student absence alerts, exam date-sheets, and emergency school circulars.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feat-header">
+            <span class="feat-icon">📅</span>
+            <span>Live Timetable & Period Tracker</span>
+          </div>
+          <p>Real-time "Student 360" live location tracker showing the ongoing lecture, current period timing, assigned teacher, and classroom room number for front-desk staff.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feat-header">
+            <span class="feat-icon">📊</span>
+            <span>Exams, Marks & Report Cards</span>
+          </div>
+          <p>CBSE/State board grading schemes, subject-wise marks entry, automated question paper alerts to teachers, and 1-click printable student progress report cards.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feat-header">
+            <span class="feat-icon">👥</span>
+            <span>Enterprise HRM & Staff Payroll Desk</span>
+          </div>
+          <p>Teacher attendance, leave quota balances (CL/ML/EL), leave approval workflow, rule-based salary calculation with automated payslips & Tally ERP XML export.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feat-header">
+            <span class="feat-icon">🎨</span>
+            <span>Print Format Studio (Customized)</span>
+          </div>
+          <p>School-branded custom templates for Fee Receipts, Student ID Cards, Admit Cards, Transfer Certificates (TC), and Salary Slips with dynamic school logo & signatures.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feat-header">
+            <span class="feat-icon">📚</span>
+            <span>Digital Library Circulation Desk</span>
+          </div>
+          <p>Barcoded book cataloging, fast 1-click issue/return desk, overdue fine computation, student borrowing history, and automated book reservation management.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feat-header">
+            <span class="feat-icon">🚪</span>
+            <span>Front Desk, Visitors & Gate Pass</span>
+          </div>
+          <p>Parent walk-in visitor registration, digital student exit gate passes with guardian verification, and admission enquiry tracking pipeline.</p>
+        </div>
+      </div>
+
+      <!-- Section 2: Transparent Pricing Structure -->
+      <div class="section-heading">
+        <span class="num">2</span> Special Institutional Commercial Pricing
+      </div>
+
+      <p style="font-size: 13.5px; margin-bottom: 12px;">
+        As committed during our meeting, we offer City International School our most privileged <strong>Institutional All-Inclusive Tier</strong> with zero setup fee and zero module lock-in:
+      </p>
+
+      <div class="pricing-table-wrapper">
+        <table class="pricing-table">
+          <thead>
+            <tr>
+              <th>Item / Service Description</th>
+              <th>Commercial Quoted Price</th>
+              <th>Billing Frequency</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <strong>Full EduVault Cloud ERP Suite</strong><br/>
+                <span style="font-size: 12px; color: var(--gray-500);">All 10+ Modules (Fee Counter, WhatsApp Engine, Academics, Exams, HRM, Library, Front Desk, Portals)</span>
+              </td>
+              <td>
+                <span class="price-highlight">₹7.50</span>
+                <span class="price-unit">/ student / month</span>
+              </td>
+              <td>Monthly / Quarterly / Annual</td>
+              <td><span class="badge-included">RECURRING SUBSCRIPTION</span></td>
+            </tr>
+            <tr style="background: #f8fafc;">
+              <td>
+                <strong>One-Time Implementation & Onboarding Package</strong><br/>
+                <span style="font-size: 12px; color: var(--gray-500);">
+                  • Complete legacy master data migration (Students, Staff, Fee Heads, Due Balances)<br/>
+                  • School branding customization (Receipts, ID Cards, Admit Cards with Logo & Signature)<br/>
+                  • Comprehensive staff training (Accountant, Receptionist, Teachers, Admin)<br/>
+                  • Dedicated Go-Live engineer supervision during initial launch
+                </span>
+              </td>
+              <td>
+                <span style="font-size: 20px; font-weight: 800; color: #1e293b; font-family: 'JetBrains Mono', monospace;">₹5,000</span>
+                <span class="price-unit">only</span>
+              </td>
+              <td>One-Time (Payable at Setup)</td>
+              <td><span style="background: #e0f2fe; color: #0369a1; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 20px; display: inline-block;">ONE-TIME SETUP</span></td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Cloud Server Hosting & SSL Encryption</strong><br/>
+                <span style="font-size: 12px; color: var(--gray-500);">AWS High-Speed Cloud, 99.9% Uptime SLA, Daily Auto Backups, No Server Maintenance</span>
+              </td>
+              <td><strong>₹0.00</strong> (Included)</td>
+              <td>Continuous Cloud Hosting</td>
+              <td><span class="badge-included">COMPLIMENTARY</span></td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Priority Technical Support & SLA</strong><br/>
+                <span style="font-size: 12px; color: var(--gray-500);">Dedicated School Account Manager + WhatsApp Hotline + 1-Hour SLA Resolution</span>
+              </td>
+              <td><strong>₹0.00</strong> (Included)</td>
+              <td>6 Days / Week (8:00 AM – 7:00 PM)</td>
+              <td><span class="badge-included">VIP PRIORITY</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Value Highlights -->
+      <div class="section-heading">
+        <span class="num">3</span> Key Institutional Advantages for City International School
+      </div>
+
+      <ul class="benefits-list">
+        <li><strong>No Hidden Costs:</strong> No software update fee, no per-user licensing fees.</li>
+        <li><strong>Pay Only for Active Students:</strong> Billing adjusts dynamically as enrollments change.</li>
+        <li><strong>Zero Hardware Investment:</strong> Works smoothly on existing school PCs, laptops, & mobiles.</li>
+        <li><strong>Instant WhatsApp Connectivity:</strong> Direct parent engagement without SMS charges.</li>
+        <li><strong>Bank-Grade Data Security:</strong> Role-based access control (RBAC) protecting financial and student data.</li>
+        <li><strong>Paperless Front Desk:</strong> Instant search, thermal slip printing, and real-time ledger sync.</li>
+      </ul>
+
+      <!-- Section 4: Onboarding Roadmap -->
+      <div class="section-heading">
+        <span class="num">4</span> Rapid 5-Day Deployment Plan
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-step">
+          <div class="day-badge">Day 1 – Day 2</div>
+          <h4>Data Import & Configuration</h4>
+          <p>School profile creation, fee structures setup, master CSV import of all students, classes, and teachers.</p>
+        </div>
+        <div class="timeline-step">
+          <div class="day-badge">Day 3 – Day 4</div>
+          <h4>Staff Training & Testing</h4>
+          <p>Role-wise staff training (Accountant, Receptionist, Teachers), receipt format customization, and mock run.</p>
+        </div>
+        <div class="timeline-step">
+          <div class="day-badge">Day 5 Onwards</div>
+          <h4>Full Official Go-Live</h4>
+          <p>Official counter fee collection launch, live WhatsApp receipts, and dedicated on-call technical supervisor.</p>
+        </div>
+      </div>
+
+      <!-- Conclusion & Sign-off -->
+      <div class="letter-body" style="margin-top: 24px;">
+        <p>
+          We are committed to delivering a frictionless digital transformation for City International School that enhances administrative efficiency, eliminates fee leakage, and delights parents and faculty alike.
+        </p>
+        <p>
+          We look forward to receiving your valuable confirmation to initiate the onboarding process.
+        </p>
+      </div>
+
+      <!-- Signatures -->
+      <div class="sign-section">
+        <div class="sign-box">
+          <h5>Authorized Signatory (EduVault)</h5>
+          <div class="sign-line"></div>
+          <div class="sign-meta">Institutional Deployment Head</div>
+          <div class="sign-sub">EduVault EdTech Solutions Pvt. Ltd.</div>
+          <div class="sign-sub">Contact: +91 98765 43210</div>
+        </div>
+
+        <div class="sign-box">
+          <h5>Acceptance & Confirmation (School)</h5>
+          <div class="sign-line"></div>
+          <div class="sign-meta">The Principal / Managing Director</div>
+          <div class="sign-sub">City International School</div>
+          <div class="sign-sub">Date & Official Seal: ____________________</div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="proposal-footer">
+        EduVault School Operating System • Confidential Commercial Proposal • Designed exclusively for City International School
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

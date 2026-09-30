@@ -106,6 +106,25 @@ const LeaveQuotas = () => {
           </div>
         </div>
 
+        {/* Enterprise HRM Studio Prompt */}
+        <div className="bg-white rounded-2xl p-4 border border-purple-100 shadow-sm flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-purple-50 text-purple-600 rounded-xl shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 text-sm">Enterprise HRM Policy Studio Available</h4>
+              <p className="text-xs text-slate-500">Define custom leave policies, accrual rules, holiday calendar & full staff balances in the centralized HRM Studio.</p>
+            </div>
+          </div>
+          <a
+            href="/account/hrm"
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shrink-0"
+          >
+            Open HRM Studio →
+          </a>
+        </div>
+
         {/* Alerts */}
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-sm text-red-700 shadow-sm">

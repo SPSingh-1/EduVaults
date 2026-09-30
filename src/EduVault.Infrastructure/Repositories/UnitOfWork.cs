@@ -83,6 +83,9 @@ namespace EduVault.Infrastructure.Repositories
 
             // Security & Auth
             PasswordResetTokens = new Repository<PasswordResetToken>(_context);
+
+            // Print Format Templates
+            PrintTemplates = new Repository<PrintTemplate>(_context);
         }
 
         public IRepository<School> Schools { get; private set; }
@@ -155,6 +158,9 @@ namespace EduVault.Infrastructure.Repositories
 
         // Security & Auth
         public IRepository<PasswordResetToken> PasswordResetTokens { get; private set; }
+
+        // Print Format Templates
+        public IRepository<PrintTemplate> PrintTemplates { get; private set; }
 
         public async Task<int> CompleteAsync()
         {

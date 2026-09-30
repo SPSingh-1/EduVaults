@@ -1,0 +1,141 @@
+/* ================================================
+   EDUVAULT GLOBAL PRINT STYLESHEET
+   Loaded globally — applies to ALL pages on print.
+   ================================================ */
+
+/* ── Screen Mode: Hide elements meant ONLY for print ── */
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}
+
+/* ── Print Mode: Clean, Isolated Paper Layout ── */
+@media print {
+  /* ── 1. HARD HIDE: Sidebar, Topbar, Buttons, Inputs, Modals, Toasts ── */
+  aside,
+  .sidebar,
+  [class*="sidebar"],
+  nav,
+  .topbar,
+  [class*="topbar"],
+  button:not(.printable-keep),
+  input,
+  select,
+  textarea,
+  .no-print,
+  [data-no-print],
+  .toast,
+  .modal-backdrop,
+  .backdrop,
+  footer,
+  .recharts-wrapper,       /* Recharts charts — never in print */
+  .recharts-surface {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* ── 2. RESET: Clean white paper body ── */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 11pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ── 3. MAIN CONTENT: Remove padding/margins ── */
+  main,
+  .main-content,
+  [class*="main-content"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: unset !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+  }
+
+  /* ── 4. TABLE: Prevent row splits across pages ── */
+  table {
+    page-break-inside: auto;
+    width: 100%;
+    border-collapse: collapse;
+  }
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+  thead {
+    display: table-header-group; /* Repeat header on each page */
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+
+  /* ── 5. PRINTABLE ZONES: Only these show ── */
+  .print-only {
+    display: block !important;
+    visibility: visible !important;
+  }
+  .print-hidden {
+    display: none !important;
+  }
+
+  /* ── 6. PAGE SIZE PRESETS ── */
+  @page { margin: 8mm 10mm; size: A4 portrait; }
+  @page thermal { margin: 2mm; size: 80mm auto; }
+  @page a5 { margin: 8mm; size: A5 portrait; }
+  @page idcard { margin: 0; size: 85.6mm 54mm landscape; }
+
+  /* ── 7. PAPER FORMAT CLASSES ── */
+  .print-zone-thermal {
+    width: 72mm !important;
+    max-width: 76mm !important;
+    font-size: 9pt !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    margin: 0 auto !important;
+  }
+  .print-zone-a4 {
+    width: 190mm !important;
+    font-size: 10pt !important;
+    margin: 0 auto !important;
+  }
+  .print-zone-a5 {
+    width: 140mm !important;
+    font-size: 9pt !important;
+    margin: 0 auto !important;
+  }
+  .print-zone-twin-copy {
+    width: 190mm !important;
+    font-size: 10pt !important;
+  }
+  .print-zone-id-card {
+    width: 85.6mm !important;
+    height: 54mm !important;
+    overflow: hidden !important;
+  }
+
+  /* ── 8. TWIN-COPY SEPARATOR LINE ── */
+  .print-scissor-line {
+    border-top: 1px dashed #999;
+    text-align: center;
+    margin: 4mm 0;
+    color: #888;
+    font-size: 8pt;
+  }
+
+  /* ── 9. REMOVE BOX SHADOWS & ROUNDED CORNERS ON PRINT ── */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* ── 10. PRESERVE COLORS FOR LOGO & STAMPS ── */
+  .print-color-preserve {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

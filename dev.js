@@ -31,28 +31,30 @@ const isWindows = process.platform === 'win32';
 const npmCmd = isWindows ? 'npm.cmd' : 'npm';
 const dotnetCmd = 'dotnet';
 
-// 1. Start C# API
+// 1. Start C# API (.NET executable does not require shell)
 const apiProcess = spawn(dotnetCmd, ['run', '--project', 'src/EduVault.Api/EduVault.Api.csproj'], {
   cwd: rootDir,
-  shell: isWindows
+  shell: false
 });
 
 apiProcess.stdout.on('data', data => log('API', colors.api, data));
 apiProcess.stderr.on('data', data => log('API', colors.api, data));
 
-// 2. Start Express Auxiliary Service
-const expressProcess = spawn(npmCmd, ['run', 'dev'], {
+// 2. Start Express Auxiliary Service (pass single command string when shell is true to prevent DEP0190)
+const expressCmd = isWindows ? 'npm.cmd run dev' : 'npm run dev';
+const expressProcess = spawn(expressCmd, {
   cwd: path.join(rootDir, 'src/EduVault.Express'),
-  shell: isWindows
+  shell: true
 });
 
 expressProcess.stdout.on('data', data => log('EXPRESS', colors.express, data));
 expressProcess.stderr.on('data', data => log('EXPRESS', colors.express, data));
 
-// 3. Start React Web Frontend
-const webProcess = spawn(npmCmd, ['run', 'dev'], {
+// 3. Start React Web Frontend (pass single command string when shell is true to prevent DEP0190)
+const webCmd = isWindows ? 'npm.cmd run dev' : 'npm run dev';
+const webProcess = spawn(webCmd, {
   cwd: path.join(rootDir, 'src/EduVault.Web'),
-  shell: isWindows
+  shell: true
 });
 
 webProcess.stdout.on('data', data => log('WEB', colors.web, data));

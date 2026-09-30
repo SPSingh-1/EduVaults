@@ -126,7 +126,7 @@ namespace EduVault.Api.Controllers
             var result = rolePages.Select(page =>
             {
                 var saved = savedPerms.FirstOrDefault(p => p.PageDefinitionId == page.Id);
-                bool defaultView = IsDefaultVisible(role, page.Module);
+                bool defaultView = savedPerms.Any() ? false : IsDefaultVisible(role, page.Module);
                 return new
                 {
                     pageId = page.Id,
@@ -347,16 +347,22 @@ namespace EduVault.Api.Controllers
                 // School Admin Pages
                 new() { PageKey = "schooladmin.dashboard", PageName = "Dashboard", Module = "school_admin", TargetRole = "schooladmin", Icon = "LayoutDashboard", Route = "/school-admin/dashboard", SortOrder = 1 },
                 new() { PageKey = "schooladmin.admission", PageName = "Admissions Inquiry", Module = "school_admin", TargetRole = "schooladmin", Icon = "UserCheck", Route = "/school-admin/admission", SortOrder = 2 },
-                new() { PageKey = "schooladmin.students", PageName = "Students Directory", Module = "school_admin", TargetRole = "schooladmin", Icon = "Users", Route = "/school-admin/students", SortOrder = 3 },
+                new() { PageKey = "schooladmin.data_import", PageName = "Data Import Hub", Module = "school_admin", TargetRole = "schooladmin", Icon = "UploadCloud", Route = "/school-admin/data-import", SortOrder = 3 },
+                new() { PageKey = "schooladmin.ai_planner", PageName = "AI School Planner", Module = "school_admin", TargetRole = "schooladmin", Icon = "CalendarDays", Route = "/school-admin/ai-planner", SortOrder = 4 },
+                new() { PageKey = "schooladmin.format_studio", PageName = "Print Format Studio", Module = "school_admin", TargetRole = "schooladmin", Icon = "Printer", Route = "/school-admin/format-studio", SortOrder = 5 },
+                new() { PageKey = "schooladmin.students", PageName = "Students Directory", Module = "school_admin", TargetRole = "schooladmin", Icon = "Users", Route = "/school-admin/students", SortOrder = 6 },
                 new() { PageKey = "schooladmin.teachers", PageName = "Teaching Faculty", Module = "school_admin", TargetRole = "schooladmin", Icon = "GraduationCap", Route = "/school-admin/teachers", SortOrder = 4 },
                 new() { PageKey = "schooladmin.account_managers", PageName = "Account Managers", Module = "school_admin", TargetRole = "schooladmin", Icon = "DollarSign", Route = "/school-admin/account-managers", SortOrder = 5 },
                 new() { PageKey = "schooladmin.librarians", PageName = "School Librarians", Module = "school_admin", TargetRole = "schooladmin", Icon = "BookOpen", Route = "/school-admin/librarians", SortOrder = 6 },
                 new() { PageKey = "schooladmin.classes", PageName = "Class Management", Module = "school_admin", TargetRole = "schooladmin", Icon = "Building", Route = "/school-admin/classes", SortOrder = 7 },
                 new() { PageKey = "schooladmin.fees", PageName = "Fee Management", Module = "school_admin", TargetRole = "schooladmin", Icon = "DollarSign", Route = "/school-admin/fees", SortOrder = 8 },
-                new() { PageKey = "schooladmin.exams", PageName = "Examinations", Module = "school_admin", TargetRole = "schooladmin", Icon = "ClipboardList", Route = "/school-admin/exams", SortOrder = 9 },
+                new() { PageKey = "schooladmin.payment_reports", PageName = "Payment Reports", Module = "school_admin", TargetRole = "schooladmin", Icon = "BarChart2", Route = "/school-admin/payment-reports", SortOrder = 9 },
+                new() { PageKey = "schooladmin.exams", PageName = "Examinations", Module = "school_admin", TargetRole = "schooladmin", Icon = "ClipboardList", Route = "/school-admin/exams", SortOrder = 10 },
                 new() { PageKey = "schooladmin.reports", PageName = "Audit & Reports", Module = "school_admin", TargetRole = "schooladmin", Icon = "TrendingUp", Route = "/school-admin/reports", SortOrder = 10 },
                 new() { PageKey = "schooladmin.notices", PageName = "Notice Board", Module = "school_admin", TargetRole = "schooladmin", Icon = "Megaphone", Route = "/school-admin/notices", SortOrder = 11 },
-                new() { PageKey = "schooladmin.setup", PageName = "School Settings", Module = "school_admin", TargetRole = "schooladmin", Icon = "Sliders", Route = "/school-admin/setup", SortOrder = 12 },
+                new() { PageKey = "schooladmin.staff_desk", PageName = "Staff Attendance & Leave Desk", Module = "school_admin", TargetRole = "schooladmin", Icon = "UserCheck", Route = "/school-admin/staff-desk", SortOrder = 12 },
+                new() { PageKey = "schooladmin.hrm", PageName = "HRM Studio", Module = "school_admin", TargetRole = "schooladmin", Icon = "Briefcase", Route = "/school-admin/hrm", SortOrder = 13 },
+                new() { PageKey = "schooladmin.setup", PageName = "School Settings", Module = "school_admin", TargetRole = "schooladmin", Icon = "Sliders", Route = "/school-admin/setup", SortOrder = 14 },
 
                 // Teacher Pages
                 new() { PageKey = "teacher.dashboard", PageName = "Dashboard", Module = "teacher", TargetRole = "teacher", Icon = "LayoutDashboard", Route = "/teacher/dashboard", SortOrder = 1 },
@@ -385,12 +391,15 @@ namespace EduVault.Api.Controllers
 
                 // Account Manager Pages
                 new() { PageKey = "account.dashboard", PageName = "Dashboard", Module = "account", TargetRole = "accountmanager", Icon = "LayoutDashboard", Route = "/account/dashboard", SortOrder = 1 },
-                new() { PageKey = "account.billing", PageName = "School Billing & Fees", Module = "account", TargetRole = "accountmanager", Icon = "DollarSign", Route = "/account/billing", SortOrder = 2 },
-                new() { PageKey = "account.salaries", PageName = "Teacher Payroll & Salaries", Module = "account", TargetRole = "accountmanager", Icon = "DollarSign", Route = "/account/salaries", SortOrder = 3 },
-                new() { PageKey = "account.salary_rules", PageName = "Salary Rules (HRA/PF)", Module = "account", TargetRole = "accountmanager", Icon = "Sliders", Route = "/account/salary-rules", SortOrder = 4 },
-                new() { PageKey = "account.leaves", PageName = "Teacher Leave Approvals", Module = "account", TargetRole = "accountmanager", Icon = "CalendarCheck", Route = "/account/leaves", SortOrder = 5 },
-                new() { PageKey = "account.quotas", PageName = "Annual Leave Quotas", Module = "account", TargetRole = "accountmanager", Icon = "Clock", Route = "/account/quotas", SortOrder = 6 },
-                new() { PageKey = "account.expenses", PageName = "Expense Vouchers", Module = "account", TargetRole = "accountmanager", Icon = "DollarSign", Route = "/account/expenses", SortOrder = 7 },
+                new() { PageKey = "account.hrm", PageName = "Enterprise HRM Studio", Module = "account", TargetRole = "accountmanager", Icon = "Briefcase", Route = "/account/hrm", SortOrder = 2 },
+                new() { PageKey = "account.employees", PageName = "Staff & Employees", Module = "account", TargetRole = "accountmanager", Icon = "Users", Route = "/account/employees", SortOrder = 3 },
+                new() { PageKey = "account.salaries", PageName = "Teacher Payroll & Salaries", Module = "account", TargetRole = "accountmanager", Icon = "DollarSign", Route = "/account/salaries", SortOrder = 4 },
+                new() { PageKey = "account.salary_rules", PageName = "Salary Rules (HRA/PF)", Module = "account", TargetRole = "accountmanager", Icon = "Sliders", Route = "/account/salary-rules", SortOrder = 5 },
+                new() { PageKey = "account.leaves", PageName = "Teacher Leave Approvals", Module = "account", TargetRole = "accountmanager", Icon = "CalendarCheck", Route = "/account/leaves", SortOrder = 6 },
+                new() { PageKey = "account.quotas", PageName = "Annual Leave Quotas", Module = "account", TargetRole = "accountmanager", Icon = "Clock", Route = "/account/quotas", SortOrder = 7 },
+                new() { PageKey = "account.fee_rules", PageName = "Fee & Financial Rules", Module = "account", TargetRole = "accountmanager", Icon = "Sliders", Route = "/account/fee-rules", SortOrder = 8 },
+                new() { PageKey = "account.billing", PageName = "School Billing & Fees", Module = "account", TargetRole = "accountmanager", Icon = "DollarSign", Route = "/account/billing", SortOrder = 9 },
+                new() { PageKey = "account.expenses", PageName = "Expense Vouchers", Module = "account", TargetRole = "accountmanager", Icon = "CreditCard", Route = "/account/expenses", SortOrder = 10 },
 
                 // Librarian Pages
                 new() { PageKey = "library.dashboard", PageName = "Dashboard", Module = "library", TargetRole = "librarian", Icon = "LayoutDashboard", Route = "/library/dashboard", SortOrder = 1 },
@@ -428,9 +437,16 @@ namespace EduVault.Api.Controllers
 
             foreach (var p in defaultPages)
             {
-                if (!existingPages.Any(ep => ep.PageKey == p.PageKey))
+                var existing = existingPages.FirstOrDefault(ep => ep.PageKey == p.PageKey);
+                if (existing == null)
                 {
                     await _unitOfWork.PageDefinitions.AddAsync(p);
+                    modified = true;
+                }
+                else if (!existing.IsActive)
+                {
+                    existing.IsActive = true;
+                    _unitOfWork.PageDefinitions.Update(existing);
                     modified = true;
                 }
             }

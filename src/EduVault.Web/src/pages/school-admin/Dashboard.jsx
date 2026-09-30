@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import Loader from '../../components/common/Loader';
@@ -15,7 +16,16 @@ import {
   AlertTriangle, 
   ChevronRight, 
   ArrowUpRight, 
-  Calendar 
+  Calendar,
+  Sun,
+  Cake,
+  UserX,
+  MessageSquare,
+  Megaphone,
+  Printer,
+  Sparkles,
+  DollarSign,
+  X
 } from 'lucide-react';
 
 const resolveWidgetIcon = (iconName) => {
@@ -59,9 +69,12 @@ const CustomTooltip = ({ active, payload, label, mode }) => {
 
 const SchoolAdminDashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [teacherSummary, setTeacherSummary] = useState(null);
   const [dynamicWidgets, setDynamicWidgets] = useState(null);
+  const [morningBriefing, setMorningBriefing] = useState(null);
+  const [briefingExpanded, setBriefingExpanded] = useState(true);
   const [loading, setLoading] = useState(true);
   const [showOnboardChoice, setShowOnboardChoice] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -70,14 +83,16 @@ const SchoolAdminDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [res, tRes, wRes] = await Promise.all([
+        const [res, tRes, wRes, bRes] = await Promise.all([
           apiClient.get('/academics/stats'),
           expressClient.get('/teacher-attendance/today-summary').catch(() => ({ data: { presentCount: 0 } })),
-          apiClient.get('/academics/dashboard/dynamic-widgets').catch(() => ({ data: null }))
+          apiClient.get('/academics/dashboard/dynamic-widgets').catch(() => ({ data: null })),
+          apiClient.get('/academics/dashboard/morning-briefing').catch(() => ({ data: null }))
         ]);
         setStats(res.data);
         setTeacherSummary(tRes.data);
         if (wRes?.data) setDynamicWidgets(wRes.data);
+        if (bRes?.data) setMorningBriefing(bRes.data);
       } catch (err) {
         console.error('Error fetching school stats:', err);
       } finally {
@@ -287,6 +302,95 @@ const SchoolAdminDashboard = () => {
           </button>
         </div>
       )}
+
+      {/* 🌅 Principal's Morning Briefing Widget */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border border-amber-200/60 rounded-2xl p-5 shadow-2xs relative overflow-hidden">
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+              <Sun className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900">Principal's Morning Briefing</h3>
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-3xs font-bold">
+                  {morningBriefing?.date || 'Today'}
+                </span>
+              </div>
+              <p className="text-2xs text-slate-500">Live operational snapshot across attendance, leaves, birthdays & finances</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setBriefingExpanded(!briefingExpanded)}
+            className="text-2xs text-slate-500 hover:text-slate-800 font-semibold px-2.5 py-1 rounded-lg bg-white/80 border border-slate-200/60 transition"
+          >
+            {briefingExpanded ? 'Collapse' : 'Expand'}
+          </button>
+        </div>
+
+        {briefingExpanded && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+            {/* 1. Staff On Leave */}
+            <div className="bg-white/90 backdrop-blur-xs p-3.5 rounded-xl border border-amber-200/40 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-2xs font-bold text-slate-500">
+                <span>Teachers on Leave</span>
+                <UserX className="w-3.5 h-3.5 text-rose-500" />
+              </div>
+              <div className="text-xl font-black text-slate-900 font-mono">
+                {morningBriefing?.teachersOnLeaveToday ?? 0}
+              </div>
+              <div className="text-3xs text-slate-400">Approved leaves for today</div>
+            </div>
+
+            {/* 2. Students Absent Today */}
+            <div className="bg-white/90 backdrop-blur-xs p-3.5 rounded-xl border border-amber-200/40 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-2xs font-bold text-slate-500">
+                <span>Students Absent Today</span>
+                <Users className="w-3.5 h-3.5 text-amber-500" />
+              </div>
+              <div className="text-xl font-black text-slate-900 font-mono">
+                {morningBriefing?.studentsAbsentToday ?? 0}
+              </div>
+              <div className="text-3xs text-slate-400">
+                {morningBriefing?.attendanceMarkedTotal > 0
+                  ? `${morningBriefing.studentsPresentToday} of ${morningBriefing.attendanceMarkedTotal} present`
+                  : 'Attendance marking in progress'}
+              </div>
+            </div>
+
+            {/* 3. Birthdays Today */}
+            <div className="bg-white/90 backdrop-blur-xs p-3.5 rounded-xl border border-amber-200/40 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-2xs font-bold text-slate-500">
+                <span>Birthdays Today 🎂</span>
+                <Cake className="w-3.5 h-3.5 text-purple-500" />
+              </div>
+              <div className="text-xl font-black text-purple-900 font-mono">
+                {morningBriefing?.birthdaysCount ?? 0}
+              </div>
+              <div className="text-3xs text-slate-400 truncate">
+                {morningBriefing?.birthdaysToday?.length > 0
+                  ? morningBriefing.birthdaysToday.map(b => b.name).slice(0, 2).join(', ')
+                  : 'No celebrations today'}
+              </div>
+            </div>
+
+            {/* 4. Overdue Unpaid Fees */}
+            <div className="bg-white/90 backdrop-blur-xs p-3.5 rounded-xl border border-amber-200/40 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-2xs font-bold text-slate-500">
+                <span>Overdue Invoices</span>
+                <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+              </div>
+              <div className="text-xl font-black text-slate-900 font-mono">
+                ₹{(morningBriefing?.overdueFeeTotal ?? 0).toLocaleString()}
+              </div>
+              <div className="text-3xs text-rose-600 font-semibold">
+                {morningBriefing?.overdueFeeCount ?? 0} invoices past due date
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Dynamic / Real-time School Action Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -507,32 +611,38 @@ const SchoolAdminDashboard = () => {
                 <span className="text-[10px] text-gray-400">Faculty member</span>
               </button>
 
-              <button 
-                onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/account-managers'); }} 
-                className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-amber-50/70 hover:border-amber-200 transition-all text-center group"
-              >
-                <span className="text-2xl group-hover:scale-110 transition-transform">💼</span>
-                <span className="text-xs font-bold text-primary">Account Manager</span>
-                <span className="text-[10px] text-gray-400">Finance & payroll</span>
-              </button>
+              {Boolean(user?.hasAccountModule) && user?.hasAccountModule !== 'false' && (
+                <button 
+                  onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/account-managers'); }} 
+                  className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-amber-50/70 hover:border-amber-200 transition-all text-center group"
+                >
+                  <span className="text-2xl group-hover:scale-110 transition-transform">💼</span>
+                  <span className="text-xs font-bold text-primary">Account Manager</span>
+                  <span className="text-[10px] text-gray-400">Finance & payroll</span>
+                </button>
+              )}
 
-              <button 
-                onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/librarians'); }} 
-                className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-purple-50/70 hover:border-purple-200 transition-all text-center group"
-              >
-                <span className="text-2xl group-hover:scale-110 transition-transform">📚</span>
-                <span className="text-xs font-bold text-primary">Librarian</span>
-                <span className="text-[10px] text-gray-400">Library & catalog</span>
-              </button>
+              {Boolean(user?.hasLibraryModule) && user?.hasLibraryModule !== 'false' && (
+                <button 
+                  onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/librarians'); }} 
+                  className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-purple-50/70 hover:border-purple-200 transition-all text-center group"
+                >
+                  <span className="text-2xl group-hover:scale-110 transition-transform">📚</span>
+                  <span className="text-xs font-bold text-primary">Librarian</span>
+                  <span className="text-[10px] text-gray-400">Library & catalog</span>
+                </button>
+              )}
 
-              <button 
-                onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/receptionists'); }} 
-                className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-rose-50/70 hover:border-rose-200 transition-all text-center group col-span-2 sm:col-span-1"
-              >
-                <span className="text-2xl group-hover:scale-110 transition-transform">📞</span>
-                <span className="text-xs font-bold text-primary">Receptionist</span>
-                <span className="text-[10px] text-gray-400">Front desk & inquiry</span>
-              </button>
+              {Boolean(user?.hasReceptionistModule) && user?.hasReceptionistModule !== 'false' && (
+                <button 
+                  onClick={() => { setShowOnboardChoice(false); navigate('/school-admin/receptionists'); }} 
+                  className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-rose-50/70 hover:border-rose-200 transition-all text-center group col-span-2 sm:col-span-1"
+                >
+                  <span className="text-2xl group-hover:scale-110 transition-transform">📞</span>
+                  <span className="text-xs font-bold text-primary">Receptionist</span>
+                  <span className="text-[10px] text-gray-400">Front desk & inquiry</span>
+                </button>
+              )}
             </div>
             <div className="flex justify-end mt-6 pt-3 border-t border-gray-100">
               <button onClick={() => setShowOnboardChoice(false)} className="btn-outline text-xs px-4 py-2">Close</button>
@@ -540,6 +650,36 @@ const SchoolAdminDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* 🚀 Quick Action Floating Bar */}
+      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-slate-900/95 backdrop-blur-md p-2 rounded-2xl shadow-2xl border border-slate-700/60 no-print">
+        <button
+          onClick={() => navigate('/school-admin/notices')}
+          title="Broadcast Notice to School"
+          className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 hover:scale-105"
+        >
+          <Megaphone className="w-3.5 h-3.5 text-amber-400" />
+          <span className="hidden sm:inline">Broadcast</span>
+        </button>
+
+        <button
+          onClick={() => navigate('/school-admin/format-studio')}
+          title="Open Print Format Studio"
+          className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 hover:scale-105"
+        >
+          <Printer className="w-3.5 h-3.5 text-indigo-400" />
+          <span className="hidden sm:inline">Format Studio</span>
+        </button>
+
+        <button
+          onClick={() => navigate('/school-admin/reports')}
+          title="Generate Today's School Summary Report"
+          className="px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs hover:scale-105"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Quick Report</span>
+        </button>
+      </div>
     </div>
   );
 };

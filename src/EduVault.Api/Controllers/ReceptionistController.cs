@@ -11,27 +11,46 @@ using Microsoft.EntityFrameworkCore;
 using EduVault.Core.Entities;
 using EduVault.Core.Interfaces;
 using EduVault.Infrastructure.Data;
+using EduVault.Api.Services;
 
 namespace EduVault.Api.Controllers
 {
     [ApiController]
     [Route("api/receptionist")]
-    [Authorize(Roles = "receptionist,Receptionist,schooladmin,SchoolAdmin")]
+    [Authorize(Roles = "receptionist,Receptionist,schooladmin,SchoolAdmin,superadmin,SuperAdmin")]
     public class ReceptionistController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly EduVaultDbContext _context;
         private readonly Services.WhatsAppService _whatsAppService;
+        private readonly IAuthService _authService;
 
-        public ReceptionistController(IUnitOfWork unitOfWork, EduVaultDbContext context, Services.WhatsAppService whatsAppService)
+        public ReceptionistController(IUnitOfWork unitOfWork, EduVaultDbContext context, Services.WhatsAppService whatsAppService, IAuthService authService)
         {
             _unitOfWork = unitOfWork;
             _context = context;
             _whatsAppService = whatsAppService;
+            _authService = authService;
         }
 
         private Guid GetSchoolId()
         {
+            if (User.IsInRole("superadmin") || User.IsInRole("SuperAdmin"))
+            {
+                var qSchoolId = HttpContext.Request.Query["schoolId"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(qSchoolId) && Guid.TryParse(qSchoolId, out var saSchoolId))
+                    return saSchoolId;
+
+                var hSchoolId = HttpContext.Request.Headers["X-School-Id"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(hSchoolId) && Guid.TryParse(hSchoolId, out var headerSchoolId))
+                    return headerSchoolId;
+
+                var firstSchool = _context.Schools.Select(s => s.Id).FirstOrDefault();
+                if (firstSchool != Guid.Empty) return firstSchool;
+
+                throw new UnauthorizedAccessException("Super Admin must provide schoolId via query parameter (?schoolId=...) or X-School-Id header.");
+            }
+
             var schoolIdStr = User.FindFirst("schoolId")?.Value;
             if (string.IsNullOrEmpty(schoolIdStr)) throw new UnauthorizedAccessException("School ID missing in token");
             return Guid.Parse(schoolIdStr);
@@ -59,15 +78,22 @@ namespace EduVault.Api.Controllers
             var query = q.Trim().ToLower();
 
             var studentUsers = await _context.Users.AsNoTracking()
-                .Where(u => u.SchoolId == schoolId && u.Role == "student" && u.IsActive)
+                .Where(u => u.SchoolId == schoolId && (u.Role == "student" || u.Role == "Student") && u.IsActive)
                 .ToListAsync();
 
+            if (!studentUsers.Any())
+            {
+                return Ok(new List<object>());
+            }
+
+            var userIds = studentUsers.Select(u => u.Id).ToList();
+
             var studentProfiles = await _context.Students.AsNoTracking()
-                .Where(s => studentUsers.Select(u => u.Id).Contains(s.UserId))
+                .Where(s => userIds.Contains(s.UserId))
                 .ToListAsync();
 
             var enrollments = await _context.Enrollments.AsNoTracking()
-                .Where(e => e.Status == "ACTIVE")
+                .Where(e => userIds.Contains(e.StudentId) && e.Status == "ACTIVE")
                 .Include(e => e.Class)
                 .ToListAsync();
 
@@ -440,9 +466,29 @@ namespace EduVault.Api.Controllers
             if (studentUser == null) return Forbid();
 
             decimal totalPayable = invoice.Amount + invoice.LateFineAmount;
-            decimal remainingBalance = Math.Max(0, totalPayable - invoice.PaidAmount);
 
-            decimal payAmount = request.Amount > 0 ? Math.Min(request.Amount, remainingBalance) : remainingBalance;
+            var allPaidTxns = await _context.Transactions
+                .Where(t => t.InvoiceId == invoice.Id && (t.Status == "success" || t.Status == "SUCCESS" || t.Status == "Paid"))
+                .SumAsync(t => t.Amount);
+
+            decimal realPaid = Math.Max(invoice.PaidAmount, allPaidTxns);
+            decimal remainingBalance = Math.Max(0, totalPayable - realPaid);
+
+            if (remainingBalance <= 0 || invoice.Status == "Paid")
+            {
+                invoice.Status = "Paid";
+                invoice.PaidAmount = totalPayable;
+                _context.Invoices.Update(invoice);
+                await _context.SaveChangesAsync();
+                return BadRequest(new { error = "Invoice is already fully marked as Paid. No further payment required." });
+            }
+
+            if (request.Amount > remainingBalance)
+            {
+                return BadRequest(new { error = $"Payment amount (₹{request.Amount:N2}) cannot exceed the remaining balance of ₹{remainingBalance:N2}." });
+            }
+
+            decimal payAmount = request.Amount > 0 ? request.Amount : remainingBalance;
             if (payAmount <= 0)
             {
                 return BadRequest(new { error = "Payment amount must be greater than zero." });
@@ -503,6 +549,7 @@ namespace EduVault.Api.Controllers
             return Ok(new
             {
                 success = true,
+                transactionId = transaction.Id,
                 referenceNumber = referenceNo,
                 amountPaid = payAmount,
                 totalBilled = totalPayable,
@@ -680,6 +727,205 @@ namespace EduVault.Api.Controllers
             return Ok(new { success = true });
         }
 
+        [HttpPost("inquiries/{id}/enroll")]
+        public async Task<IActionResult> EnrollInquiry(Guid id, [FromBody] EnrollInquiryRequest request)
+        {
+            var schoolId = GetSchoolId();
+            var inquiry = await _context.AdmissionInquiries.FirstOrDefaultAsync(i => i.Id == id && i.SchoolId == schoolId);
+            if (inquiry == null) return NotFound(new { error = "Inquiry record not found." });
+
+            if (inquiry.Status == "Enrolled")
+            {
+                return BadRequest(new { error = "This applicant is already enrolled." });
+            }
+
+            var cleanEmail = request.Email?.Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(cleanEmail))
+            {
+                return BadRequest(new { error = "Valid student login email is required." });
+            }
+
+            var existingUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email.ToLower() == cleanEmail);
+            if (existingUser != null)
+            {
+                return BadRequest(new { error = "Email address is already registered to another user." });
+            }
+
+            var targetGrade = string.IsNullOrWhiteSpace(request.Grade) ? inquiry.TargetClass : request.Grade.Trim();
+            var targetSection = string.IsNullOrWhiteSpace(request.Section) ? "Section A" : request.Section.Trim();
+
+            var classObj = await _context.Classes.FirstOrDefaultAsync(c => c.SchoolId == schoolId && c.Grade.ToLower() == targetGrade.ToLower() && c.Section.ToLower() == targetSection.ToLower());
+            if (classObj == null)
+            {
+                classObj = new Class
+                {
+                    SchoolId = schoolId,
+                    Grade = targetGrade,
+                    Section = targetSection,
+                    Level = int.TryParse(targetGrade.Replace("Class ", "").Trim(), out int gNum) && gNum >= 9 ? "Secondary Education" : "Primary Education",
+                    Room = $"Room {targetGrade}",
+                    Capacity = 40
+                };
+                await _context.Classes.AddAsync(classObj);
+                await _context.SaveChangesAsync();
+            }
+
+            var firstName = inquiry.ChildFirstName ?? (inquiry.ChildName.Split(' ').FirstOrDefault() ?? "Student");
+            var lastName = inquiry.ChildLastName ?? (inquiry.ChildName.Split(' ').Length > 1 ? string.Join(" ", inquiry.ChildName.Split(' ').Skip(1)) : "Scholar");
+
+            var school = await _context.Schools.AsNoTracking().FirstOrDefaultAsync(s => s.Id == schoolId);
+            var schoolName = school?.Name ?? "School";
+
+            var finalPassword = request.Password?.Trim();
+            if (string.IsNullOrWhiteSpace(finalPassword))
+            {
+                finalPassword = PasswordRuleHelper.GeneratePassword(
+                    school?.StudentPasswordPattern,
+                    "student",
+                    firstName,
+                    lastName,
+                    inquiry.DateOfBirth,
+                    schoolName);
+            }
+
+            var user = new User
+            {
+                SchoolId = schoolId,
+                Email = cleanEmail,
+                PasswordHash = _authService.HashPassword(finalPassword),
+                Role = "student",
+                FirstName = firstName,
+                LastName = lastName,
+                IsActive = true
+            };
+            await _context.Users.AddAsync(user);
+            await _context.SaveChangesAsync();
+
+            var studentCode = request.AdmissionNumber;
+            if (string.IsNullOrWhiteSpace(studentCode))
+            {
+                studentCode = $"STU-{DateTime.UtcNow.Year}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
+            }
+
+            var student = new Student
+            {
+                UserId = user.Id,
+                StudentId = studentCode,
+                AdmissionNumber = studentCode,
+                AdmissionDate = DateTime.UtcNow,
+                AdmissionSource = inquiry.Source ?? "qr_form",
+                BloodGroup = inquiry.BloodGroup ?? string.Empty,
+                DateOfBirth = inquiry.DateOfBirth ?? string.Empty,
+                Address = inquiry.Address ?? string.Empty,
+                MiddleName = inquiry.ChildMiddleName,
+                Gender = inquiry.Gender,
+                Religion = inquiry.Religion,
+                Category = inquiry.Category,
+                Nationality = inquiry.Nationality ?? "Indian",
+                MotherTongue = inquiry.MotherTongue,
+                PlaceOfBirth = inquiry.PlaceOfBirth,
+                AadhaarNumber = inquiry.AadhaarEncrypted,
+
+                FatherName = inquiry.FatherName,
+                FatherPhone = inquiry.FatherPhone,
+                FatherOccupation = inquiry.FatherOccupation,
+                FatherQualification = inquiry.FatherQualification,
+                FatherEmail = inquiry.GuardianEmail,
+                MotherName = inquiry.MotherName,
+                MotherPhone = inquiry.MotherPhone,
+                MotherOccupation = inquiry.MotherOccupation,
+                AnnualFamilyIncome = inquiry.AnnualFamilyIncome,
+                GuardianName = inquiry.FatherName ?? inquiry.ParentName,
+                GuardianPhone = inquiry.FatherPhone ?? inquiry.Phone,
+                GuardianRelationship = "Father",
+
+                FeeCategory = request.FeeCategory ?? "General",
+                BusRoute = request.BusRoute,
+                HostelRequired = request.HostelRequired,
+
+                HouseNo = inquiry.HouseNo,
+                Village = inquiry.StreetOrVillage,
+                City = inquiry.City,
+                District = inquiry.District,
+                State = inquiry.State,
+                Pincode = inquiry.Pincode,
+
+                PreviousSchoolName = inquiry.PreviousSchoolName,
+                PreviousSchoolBoard = inquiry.PreviousBoard,
+                PreviousClassStudied = inquiry.PreviousClassStudied,
+                PreviousTcNumber = inquiry.PreviousTcNumber,
+                PreviousTcDate = inquiry.PreviousTcDate,
+                LastExamPercentage = inquiry.LastExamPercentage,
+                ReasonForLeaving = inquiry.ReasonForLeaving,
+
+                HeightCm = inquiry.HeightCm,
+                WeightKg = inquiry.WeightKg,
+                HasDisability = inquiry.HasDisability,
+                DisabilityType = inquiry.DisabilityType,
+                ChronicIllness = inquiry.ChronicIllness,
+                CurrentMedication = inquiry.CurrentMedication,
+                EmergencyContactName = inquiry.EmergencyContactName,
+                EmergencyContactPhone = inquiry.EmergencyContactPhone,
+                EmergencyContactRelation = inquiry.EmergencyContactRelation
+            };
+            await _context.Students.AddAsync(student);
+
+            var enrollment = new Enrollment
+            {
+                StudentId = user.Id,
+                ClassId = classObj.Id,
+                AcademicYear = $"{DateTime.UtcNow.Year}-{((DateTime.UtcNow.Year + 1) % 100):D2}",
+                Status = "ACTIVE",
+                EnrollDate = DateTime.UtcNow
+            };
+            await _context.Enrollments.AddAsync(enrollment);
+
+            inquiry.Status = "Enrolled";
+            inquiry.ApprovedAt = DateTime.UtcNow;
+            inquiry.ApprovedBy = User.FindFirst("firstName")?.Value ?? "School Admin";
+            _context.AdmissionInquiries.Update(inquiry);
+
+            await _context.SaveChangesAsync();
+
+            if (request.SendWhatsAppCredentials && !string.IsNullOrWhiteSpace(inquiry.Phone))
+            {
+                var msg = $"🎉 Congratulations!\n\nDear {inquiry.ParentName},\n{inquiry.ChildName}'s admission to {schoolName} is confirmed.\n\n📋 Student Login Credentials:\nEmail: {cleanEmail}\nPassword: {finalPassword}\nClass: {targetGrade} - {targetSection}\nStudent ID: {studentCode}\n\n🔗 Login Portal: {Request.Scheme}://{Request.Host}/login\n\n— {schoolName} Administration";
+                _ = _whatsAppService.SendEventNotificationAsync(schoolId, "ADMISSION_INQUIRY", inquiry.Phone, msg);
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = $"{inquiry.ChildName} has been enrolled successfully into {targetGrade} - {targetSection}!",
+                studentId = student.StudentId,
+                userId = user.Id,
+                email = cleanEmail
+            });
+        }
+
+        [HttpDelete("inquiries/{id}")]
+        public async Task<IActionResult> DeleteInquiry(Guid id)
+        {
+            var schoolId = GetSchoolId();
+            var entry = await _context.AdmissionInquiries.FirstOrDefaultAsync(i => i.Id == id && i.SchoolId == schoolId);
+            if (entry == null) return NotFound(new { error = "Inquiry not found." });
+
+            _context.AdmissionInquiries.Remove(entry);
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, message = "Inquiry record deleted." });
+        }
+
+        [HttpDelete("inquiries/flagged-bots")]
+        public async Task<IActionResult> PurgeFlaggedBots()
+        {
+            var schoolId = GetSchoolId();
+            var deletedCount = await _context.AdmissionInquiries
+                .Where(i => i.SchoolId == schoolId && i.IsHoneypotFlagged)
+                .ExecuteDeleteAsync();
+
+            return Ok(new { success = true, deletedCount, message = $"Purged {deletedCount} suspected bot submission(s)." });
+        }
+
         // ==========================================
         // 8. Front Desk Dashboard Snapshot Stats
         // ==========================================
@@ -766,5 +1012,19 @@ namespace EduVault.Api.Controllers
     public class UpdateInquiryStatusRequest
     {
         public string Status { get; set; } = "Inquiry";
+    }
+
+    public class EnrollInquiryRequest
+    {
+        public string Grade { get; set; } = string.Empty;
+        public string Section { get; set; } = "Section A";
+        public string? RollNumber { get; set; }
+        public string? AdmissionNumber { get; set; }
+        public string? FeeCategory { get; set; } = "General";
+        public string? BusRoute { get; set; }
+        public bool HostelRequired { get; set; } = false;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public bool SendWhatsAppCredentials { get; set; } = true;
     }
 }

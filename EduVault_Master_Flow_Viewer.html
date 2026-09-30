@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduVault — Master Architecture & UI/UX Flow Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #0a0e17;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #1a2234;
+      --bg-glass: rgba(17, 24, 39, 0.85);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.5);
+      
+      --color-green: #10b981;
+      --color-green-glow: rgba(16, 185, 129, 0.25);
+      --color-red: #ef4444;
+      --color-red-glow: rgba(239, 68, 68, 0.25);
+      --color-yellow: #f59e0b;
+      --color-yellow-glow: rgba(245, 158, 11, 0.25);
+      --color-blue: #3b82f6;
+      --color-blue-glow: rgba(59, 130, 246, 0.25);
+      --color-purple: #8b5cf6;
+      --color-purple-glow: rgba(139, 92, 246, 0.25);
+      --color-orange: #f97316;
+      --color-orange-glow: rgba(249, 115, 22, 0.25);
+      --color-cyan: #06b6d4;
+      
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      
+      --sidebar-width: 320px;
+      --inspector-width: 420px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+    }
+
+    /* Scrollbar customization */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* LEFT SIDEBAR */
+    #sidebar {
+      width: var(--sidebar-width);
+      min-width: var(--sidebar-width);
+      height: 100vh;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .brand-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+      font-weight: 800;
+      font-size: 1.2rem;
+    }
+
+    .brand-title h1 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .brand-title p {
+      font-size: 0.72rem;
+      color: var(--color-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+
+    .sidebar-stats-pill {
+      margin: 12px 16px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      text-align: center;
+      gap: 8px;
+    }
+    .stat-mini-box .num {
+      font-size: 1.05rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: #fff;
+    }
+    .stat-mini-box .lbl {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .nav-sections {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+    }
+
+    .nav-group-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--text-muted);
+      margin: 14px 10px 6px 10px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-bottom: 2px;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+    }
+
+    .nav-item.active {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: rgba(99, 102, 241, 0.35);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .nav-item .icon {
+      font-size: 1.05rem;
+      opacity: 0.9;
+      width: 20px;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .nav-item .badge {
+      margin-left: auto;
+      font-size: 0.68rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+    .nav-item.active .badge {
+      background: rgba(99, 102, 241, 0.3);
+      color: #c7d2fe;
+    }
+
+    /* MAIN VIEWPORT */
+    #main-viewport {
+      flex: 1;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, #111827 0%, #0a0e17 100%);
+      overflow: hidden;
+    }
+
+    /* TOPBAR */
+    #topbar {
+      height: 64px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 10;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .view-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .view-title-tag {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .search-box {
+      position: relative;
+      width: 260px;
+    }
+    .search-box input {
+      width: 100%;
+      height: 36px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0 12px 0 34px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      color: #fff;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .search-box input:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      width: 320px;
+    }
+    .search-box .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .topbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .filter-select {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.8rem;
+      padding: 6px 12px;
+      border-radius: 8px;
+      outline: none;
+      cursor: pointer;
+    }
+    .filter-select:focus {
+      border-color: var(--border-focus);
+    }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .btn-action.active {
+      background: var(--color-blue);
+      border-color: var(--color-blue);
+      color: #fff;
+    }
+
+    /* CANVAS WRAPPER */
+    #canvas-container {
+      flex: 1;
+      width: 100%;
+      height: calc(100vh - 64px);
+      position: relative;
+      cursor: grab;
+      user-select: none;
+    }
+    #canvas-container:active {
+      cursor: grabbing;
+    }
+
+    svg#flow-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* FLOATING CANVAS CONTROLS */
+    .floating-canvas-controls {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 15;
+    }
+    .control-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .zoom-level-text {
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      padding: 0 6px;
+    }
+
+    /* FLOATING LEGEND */
+    .floating-legend {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 15;
+      display: flex;
+      gap: 16px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+    }
+
+    /* NODE INSPECTOR DRAWER */
+    #inspector {
+      width: var(--inspector-width);
+      height: calc(100vh - 64px);
+      position: absolute;
+      top: 64px;
+      right: 0;
+      background: rgba(17, 24, 39, 0.94);
+      backdrop-filter: blur(16px);
+      border-left: 1px solid var(--border-subtle);
+      box-shadow: -10px 0 35px rgba(0,0,0,0.6);
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 25;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    #inspector.open {
+      transform: translateX(0);
+    }
+
+    .inspector-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      background: rgba(17, 24, 39, 0.96);
+      z-index: 2;
+    }
+    .inspector-title-wrap h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+    }
+    .inspector-type-tag {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .close-inspector-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: all 0.15s;
+    }
+    .close-inspector-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .inspector-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .meta-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .meta-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .meta-content {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .route-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-subtle);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: #93c5fd;
+    }
+
+    .tag-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .tag {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: #e5e7eb;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .tag.green { border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1); color: #6ee7b7; }
+    .tag.red { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); color: #fca5a5; }
+    .tag.blue { border-color: rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.1); color: #93c5fd; }
+    .tag.purple { border-color: rgba(139, 92, 246, 0.3); background: rgba(139, 92, 246, 0.1); color: #c4b5fd; }
+    .tag.orange { border-color: rgba(249, 115, 22, 0.3); background: rgba(249, 115, 22, 0.1); color: #fdba74; }
+
+    .blocker-box {
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      margin-top: 6px;
+    }
+    .blocker-box h4 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #f87171;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .blocker-box p {
+      font-size: 0.78rem;
+      color: #fca5a5;
+      line-height: 1.4;
+    }
+
+    .unblocker-box {
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      margin-top: 6px;
+    }
+    .unblocker-box h4 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #34d399;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .unblocker-box p {
+      font-size: 0.78rem;
+      color: #a7f3d0;
+      line-height: 1.4;
+    }
+
+    /* TABLE VIEW MODAL / TAB FOR MATRIX VIEWS */
+    .table-container {
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      padding: 24px;
+      display: none;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: left;
+      background: var(--bg-surface);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+    .data-table th {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 12px 16px;
+      font-weight: 700;
+      color: #fff;
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .data-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      vertical-align: middle;
+    }
+    .data-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+      color: #fff;
+    }
+    .badge-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .badge-cell.allowed { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-cell.blocked { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-cell.perm { background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .badge-cell.sub { background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
+
+    /* SVG GRAPH STYLES */
+    .node-group {
+      cursor: pointer;
+      transition: filter 0.2s ease, transform 0.2s ease;
+    }
+    .node-group:hover {
+      filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.6));
+    }
+    .node-group.selected {
+      filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.9));
+    }
+    .node-group.dimmed {
+      opacity: 0.2;
+    }
+
+    .edge-line {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.25);
+      stroke-width: 2px;
+      transition: stroke 0.2s, stroke-width 0.2s;
+    }
+    .edge-line.success { stroke: #10b981; }
+    .edge-line.failure { stroke: #ef4444; stroke-dasharray: 4,4; }
+    .edge-line.warning { stroke: #f59e0b; }
+    .edge-line.nav { stroke: #3b82f6; }
+    .edge-line.highlighted {
+      stroke: #fff;
+      stroke-width: 3.5px;
+      filter: drop-shadow(0 0 6px rgba(255,255,255,0.7));
+    }
+
+    .edge-label-rect {
+      fill: #111827;
+      stroke: rgba(255, 255, 255, 0.15);
+      stroke-width: 1px;
+      rx: 4px;
+    }
+    .edge-label-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      fill: #e5e7eb;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT SIDEBAR -->
+  <aside id="sidebar">
+    <div class="brand-header">
+      <div class="brand-logo">⚡</div>
+      <div class="brand-title">
+        <h1>EduVault Flow</h1>
+        <p>Architect Master System</p>
+      </div>
+    </div>
+
+    <div class="sidebar-stats-pill">
+      <div class="stat-mini-box">
+        <div class="num" id="stat-routes">86</div>
+        <div class="lbl">Routes</div>
+      </div>
+      <div class="stat-mini-box">
+        <div class="num" id="stat-apis">296</div>
+        <div class="lbl">APIs</div>
+      </div>
+      <div class="stat-mini-box">
+        <div class="num" id="stat-roles">7</div>
+        <div class="lbl">Roles</div>
+      </div>
+    </div>
+
+    <div class="nav-sections" id="nav-list">
+      <!-- Injected via JavaScript -->
+    </div>
+  </aside>
+
+  <!-- MAIN VIEWPORT -->
+  <main id="main-viewport">
+    <!-- TOPBAR -->
+    <header id="topbar">
+      <div class="topbar-left">
+        <div class="view-title">
+          <span id="current-view-name">Master Application Flow</span>
+          <span class="view-title-tag" id="current-view-type">Global Architecture</span>
+        </div>
+      </div>
+
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="global-search" placeholder="Search page, API, route, blocker..." />
+      </div>
+
+      <div class="topbar-controls">
+        <select class="filter-select" id="role-filter">
+          <option value="all">All Roles (7)</option>
+          <option value="superadmin">Super Admin</option>
+          <option value="schooladmin">School Admin</option>
+          <option value="teacher">Teacher</option>
+          <option value="student">Student</option>
+          <option value="accountmanager">Account Manager</option>
+          <option value="librarian">Librarian</option>
+          <option value="receptionist">Receptionist</option>
+        </select>
+
+        <select class="filter-select" id="type-filter">
+          <option value="all">All Node Types</option>
+          <option value="page">Pages / Views</option>
+          <option value="decision">Decisions / Guards</option>
+          <option value="api">API Services</option>
+          <option value="database">Database Entities</option>
+          <option value="blocker">Blockers</option>
+          <option value="unblocker">Unblockers</option>
+        </select>
+
+        <button class="btn-action" id="btn-fit-screen">
+          <span>⛶</span> Fit Screen
+        </button>
+        <button class="btn-action" id="btn-reset-zoom">
+          <span>↺</span> Reset
+        </button>
+      </div>
+    </header>
+
+    <!-- FLOW CANVAS AREA -->
+    <div id="canvas-container">
+      <svg id="flow-svg">
+        <defs>
+          <!-- Arrow Markers -->
+          <marker id="arrow-default" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="rgba(255,255,255,0.4)" />
+          </marker>
+          <marker id="arrow-success" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#10b981" />
+          </marker>
+          <marker id="arrow-failure" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#ef4444" />
+          </marker>
+          <marker id="arrow-warning" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#f59e0b" />
+          </marker>
+          <marker id="arrow-nav" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#3b82f6" />
+          </marker>
+
+          <!-- Drop Shadows & Filters -->
+          <filter id="glow-purple" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(139, 92, 246, 0.4)" />
+          </filter>
+          <filter id="glow-blue" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(59, 130, 246, 0.4)" />
+          </filter>
+          <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(16, 185, 129, 0.4)" />
+          </filter>
+          <filter id="glow-red" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(239, 68, 68, 0.4)" />
+          </filter>
+        </defs>
+
+        <g id="viewport-group">
+          <g id="edges-layer"></g>
+          <g id="nodes-layer"></g>
+        </g>
+      </svg>
+
+      <!-- FLOATING CONTROLS -->
+      <div class="floating-canvas-controls">
+        <button class="control-btn" id="ctrl-zoom-in" title="Zoom In">+</button>
+        <span class="zoom-level-text" id="zoom-text">100%</span>
+        <button class="control-btn" id="ctrl-zoom-out" title="Zoom Out">-</button>
+        <button class="control-btn" id="ctrl-recenter" title="Center View">🎯</button>
+      </div>
+
+      <!-- FLOATING LEGEND -->
+      <div class="floating-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981;"></div> Success / Allowed</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div> Blocked / Error</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;"></div> Warning / Validation</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;"></div> Navigation / Page</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6;"></div> Auth / RBAC</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f97316;"></div> Subscription / Feature</div>
+      </div>
+    </div>
+
+    <!-- TABLE VIEW AREA (For Navigation Matrix & Access Control Matrix) -->
+    <div id="table-viewport" class="table-container">
+      <!-- Injected table content -->
+    </div>
+
+    <!-- NODE DETAILS INSPECTOR DRAWER -->
+    <div id="inspector">
+      <div class="inspector-header">
+        <div class="inspector-title-wrap">
+          <h2 id="insp-title">Node Details</h2>
+          <span class="inspector-type-tag" id="insp-type-badge">Page Node</span>
+        </div>
+        <button class="close-inspector-btn" id="btn-close-inspector">&times;</button>
+      </div>
+      <div class="inspector-body">
+        <div class="meta-group">
+          <span class="meta-label">Route URL</span>
+          <div class="route-pill" id="insp-route">/school-admin/students</div>
+        </div>
+
+        <div class="meta-group">
+          <span class="meta-label">Applicable Roles</span>
+          <div class="tag-cloud" id="insp-roles"></div>
+        </div>
+
+        <div class="meta-group">
+          <span class="meta-label">Purpose & Overview</span>
+          <div class="meta-content" id="insp-purpose">Overview of student lifecycle, enrollment classes, and academic history.</div>
+        </div>
+
+        <div class="meta-group">
+          <span class="meta-label">Entry Points</span>
+          <div class="meta-content" id="insp-entry">Dashboard &rarr; Students, Admission conversion</div>
+        </div>
+
+        <div class="meta-group">
+          <span class="meta-label">Exit Points & Actions</span>
+          <div class="meta-content" id="insp-exit">Add Student, Transfer Certificate, Promote, Retain</div>
+        </div>
+
+        <div class="meta-group">
+          <span class="meta-label">Dependent APIs</span>
+          <div class="tag-cloud" id="insp-apis"></div>
+        </div>
+
+        <div class="meta-group">
+          <span class="meta-label">Database Entities</span>
+          <div class="tag-cloud" id="insp-database"></div>
+        </div>
+
+        <div class="meta-group">
+          <span class="meta-label">Permissions Required</span>
+          <div class="tag-cloud" id="insp-permissions"></div>
+        </div>
+
+        <div class="meta-group">
+          <span class="meta-label">Potential Blockers</span>
+          <div id="insp-blocker-wrap"></div>
+        </div>
+
+        <div class="meta-group">
+          <span class="meta-label">Resolution / Unblockers</span>
+          <div id="insp-unblocker-wrap"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // =========================================================================
+    // 1. COMPREHENSIVE ARCHITECTURAL GRAPH DATA (DERIVED FROM ACTUAL CODEBASE)
+    // =========================================================================
+
+    const FLOW_SECTIONS = [
+      { id: 'master', name: 'Master Application Flow', icon: '🌐', type: 'graph', count: 16 },
+      { id: 'superadmin', name: 'Super Admin Flow', icon: '⚡', type: 'graph', count: 12 },
+      { id: 'schooladmin', name: 'School Admin Flow', icon: '🏫', type: 'graph', count: 20 },
+      { id: 'teacher', name: 'Teacher Flow', icon: '👨‍🏫', type: 'graph', count: 13 },
+      { id: 'student', name: 'Student Flow', icon: '🎓', type: 'graph', count: 13 },
+      { id: 'account', name: 'Account Manager (HRM/Fin)', icon: '💰', type: 'graph', count: 11 },
+      { id: 'librarian', name: 'Librarian Flow', icon: '📚', type: 'graph', count: 7 },
+      { id: 'receptionist', name: 'Receptionist / Front Desk', icon: '🛎️', type: 'graph', count: 6 },
+      { id: 'mod_admission', name: 'Module: Admission & Dossier', icon: '📋', type: 'graph', count: 9 },
+      { id: 'mod_fees', name: 'Module: Fees & Billing', icon: '💳', type: 'graph', count: 9 },
+      { id: 'mod_exams', name: 'Module: Exams & Results', icon: '📝', type: 'graph', count: 8 },
+      { id: 'hrm_deep', name: 'HRM & Payroll Deep-Dive', icon: '⚙️', type: 'graph', count: 10 },
+      { id: 'error_recovery', name: 'Error & Recovery Master', icon: '🛡️', type: 'graph', count: 10 },
+      { id: 'nav_matrix', name: 'Navigation Matrix Table', icon: '🧭', type: 'table', count: 142 },
+      { id: 'access_matrix', name: 'Access Control Matrix', icon: '🔒', type: 'table', count: 74 },
+      { id: 'api_flow', name: 'API Architecture Flow', icon: '🔌', type: 'graph', count: 12 },
+      { id: 'data_flow', name: 'Data & Tenant Isolation', icon: '🗄️', type: 'graph', count: 10 },
+    ];
+
+    const FLOW_DATA = {
+      // -------------------------------------------------------------
+      // MASTER APPLICATION FLOW
+      // -------------------------------------------------------------
+      master: {
+        title: 'Master Application Flow',
+        subtitle: 'End-to-End Platform Gateway & Decision Lifecycle',
+        nodes: [
+          { id: 'm_pub', type: 'page', color: 'blue', label: 'Public Website', sub: 'Landing & Marketing', x: 80, y: 300, route: '/', role: 'public', purpose: 'Marketing homepage, public pricing tiers, admission application portal link, and demo triggers.', entry: 'Direct Browser URL', exit: 'Login, Demo, Signup, Admission Form', apis: ['GET /api/auth/settings', 'GET /api/auth/public-stats'], db: ['PlatformSettings', 'Schools'], perms: ['None (Anonymous)'], blocker: 'Backend API 500 / Network down', unblocker: 'Ensure .NET API (:5265) is running' },
+          { id: 'm_login', type: 'page', color: 'purple', label: 'Login Screen', sub: 'Authentication Gateway', x: 300, y: 300, route: '/login', role: 'anonymous', purpose: 'User credential validation against PBKDF2 hashes or superadmin environment credentials.', entry: 'Navbar "Sign In", Session expiry 401 redirect', exit: 'Target role dashboard, Forgot Password, Signup', apis: ['POST /api/auth/login'], db: ['Users', 'Schools', 'SchoolRolePermissions'], perms: ['None'], blocker: 'Invalid password, account deactivated (IsActive=false), system maintenance mode active', unblocker: 'Enter valid credentials, reactivate account in DB, deactivate maintenance' },
+          { id: 'm_auth_check', type: 'decision', color: 'purple', label: 'Authenticated?', sub: 'Token Signature & PBKDF2', x: 520, y: 300, route: 'Auth Middleware', role: 'system', purpose: 'Verifies PBKDF2-SHA512 password hash or environment variable credentials.', entry: 'POST /api/auth/login', exit: 'YES -> Token & Claims / NO -> Login 401', apis: ['POST /api/auth/login'], db: ['Users'], perms: ['None'], blocker: 'Hash mismatch / Brute-force rate limit (429)', unblocker: 'Wait 60 seconds / provide correct password' },
+          { id: 'm_token_gen', type: 'api', color: 'purple', label: 'JWT Generation', sub: 'Bearer Claims Injection', x: 740, y: 300, route: 'IAuthService.GenerateToken', role: 'system', purpose: 'Generates 7-day signed JWT with claims: id, email, role, firstName, lastName, schoolId.', entry: 'Successful credential check', exit: 'Role routing', apis: ['GenerateToken()'], db: ['Users'], perms: ['System'], blocker: 'JWT_SECRET missing or <32 characters', unblocker: 'Configure valid JWT_SECRET in .env' },
+          { id: 'm_role_guard', type: 'decision', color: 'purple', label: 'Role Detection', sub: 'ProtectedRoute Guard', x: 960, y: 300, route: 'ProtectedRoute.jsx', role: 'all', purpose: 'Examines user.role claim against allowedRoles and redirects unauthorized attempts.', entry: 'Login completion', exit: 'Role dashboard', apis: ['None (Client Guard)'], db: ['None'], perms: ['user.role match'], blocker: 'Unauthorized role trying to access protected layout', unblocker: 'Redirected automatically to authorized role landing' },
+          
+          { id: 'm_sa_dash', type: 'page', color: 'green', label: 'Super Admin Portal', sub: 'Multi-Tenant Management', x: 1220, y: 80, route: '/super-admin/dashboard', role: 'superadmin', purpose: 'Global platform metrics, school provisioning, subscriptions, platform settings, support tickets.', entry: 'Login with superadmin credentials', exit: 'Schools, HRM Config, Format Studio, RBAC, Subscriptions', apis: ['GET /api/superadmin/dashboard-stats'], db: ['Schools', 'Subscriptions', 'Users'], perms: ['superadmin'], blocker: 'Invalid credentials', unblocker: 'Check SUPERADMIN_EMAIL and PASSWORD in .env' },
+          { id: 'm_sch_dash', type: 'page', color: 'green', label: 'School Admin Portal', sub: 'Institutional ERP Hub', x: 1220, y: 220, route: '/school-admin/dashboard', role: 'schooladmin', purpose: 'Institutional administration, student dossiers, teacher rosters, fees, exams, setup.', entry: 'Login with schooladmin credentials', exit: 'Students, Teachers, Admissions, Fees, Exams, Setup', apis: ['GET /api/academics/stats'], db: ['Students', 'Teachers', 'Classes', 'Invoices'], perms: ['schooladmin'], blocker: 'School suspended or inactive', unblocker: 'Renew subscription / activate school' },
+          { id: 'm_tea_dash', type: 'page', color: 'green', label: 'Teacher Portal', sub: 'Classroom Operations', x: 1220, y: 360, route: '/teacher/dashboard', role: 'teacher', purpose: 'Daily student attendance marking, marks entry, homework assignment, timetable view.', entry: 'Login with teacher credentials', exit: 'Attendance, Marks, Homework, Remarks, Leaves', apis: ['GET /api/academics/teacher-stats'], db: ['Teachers', 'Classes', 'Attendances'], perms: ['teacher'], blocker: 'Teacher account deactivated', unblocker: 'Admin sets IsActive=true' },
+          { id: 'm_stu_dash', type: 'page', color: 'green', label: 'Student Portal', sub: 'Learner & Parent Hub', x: 1220, y: 500, route: '/student/dashboard', role: 'student', purpose: 'Timetable, attendance percentages, homework uploads, fee payments, published results.', entry: 'Login with student credentials', exit: 'Schedule, Attendance, Homework, Fees, Results', apis: ['GET /api/academics/students/{id}'], db: ['Students', 'Invoices', 'ExamResults'], perms: ['student'], blocker: 'Student inactive / suspended', unblocker: 'School admin resolves enrollment status' },
+          
+          { id: 'm_acc_dash', type: 'page', color: 'green', label: 'Account Manager', sub: 'HRM & Finance Desk', x: 1480, y: 150, route: '/account/dashboard', role: 'accountmanager', purpose: 'Payroll, salary structures, PF/ESI/PT/TDS, staff directory, billing, expense vouchers.', entry: 'Login or School Admin module jump', exit: 'Employees, Fee Rules, Salaries, Leaves, Expenses', apis: ['GET /api/hrm/stats'], db: ['Employees', 'SalaryRecords', 'Expenses'], perms: ['accountmanager', 'HasAccountModule'], blocker: 'School HasAccountModule == false', unblocker: 'Super Admin enables module toggle' },
+          { id: 'm_lib_dash', type: 'page', color: 'green', label: 'Librarian Desk', sub: 'Book Circulation Hub', x: 1480, y: 290, route: '/library/dashboard', role: 'librarian', purpose: 'Book catalog, ISBN, checkout/return circulation desk, fine calculation.', entry: 'Login or School Admin module jump', exit: 'Catalog, Issue/Return, Transactions, Settings', apis: ['GET /api/library/stats'], db: ['Books', 'LibraryTransactions', 'LibrarySettings'], perms: ['librarian', 'HasLibraryModule'], blocker: 'School HasLibraryModule == false', unblocker: 'Super Admin enables module toggle' },
+          { id: 'm_rec_dash', type: 'page', color: 'green', label: 'Front Desk Desk', sub: 'Visitor & Gate Pass', x: 1480, y: 430, route: '/receptionist/dashboard', role: 'receptionist', purpose: 'Visitor registration, student gate passes, admission leads, counter fee collection.', entry: 'Login or School Admin module jump', exit: 'Visitors, Fees, Gatepass, Inquiries', apis: ['GET /api/receptionist/stats'], db: ['Visitors', 'GatePasses', 'AdmissionInquiries'], perms: ['receptionist', 'HasReceptionistModule'], blocker: 'School HasReceptionistModule == false', unblocker: 'Super Admin enables module toggle' },
+
+          { id: 'm_logout', type: 'page', color: 'red', label: 'Session Logout', sub: 'Storage Invalidation', x: 1740, y: 300, route: '/login', role: 'all', purpose: 'Clears localStorage (token, user profile) and redirects to login.', entry: 'User clicks Logout in sidebar', exit: 'Login page', apis: ['None (Client purge)'], db: ['None'], perms: ['All'], blocker: 'None', unblocker: 'N/A' },
+        ],
+        edges: [
+          { from: 'm_pub', to: 'm_login', label: 'LOGIN CLICK', type: 'nav' },
+          { from: 'm_login', to: 'm_auth_check', label: 'SUBMIT FORM', type: 'nav' },
+          { from: 'm_auth_check', to: 'm_login', label: 'FAIL (401)', type: 'failure' },
+          { from: 'm_auth_check', to: 'm_token_gen', label: 'SUCCESS (200)', type: 'success' },
+          { from: 'm_token_gen', to: 'm_role_guard', label: 'DECODE CLAIMS', type: 'success' },
+          
+          { from: 'm_role_guard', to: 'm_sa_dash', label: 'role == superadmin', type: 'nav' },
+          { from: 'm_role_guard', to: 'm_sch_dash', label: 'role == schooladmin', type: 'nav' },
+          { from: 'm_role_guard', to: 'm_tea_dash', label: 'role == teacher', type: 'nav' },
+          { from: 'm_role_guard', to: 'm_stu_dash', label: 'role == student', type: 'nav' },
+
+          { from: 'm_sch_dash', to: 'm_acc_dash', label: 'hasAccountModule', type: 'success' },
+          { from: 'm_sch_dash', to: 'm_lib_dash', label: 'hasLibraryModule', type: 'success' },
+          { from: 'm_sch_dash', to: 'm_rec_dash', label: 'hasReceptionistModule', type: 'success' },
+
+          { from: 'm_sa_dash', to: 'm_logout', label: 'LOGOUT', type: 'nav' },
+          { from: 'm_sch_dash', to: 'm_logout', label: 'LOGOUT', type: 'nav' },
+          { from: 'm_tea_dash', to: 'm_logout', label: 'LOGOUT', type: 'nav' },
+          { from: 'm_stu_dash', to: 'm_logout', label: 'LOGOUT', type: 'nav' },
+          { from: 'm_acc_dash', to: 'm_logout', label: 'LOGOUT', type: 'nav' },
+          { from: 'm_lib_dash', to: 'm_logout', label: 'LOGOUT', type: 'nav' },
+          { from: 'm_rec_dash', to: 'm_logout', label: 'LOGOUT', type: 'nav' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // SUPER ADMIN FLOW
+      // -------------------------------------------------------------
+      superadmin: {
+        title: 'Super Admin Flow',
+        subtitle: 'Platform Management, School Provisioning & RBAC',
+        nodes: [
+          { id: 'sa_login', type: 'page', color: 'purple', label: 'SuperAdmin Auth', sub: '.env / Cryptographic Hash', x: 80, y: 250, route: '/login', role: 'superadmin', purpose: 'Direct env auth (SUPERADMIN_EMAIL) or database PBKDF2-SHA512 verification.', entry: 'Direct Login', exit: 'Dashboard', apis: ['POST /api/auth/login'], db: ['Users'], perms: ['superadmin'], blocker: 'Invalid password', unblocker: 'Re-enter correct credentials' },
+          { id: 'sa_dash', type: 'page', color: 'blue', label: 'Dashboard', sub: 'Platform Overview', x: 300, y: 250, route: '/super-admin/dashboard', role: 'superadmin', purpose: 'Displays aggregated metrics: total schools, total students, platform revenue, system events.', entry: 'Login completion', exit: 'Schools, Format Studio, RBAC, Subscriptions, Settings', apis: ['GET /api/superadmin/dashboard-stats'], db: ['Schools', 'Subscriptions', 'Users'], perms: ['superadmin'], blocker: 'Token expired', unblocker: 'Re-authenticate' },
+          
+          { id: 'sa_schools', type: 'page', color: 'blue', label: 'Schools Hub', sub: 'Provisioning & Modules', x: 550, y: 120, route: '/super-admin/schools', role: 'superadmin', purpose: 'Create new schools, toggle active/suspended status, enable Account/Library/Receptionist modules.', entry: 'Sidebar -> Schools', exit: 'Create School, Impersonate, School HRM Settings', apis: ['GET /api/superadmin/schools', 'POST /api/superadmin/schools', 'PUT /api/superadmin/schools/{id}/status'], db: ['Schools', 'Subscriptions'], perms: ['superadmin'], blocker: 'Duplicate school code or email', unblocker: 'Supply unique code & email' },
+          { id: 'sa_hrm_cfg', type: 'page', color: 'orange', label: 'School HRM Config', sub: 'Statutory & Payroll Rules', x: 800, y: 60, route: '/super-admin/schools/:schoolId/hrm', role: 'superadmin', purpose: 'Configure PF, ESI, Professional Tax, TDS applicability and rate thresholds per school.', entry: 'Schools -> HRM Config button', exit: 'Save statutory configuration', apis: ['GET /api/superadmin/hrm/{schoolId}', 'POST /api/superadmin/hrm/{schoolId}'], db: ['StatutoryConfigurations', 'SalaryComponents'], perms: ['superadmin'], blocker: 'Invalid schoolId in route', unblocker: 'Select valid school from list' },
+          { id: 'sa_format', type: 'page', color: 'blue', label: 'Master Print Studio', sub: 'ID Cards, Fee Receipts, TC', x: 550, y: 250, route: '/super-admin/format-studio', role: 'superadmin', purpose: 'Visual layout studio for ID cards, admit cards, fee receipts, certificates, and transfer certificates.', entry: 'Sidebar -> Print Format Studio', exit: 'Template Editor, Preview', apis: ['GET /api/print-templates', 'POST /api/print-templates'], db: ['PrintTemplates'], perms: ['superadmin'], blocker: 'Database connection error', unblocker: 'Ensure PostgreSQL running' },
+          { id: 'sa_rbac', type: 'page', color: 'purple', label: 'RBAC Studio', sub: 'Dynamic Permissions', x: 550, y: 380, route: '/super-admin/access-control', role: 'superadmin', purpose: 'Defines system pages and configures CanView, CanCreate, CanEdit, CanDelete for school roles.', entry: 'Sidebar -> Access Control', exit: 'Save Permissions', apis: ['GET /api/rbac/pages', 'POST /api/rbac/permissions'], db: ['PageDefinitions', 'SchoolRolePermissions'], perms: ['superadmin'], blocker: 'Invalid role assignment', unblocker: 'Map permission to existing role' },
+          { id: 'sa_subs', type: 'page', color: 'orange', label: 'Subscriptions', sub: 'Billing & Plan Tiers', x: 550, y: 510, route: '/super-admin/subscriptions', role: 'superadmin', purpose: 'Plan management (Starter, Growth, Enterprise), usage limits, manual invoice renewals.', entry: 'Sidebar -> Subscriptions', exit: 'Upgrade Plan, Renew', apis: ['GET /api/superadmin/subscriptions'], db: ['Subscriptions', 'PlatformPlans'], perms: ['superadmin'], blocker: 'Subscription expired', unblocker: 'Renew subscription' },
+          { id: 'sa_settings', type: 'page', color: 'yellow', label: 'Platform Settings', sub: 'Maintenance & Security', x: 800, y: 450, route: '/super-admin/settings', role: 'superadmin', purpose: 'System maintenance mode toggle, WhatsApp Gateway credentials, SMTP setup, payment credentials.', entry: 'Sidebar -> Settings', exit: 'Save settings', apis: ['GET /api/superadmin/settings', 'PUT /api/superadmin/settings'], db: ['PlatformSettings'], perms: ['superadmin'], blocker: 'Invalid API keys', unblocker: 'Validate third-party tokens' },
+          { id: 'sa_support', type: 'page', color: 'blue', label: 'Support Desk', sub: 'Global Ticket Resolver', x: 800, y: 320, route: '/super-admin/support', role: 'superadmin', purpose: 'Multi-school ticket triaging, replies, and status updates (Open, InProgress, Resolved).', entry: 'Sidebar -> Support', exit: 'Resolve ticket', apis: ['GET /api/support/tickets', 'POST /api/support/reply'], db: ['SupportTickets'], perms: ['superadmin'], blocker: 'None', unblocker: 'N/A' },
+        ],
+        edges: [
+          { from: 'sa_login', to: 'sa_dash', label: 'AUTH OK', type: 'success' },
+          { from: 'sa_dash', to: 'sa_schools', label: 'CLICK', type: 'nav' },
+          { from: 'sa_schools', to: 'sa_hrm_cfg', label: 'CONFIGURE HRM', type: 'nav' },
+          { from: 'sa_dash', to: 'sa_format', label: 'CLICK', type: 'nav' },
+          { from: 'sa_dash', to: 'sa_rbac', label: 'CLICK', type: 'nav' },
+          { from: 'sa_dash', to: 'sa_subs', label: 'CLICK', type: 'nav' },
+          { from: 'sa_dash', to: 'sa_settings', label: 'CLICK', type: 'nav' },
+          { from: 'sa_dash', to: 'sa_support', label: 'CLICK', type: 'nav' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // SCHOOL ADMIN FLOW
+      // -------------------------------------------------------------
+      schooladmin: {
+        title: 'School Admin Flow',
+        subtitle: 'Comprehensive Institutional ERP Execution',
+        nodes: [
+          { id: 'sch_dash', type: 'page', color: 'blue', label: 'Overview Dashboard', sub: 'Campus Analytics', x: 80, y: 300, route: '/school-admin/dashboard', role: 'schooladmin', purpose: 'Key metrics: student count, teacher workload, today attendance %, fee collection graph.', entry: 'Login -> Dashboard', exit: 'All school modules', apis: ['GET /api/academics/stats'], db: ['Students', 'Teachers', 'Attendances', 'Invoices'], perms: ['schooladmin'], blocker: 'School suspended', unblocker: 'Renew subscription' },
+          { id: 'sch_adm', type: 'page', color: 'green', label: 'Admissions Desk', sub: 'Online Leads & Applications', x: 320, y: 80, route: '/school-admin/admission', role: 'schooladmin', purpose: 'Review public online applications, approve admissions, collect initial admission fee.', entry: 'Sidebar -> Admission', exit: 'Enroll to Class', apis: ['GET /api/public/applications', 'POST /api/academics/onboard-student'], db: ['Students', 'Enrollments'], perms: ['schooladmin.admission'], blocker: 'Capacity reached', unblocker: 'Increase class capacity' },
+          { id: 'sch_dossier', type: 'page', color: 'blue', label: 'Student 360° Archive', sub: '20-Year Cumulative Record', x: 320, y: 190, route: '/school-admin/student-dossier', role: 'schooladmin', purpose: 'Longitudinal student history, academic transcripts across sessions, conduct remarks, biometric logs.', entry: 'Sidebar -> Student Dossier', exit: 'View History', apis: ['GET /api/academics/student-dossier/{id}'], db: ['Students', 'ExamResults', 'Attendances'], perms: ['schooladmin.student_dossier'], blocker: 'Student not found', unblocker: 'Select valid student' },
+          { id: 'sch_import', type: 'page', color: 'blue', label: 'Data Import Hub', sub: 'Smart CSV Parser', x: 320, y: 300, route: '/school-admin/data-import', role: 'schooladmin', purpose: 'Bulk onboarding of students, teachers, and fee structures from Excel/CSV files.', entry: 'Sidebar -> Data Import Hub', exit: 'Upload CSV', apis: ['POST /api/data-import/students', 'POST /api/data-import/teachers'], db: ['DataImportLogs', 'Students'], perms: ['schooladmin.data_import'], blocker: 'CSV column mismatch', unblocker: 'Download official template' },
+          { id: 'sch_ai_plan', type: 'page', color: 'purple', label: 'AI School Planner', sub: 'Automated Academic Calendar', x: 320, y: 410, route: '/school-admin/ai-planner', role: 'schooladmin', purpose: 'Generates annual academic calendar, exam dates, holiday schedules, and event milestones.', entry: 'Sidebar -> AI Planner', exit: 'Publish Calendar', apis: ['POST /api/school-plan/generate'], db: ['AnnualSchoolPlans', 'SchoolPlanEvents'], perms: ['schooladmin.ai_planner'], blocker: 'AI service timeout', unblocker: 'Retry generation' },
+          { id: 'sch_format', type: 'page', color: 'blue', label: 'Print Format Studio', sub: 'School Badge & Receipts', x: 320, y: 520, route: '/school-admin/format-studio', role: 'schooladmin', purpose: 'Customize header, logo, signature stamps for student ID cards and fee receipts.', entry: 'Sidebar -> Format Studio', exit: 'Save Layout', apis: ['GET /api/print-templates/school', 'POST /api/print-templates/school'], db: ['PrintTemplates'], perms: ['schooladmin.format_studio'], blocker: 'Invalid template syntax', unblocker: 'Reset to default template' },
+          
+          { id: 'sch_students', type: 'page', color: 'blue', label: 'Student Directory', sub: 'Lifecycle & Clearance', x: 600, y: 150, route: '/school-admin/students', role: 'schooladmin', purpose: 'Student list, search, filter by class, fee clearance check, Transfer Certificate generation, promote/retain.', entry: 'Sidebar -> Students', exit: 'Add Student, Student Details, TC Modal', apis: ['GET /api/academics/students', 'POST /api/academics/students/{id}/generate-tc'], db: ['Students', 'Invoices', 'Attendances'], perms: ['schooladmin.students'], blocker: 'Fee dues pending for TC', unblocker: 'Clear dues in billing desk' },
+          { id: 'sch_teachers', type: 'page', color: 'blue', label: 'Teacher Directory', sub: 'Faculty & Workload', x: 600, y: 270, route: '/school-admin/teachers', role: 'schooladmin', purpose: 'Faculty profiles, subject specialization, assigned classes, workload distribution.', entry: 'Sidebar -> Teachers', exit: 'Add Teacher, Assign Class', apis: ['GET /api/academics/teachers', 'POST /api/academics/teachers'], db: ['Teachers', 'ClassSubjects'], perms: ['schooladmin.teachers'], blocker: 'Email already registered', unblocker: 'Use distinct email' },
+          { id: 'sch_classes', type: 'page', color: 'blue', label: 'Classes & Sections', sub: 'Curriculum & Rooms', x: 600, y: 390, route: '/school-admin/classes', role: 'schooladmin', purpose: 'Setup classes (1-12), sections (A, B), subjects, room allocations, capacity limits.', entry: 'Sidebar -> Classes', exit: 'Create Section, Assign Room', apis: ['GET /api/academics/classes', 'POST /api/academics/classes'], db: ['Classes', 'Sections', 'Rooms'], perms: ['schooladmin.classes'], blocker: 'Cannot delete class with active students', unblocker: 'Reassign students first' },
+          { id: 'sch_fees', type: 'page', color: 'orange', label: 'Fees & Invoicing', sub: 'Fee Rules & Defaulters', x: 600, y: 510, route: '/school-admin/fees', role: 'schooladmin', purpose: 'Define tuition, transport, lab fees; generate monthly invoices; track fee defaulters.', entry: 'Sidebar -> Fees', exit: 'Generate Invoices, Record Payment', apis: ['GET /api/billing/invoices', 'POST /api/billing/generate'], db: ['FeeStructures', 'Invoices', 'Transactions'], perms: ['schooladmin.fees'], blocker: 'Invoice already generated', unblocker: 'Edit existing invoice' },
+          
+          { id: 'sch_exams', type: 'page', color: 'purple', label: 'Exams & Results', sub: 'Moderation & Publication', x: 880, y: 220, route: '/school-admin/exams', role: 'schooladmin', purpose: 'Exam datesheet configuration, marks moderation, approve results, publish report cards.', entry: 'Sidebar -> Exams', exit: 'Publish Results, Print Report Cards', apis: ['GET /api/exams', 'POST /api/academics/classes/{id}/publish-marks'], db: ['Exams', 'ExamResults', 'Classes'], perms: ['schooladmin.exams'], blocker: 'Pending marks from subject teacher', unblocker: 'Teacher enters marks first' },
+          { id: 'sch_reports', type: 'page', color: 'blue', label: 'Reports & Analytics', sub: 'Academic & Financial', x: 880, y: 340, route: '/school-admin/reports', role: 'schooladmin', purpose: 'Export attendance registers, financial summaries, grade distribution charts.', entry: 'Sidebar -> Reports', exit: 'Export PDF/Excel', apis: ['GET /api/academics/reports'], db: ['Attendances', 'Invoices', 'ExamResults'], perms: ['schooladmin.reports'], blocker: 'No data for selected period', unblocker: 'Broaden date range' },
+          { id: 'sch_setup', type: 'page', color: 'yellow', label: 'Academic Setup', sub: 'Configuration Wizard', x: 880, y: 460, route: '/school-admin/setup', role: 'schooladmin', purpose: 'Academic year setup, timetable periods, grading scales, departments, room directory.', entry: 'Sidebar -> Setup', exit: 'Save Configuration', apis: ['GET /api/academics/periods', 'POST /api/academics/periods'], db: ['TimetablePeriods', 'Departments'], perms: ['schooladmin.setup'], blocker: 'Overlapping timetable periods', unblocker: 'Fix start/end times' },
+        ],
+        edges: [
+          { from: 'sch_dash', to: 'sch_adm', label: 'NAV', type: 'nav' },
+          { from: 'sch_dash', to: 'sch_dossier', label: 'NAV', type: 'nav' },
+          { from: 'sch_dash', to: 'sch_import', label: 'NAV', type: 'nav' },
+          { from: 'sch_dash', to: 'sch_ai_plan', label: 'NAV', type: 'nav' },
+          { from: 'sch_dash', to: 'sch_format', label: 'NAV', type: 'nav' },
+          { from: 'sch_dash', to: 'sch_students', label: 'NAV', type: 'nav' },
+          { from: 'sch_dash', to: 'sch_teachers', label: 'NAV', type: 'nav' },
+          { from: 'sch_dash', to: 'sch_classes', label: 'NAV', type: 'nav' },
+          { from: 'sch_dash', to: 'sch_fees', label: 'NAV', type: 'nav' },
+          { from: 'sch_students', to: 'sch_exams', label: 'NAV', type: 'nav' },
+          { from: 'sch_classes', to: 'sch_setup', label: 'NAV', type: 'nav' },
+          { from: 'sch_dash', to: 'sch_reports', label: 'NAV', type: 'nav' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // TEACHER FLOW
+      // -------------------------------------------------------------
+      teacher: {
+        title: 'Teacher Flow',
+        subtitle: 'Classroom Instruction, Attendance & Evaluation',
+        nodes: [
+          { id: 'tea_dash', type: 'page', color: 'blue', label: 'Teacher Dashboard', sub: 'Today Classes & Workload', x: 80, y: 300, route: '/teacher/dashboard', role: 'teacher', purpose: 'View daily schedule, pending attendance alerts, homework submissions count, remarks feed.', entry: 'Login -> Dashboard', exit: 'Attendance, Classes, Marks, Homework', apis: ['GET /api/academics/teacher-stats'], db: ['Teachers', 'Classes'], perms: ['teacher'], blocker: 'Teacher profile not assigned', unblocker: 'Admin links user to Teacher record' },
+          { id: 'tea_classes', type: 'page', color: 'blue', label: 'My Classes', sub: 'Roster & Subject List', x: 320, y: 120, route: '/teacher/classes', role: 'teacher', purpose: 'View all classes where teacher is assigned as Class Teacher or Subject Teacher.', entry: 'Sidebar -> My Classes', exit: 'Class Student List', apis: ['GET /api/academics/classes'], db: ['Classes', 'ClassSubjects'], perms: ['teacher.classes'], blocker: 'No classes assigned', unblocker: 'School Admin assigns classes' },
+          { id: 'tea_att', type: 'page', color: 'green', label: 'Student Attendance', sub: 'Daily Register & QR', x: 320, y: 240, route: '/teacher/attendance', role: 'teacher', purpose: 'Mark students Present, Absent, Late, or Excused with single-click bulk submission.', entry: 'Sidebar -> Attendance', exit: 'Submit Attendance', apis: ['GET /api/academics/attendance', 'POST /api/academics/attendance'], db: ['Attendances', 'Students'], perms: ['teacher.attendance'], blocker: 'Attendance already locked for date', unblocker: 'School Admin unlocks date' },
+          { id: 'tea_self_att', type: 'page', color: 'green', label: 'Self Attendance', sub: 'Geo/IP Punch In/Out', x: 320, y: 360, route: '/teacher/self-attendance', role: 'teacher', purpose: 'Punch-in and punch-out attendance recording via Express auxiliary service.', entry: 'Sidebar -> My Attendance', exit: 'Punch Action', apis: ['POST :5005/api/teacher-attendance/punch-in', 'POST :5005/api/teacher-attendance/punch-out'], db: ['MongoDB TeacherAttendance'], perms: ['teacher.self_attendance'], blocker: 'Outside geofence or IP whitelist', unblocker: 'Connect to school WiFi' },
+          { id: 'tea_marks', type: 'page', color: 'purple', label: 'Marks Entry Desk', sub: 'Evaluation & Grades', x: 320, y: 480, route: '/teacher/marks', role: 'teacher', purpose: 'Enter test and exam marks for assigned subjects; automatic grade calculation.', entry: 'Sidebar -> Marks Entry', exit: 'Save & Submit Marks', apis: ['GET /api/exams', 'POST /api/academics/classes/{id}/save-marks'], db: ['ExamResults', 'Exams'], perms: ['teacher.marks'], blocker: 'Results already published by Admin', unblocker: 'Admin revokes publication to allow edits' },
+          
+          { id: 'tea_hw', type: 'page', color: 'orange', label: 'Homework Desk', sub: 'Assignments & Attachments', x: 580, y: 180, route: '/teacher/homework', role: 'teacher', purpose: 'Publish homework assignments with due dates and attachments; review student submissions.', entry: 'Sidebar -> Homework', exit: 'Create Homework, Review Uploads', apis: ['POST :5005/api/homework', 'GET :5005/api/homework'], db: ['MongoDB Homework'], perms: ['teacher.homework'], blocker: 'File size exceeds limit (10MB)', unblocker: 'Compress PDF or attachment' },
+          { id: 'tea_remarks', type: 'page', color: 'blue', label: 'Student Remarks', sub: 'Conduct & Behavioral', x: 580, y: 300, route: '/teacher/remarks', role: 'teacher', purpose: 'Post commendations or disciplinary remarks visible to school admin and parents.', entry: 'Sidebar -> Remarks', exit: 'Post Remark', apis: ['POST :5005/api/remarks', 'GET :5005/api/remarks'], db: ['MongoDB Remark'], perms: ['teacher.remarks'], blocker: 'Empty remark text', unblocker: 'Enter valid remark text' },
+          { id: 'tea_leaves', type: 'page', color: 'yellow', label: 'My Leave Requests', sub: 'Casual / Sick Leave', x: 580, y: 420, route: '/teacher/leaves', role: 'teacher', purpose: 'Apply for leaves; view leave balance quotas (CL, SL, EL) and approval statuses.', entry: 'Sidebar -> My Leaves', exit: 'Submit Application', apis: ['POST /api/hrm/leaves/apply', 'GET /api/hrm/leaves/my'], db: ['LeaveRequests', 'LeaveQuotas'], perms: ['teacher.leaves'], blocker: 'Quota exhausted', unblocker: 'Apply for Leave Without Pay (LWP)' },
+        ],
+        edges: [
+          { from: 'tea_dash', to: 'tea_classes', label: 'VIEW', type: 'nav' },
+          { from: 'tea_dash', to: 'tea_att', label: 'MARK', type: 'nav' },
+          { from: 'tea_dash', to: 'tea_self_att', label: 'PUNCH', type: 'nav' },
+          { from: 'tea_dash', to: 'tea_marks', label: 'ENTER', type: 'nav' },
+          { from: 'tea_classes', to: 'tea_hw', label: 'ASSIGN', type: 'nav' },
+          { from: 'tea_classes', to: 'tea_remarks', label: 'NOTE', type: 'nav' },
+          { from: 'tea_dash', to: 'tea_leaves', label: 'APPLY', type: 'nav' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // STUDENT FLOW
+      // -------------------------------------------------------------
+      student: {
+        title: 'Student & Parent Flow',
+        subtitle: 'Schedule, Homework, Results & Fee Payments',
+        nodes: [
+          { id: 'stu_dash', type: 'page', color: 'blue', label: 'Student Dashboard', sub: 'Daily Agenda & Overview', x: 80, y: 300, route: '/student/dashboard', role: 'student', purpose: 'Timetable snapshot, attendance gauge, pending homework tasks, fee alert notifications.', entry: 'Login -> Dashboard', exit: 'Schedule, Attendance, Fees, Results', apis: ['GET /api/academics/students/{id}'], db: ['Students', 'Invoices', 'Attendances'], perms: ['student'], blocker: 'Student record inactive', unblocker: 'School admin verifies enrollment' },
+          { id: 'stu_sched', type: 'page', color: 'blue', label: 'Daily Schedule', sub: 'Timetable & Periods', x: 320, y: 100, route: '/student/schedule', role: 'student', purpose: 'Day-wise period timetable showing subjects, start/end times, rooms, and assigned teachers.', entry: 'Sidebar -> Daily Schedule', exit: 'View periods', apis: ['GET /api/academics/timetable/{classId}'], db: ['TimetableItems', 'TimetablePeriods'], perms: ['student.schedule'], blocker: 'Timetable not published for class', unblocker: 'Admin configures class timetable' },
+          { id: 'stu_att', type: 'page', color: 'green', label: 'Attendance Record', sub: 'Percentages & Monthly Log', x: 320, y: 220, route: '/student/attendance', role: 'student', purpose: 'Full calendar of present, absent, late days; cumulative attendance percentage with warning if <75%.', entry: 'Sidebar -> Attendance', exit: 'Calendar filter', apis: ['GET /api/academics/attendance/student/{id}'], db: ['Attendances'], perms: ['student.attendance'], blocker: 'None', unblocker: 'N/A' },
+          { id: 'stu_hw', type: 'page', color: 'orange', label: 'Homework Desk', sub: 'Submissions & Deadlines', x: 320, y: 340, route: '/student/homework', role: 'student', purpose: 'View assigned homework; upload assignment files (PDF, images) before due date.', entry: 'Sidebar -> Homework', exit: 'Upload file', apis: ['GET :5005/api/homework', 'POST :5005/api/homework/{id}/submit-file'], db: ['MongoDB Homework'], perms: ['student.homework'], blocker: 'Submission window expired', unblocker: 'Teacher extends homework deadline' },
+          { id: 'stu_fees', type: 'page', color: 'orange', label: 'Fee Payments Desk', sub: 'Invoices & Razorpay', x: 320, y: 460, route: '/student/fees', role: 'student', purpose: 'View pending tuition and fee invoices; trigger Razorpay online payment modal; download receipts.', entry: 'Sidebar -> Fees', exit: 'Pay Now -> Razorpay Modal', apis: ['GET /api/billing/student-invoices', 'POST /api/billing/create-order'], db: ['Invoices', 'Transactions'], perms: ['student.fees'], blocker: 'Payment gateway timeout or invalid card', unblocker: 'Retry payment or use alternate payment method' },
+          
+          { id: 'stu_pay_flow', type: 'decision', color: 'orange', label: 'Payment Gateway', sub: 'Razorpay / UPI / Cards', x: 580, y: 460, route: 'Razorpay Checkout', role: 'student', purpose: 'Executes secure payment processing; receives signature; verifies transaction on backend.', entry: 'Click "Pay Now"', exit: 'Success -> Mark Invoice Paid / Failure -> Retry', apis: ['POST /api/billing/verify-payment'], db: ['Transactions', 'Invoices'], perms: ['student'], blocker: 'Signature verification mismatch', unblocker: 'Webhook reconciles transaction' },
+          { id: 'stu_receipt', type: 'page', color: 'green', label: 'Payment Receipt', sub: 'Official Digital Voucher', x: 840, y: 460, route: 'Receipt Dialog', role: 'student', purpose: 'Instant downloadable PDF receipt with transaction ID, school stamp, and fee breakdown.', entry: 'Payment success', exit: 'Download PDF', apis: ['GET /api/billing/receipt/{transactionId}'], db: ['Transactions'], perms: ['student'], blocker: 'None', unblocker: 'N/A' },
+          
+          { id: 'stu_exams', type: 'page', color: 'purple', label: 'Exam Datesheet', sub: 'Schedule & Admit Card', x: 320, y: 580, route: '/student/exams', role: 'student', purpose: 'Upcoming examination schedule, subject timings, room numbers, and digital admit card.', entry: 'Sidebar -> Exam Timetable', exit: 'Print Admit Card', apis: ['GET /api/exams/student/{id}'], db: ['Exams', 'ExamTypes'], perms: ['student.exams'], blocker: 'Fee dues unpaid (Admit card blocked)', unblocker: 'Clear outstanding dues in Fees desk' },
+          { id: 'stu_results', type: 'page', color: 'purple', label: 'Report Cards', sub: 'Published Grades & GPA', x: 580, y: 580, route: '/student/results', role: 'student', purpose: 'View published report card with subject-wise marks, percentage, grade, teacher remarks.', entry: 'Sidebar -> Results', exit: 'Print Report Card', apis: ['GET /api/exams/results/student/{id}'], db: ['ExamResults'], perms: ['student.results'], blocker: 'Results withheld by School Admin', unblocker: 'Admin publishes student results' },
+        ],
+        edges: [
+          { from: 'stu_dash', to: 'stu_sched', label: 'NAV', type: 'nav' },
+          { from: 'stu_dash', to: 'stu_att', label: 'NAV', type: 'nav' },
+          { from: 'stu_dash', to: 'stu_hw', label: 'NAV', type: 'nav' },
+          { from: 'stu_dash', to: 'stu_fees', label: 'NAV', type: 'nav' },
+          { from: 'stu_fees', to: 'stu_pay_flow', label: 'PAY NOW', type: 'nav' },
+          { from: 'stu_pay_flow', to: 'stu_fees', label: 'FAIL', type: 'failure' },
+          { from: 'stu_pay_flow', to: 'stu_receipt', label: 'SUCCESS', type: 'success' },
+          { from: 'stu_dash', to: 'stu_exams', label: 'NAV', type: 'nav' },
+          { from: 'stu_exams', to: 'stu_results', label: 'VIEW', type: 'nav' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // ACCOUNT MANAGER FLOW (HRM & FINANCES)
+      // -------------------------------------------------------------
+      account: {
+        title: 'Account Manager Flow',
+        subtitle: 'HRM, Salaries, Statutory Rules & Financial Books',
+        nodes: [
+          { id: 'acc_dash', type: 'page', color: 'blue', label: 'Finance Dashboard', sub: 'Payroll & Cash Flow', x: 80, y: 300, route: '/account/dashboard', role: 'accountmanager', purpose: 'Monthly payroll budget overview, fee collection totals, pending vouchers, leave count.', entry: 'Login -> Dashboard', exit: 'Employees, Salaries, Fees, Expenses', apis: ['GET /api/hrm/stats'], db: ['Employees', 'SalaryRecords', 'Expenses'], perms: ['accountmanager'], blocker: 'Module disabled in school profile', unblocker: 'Super Admin enables HasAccountModule' },
+          { id: 'acc_emp', type: 'page', color: 'blue', label: 'Staff & Employees', sub: 'Master Employee Registry', x: 320, y: 120, route: '/account/employees', role: 'accountmanager', purpose: 'Onboard non-teaching and teaching staff, assign designations, salary structures, bank accounts.', entry: 'Sidebar -> Staff & Employees', exit: 'Add Employee, Salary Structure', apis: ['GET /api/hrm/employees', 'POST /api/hrm/employees'], db: ['Employees', 'Designations'], perms: ['account.employees'], blocker: 'Duplicate employee code or PAN', unblocker: 'Enter unique employee identifiers' },
+          { id: 'acc_sal_rules', type: 'page', color: 'orange', label: 'Salary Components & Rules', sub: 'Basic, HRA, PF, ESI, TDS', x: 320, y: 240, route: '/account/salary-rules', role: 'accountmanager', purpose: 'Define allowances (HRA, DA, Medical) and statutory deductions (PF 12%, ESI 0.75%, PT, TDS).', entry: 'Sidebar -> Salary Rules', exit: 'Save Formula', apis: ['GET /api/hrm/salary-components', 'POST /api/hrm/salary-rules'], db: ['SalaryComponents', 'SalaryRules'], perms: ['account.salary_rules'], blocker: 'Formula syntax error', unblocker: 'Use verified mathematical tokens' },
+          { id: 'acc_salaries', type: 'page', color: 'green', label: 'Payroll Generation Desk', sub: 'Monthly Disbursal & Slips', x: 320, y: 360, route: '/account/salaries', role: 'accountmanager', purpose: 'Calculate monthly net salary based on days worked, LWP deductions; disburse payroll; generate payslips.', entry: 'Sidebar -> Salaries & Payroll', exit: 'Run Payroll, Print Payslips', apis: ['POST /api/hrm/payroll/calculate', 'GET /api/hrm/payroll/history'], db: ['SalaryRecords', 'Payrolls'], perms: ['account.salaries'], blocker: 'Attendance not synchronized for month', unblocker: 'Run attendance sync before payroll' },
+          { id: 'acc_leaves', type: 'page', color: 'yellow', label: 'Staff Leave Approvals', sub: 'Leave Requests & LWP', x: 320, y: 480, route: '/account/leaves', role: 'accountmanager', purpose: 'Approve or reject staff leave applications; automatic computation of Leave Without Pay (LWP).', entry: 'Sidebar -> Leave Requests', exit: 'Approve / Reject', apis: ['GET /api/hrm/leaves/pending', 'PUT /api/hrm/leaves/{id}/status'], db: ['LeaveRequests', 'LeaveQuotas'], perms: ['account.leaves'], blocker: 'Employee exceeds leave quota', unblocker: 'Mark excess days as LWP' },
+          
+          { id: 'acc_billing', type: 'page', color: 'orange', label: 'School Billing & Fees', sub: 'Fee Counter & Overdue', x: 580, y: 180, route: '/account/billing', role: 'accountmanager', purpose: 'Collect student fee dues over the counter; issue stamped physical receipts; monitor aging report.', entry: 'Sidebar -> School Billing', exit: 'Collect Fee, Issue Receipt', apis: ['GET /api/billing/invoices', 'POST /api/billing/pay-counter'], db: ['Invoices', 'Transactions'], perms: ['account.billing'], blocker: 'Invalid cash receipt amount', unblocker: 'Enter exact payment received' },
+          { id: 'acc_expenses', type: 'page', color: 'red', label: 'Expenses & Vouchers', sub: 'Cashbook & Vendor Invoices', x: 580, y: 320, route: '/account/expenses', role: 'accountmanager', purpose: 'Record maintenance, utility, and vendor disbursements; attach scanned receipt vouchers.', entry: 'Sidebar -> Expenses & Vouchers', exit: 'Create Voucher', apis: ['GET /api/hrm/expenses', 'POST /api/hrm/expenses'], db: ['Expenses'], perms: ['account.expenses'], blocker: 'Negative expense amount', unblocker: 'Enter positive decimal amount' },
+          { id: 'acc_tally', type: 'page', color: 'blue', label: 'Tally XML Export', sub: 'Financial Integration', x: 580, y: 460, route: '/account/tally-export', role: 'accountmanager', purpose: 'Exports vouchers and fee receipts in standard Tally ERP XML format for accounting audit.', entry: 'Billing Desk -> Export Tally', exit: 'Download XML', apis: ['GET /api/tally/export'], db: ['Transactions', 'Expenses'], perms: ['accountmanager'], blocker: 'Unbalanced debits/credits', unblocker: 'Reconcile vouchers' },
+        ],
+        edges: [
+          { from: 'acc_dash', to: 'acc_emp', label: 'NAV', type: 'nav' },
+          { from: 'acc_dash', to: 'acc_sal_rules', label: 'NAV', type: 'nav' },
+          { from: 'acc_sal_rules', to: 'acc_salaries', label: 'CALCULATE', type: 'nav' },
+          { from: 'acc_dash', to: 'acc_leaves', label: 'NAV', type: 'nav' },
+          { from: 'acc_leaves', to: 'acc_salaries', label: 'LWP SYNC', type: 'success' },
+          { from: 'acc_dash', to: 'acc_billing', label: 'NAV', type: 'nav' },
+          { from: 'acc_dash', to: 'acc_expenses', label: 'NAV', type: 'nav' },
+          { from: 'acc_billing', to: 'acc_tally', label: 'EXPORT', type: 'nav' },
+          { from: 'acc_expenses', to: 'acc_tally', label: 'EXPORT', type: 'nav' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // LIBRARIAN FLOW
+      // -------------------------------------------------------------
+      librarian: {
+        title: 'Librarian Flow',
+        subtitle: 'Catalog Management, Book Circulation & Overdue Fines',
+        nodes: [
+          { id: 'lib_dash', type: 'page', color: 'blue', label: 'Library Dashboard', sub: 'Circulation Snapshot', x: 80, y: 250, route: '/library/dashboard', role: 'librarian', purpose: 'Total book titles, copies in circulation, active loans, overdue fines collected.', entry: 'Login -> Dashboard', exit: 'Catalog, Issue/Return, Fines', apis: ['GET /api/library/stats'], db: ['Books', 'LibraryTransactions'], perms: ['librarian'], blocker: 'Module disabled', unblocker: 'Super Admin enables HasLibraryModule' },
+          { id: 'lib_cat', type: 'page', color: 'blue', label: 'Book Catalog', sub: 'ISBN & Dewey Decimal', x: 320, y: 120, route: '/library/catalog', role: 'librarian', purpose: 'Master inventory: Add books, specify rack/shelf, track available vs issued copies.', entry: 'Sidebar -> Book Catalog', exit: 'Add Book, Barcode Print', apis: ['GET /api/library/books', 'POST /api/library/books'], db: ['Books'], perms: ['library.catalog'], blocker: 'Duplicate ISBN / Accession number', unblocker: 'Assign unique accession code' },
+          { id: 'lib_cir', type: 'page', color: 'green', label: 'Issue & Return Desk', sub: 'Barcode Circulation', x: 320, y: 250, route: '/library/issue-return', role: 'librarian', purpose: 'Scan student/teacher badge; issue book; record return date; compute overdue fines.', entry: 'Sidebar -> Issue & Return', exit: 'Issue Book / Return Book', apis: ['POST /api/library/issue', 'POST /api/library/return'], db: ['LibraryTransactions', 'Books'], perms: ['library.issue_return'], blocker: 'Book out of stock (AvailableCopies == 0) or student reached max loan limit', unblocker: 'Return previous book or add copies' },
+          { id: 'lib_tx', type: 'page', color: 'blue', label: 'Loans & History', sub: 'Audit Register', x: 320, y: 380, route: '/library/transactions', role: 'librarian', purpose: 'Log of all past borrowings, overdue notices sent, lost book replacement penalties.', entry: 'Sidebar -> History', exit: 'Filter borrower', apis: ['GET /api/library/transactions'], db: ['LibraryTransactions'], perms: ['library.transactions'], blocker: 'None', unblocker: 'N/A' },
+          { id: 'lib_set', type: 'page', color: 'yellow', label: 'Loan & Fine Rules', sub: 'Borrowing Policies', x: 580, y: 250, route: '/library/settings', role: 'librarian', purpose: 'Configure max books per student (e.g. 3), loan duration (14 days), fine per day (₹2).', entry: 'Sidebar -> Settings', exit: 'Save Policies', apis: ['GET /api/library/settings', 'PUT /api/library/settings'], db: ['LibrarySettings'], perms: ['library.settings'], blocker: 'Negative fine amount', unblocker: 'Enter valid non-negative number' },
+        ],
+        edges: [
+          { from: 'lib_dash', to: 'lib_cat', label: 'MANAGE', type: 'nav' },
+          { from: 'lib_dash', to: 'lib_cir', label: 'CIRCULATE', type: 'nav' },
+          { from: 'lib_cir', to: 'lib_tx', label: 'RECORDED', type: 'success' },
+          { from: 'lib_dash', to: 'lib_set', label: 'CONFIGURE', type: 'nav' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // RECEPTIONIST FLOW
+      // -------------------------------------------------------------
+      receptionist: {
+        title: 'Receptionist / Front Desk Flow',
+        subtitle: 'Visitor Logs, Student Gate Passes & Admission Leads',
+        nodes: [
+          { id: 'rec_dash', type: 'page', color: 'blue', label: 'Front Desk Hub', sub: 'Campus Visitors Today', x: 80, y: 250, route: '/receptionist/dashboard', role: 'receptionist', purpose: 'Live counters: visitors on campus, gate passes issued today, pending admission walk-ins.', entry: 'Login -> Dashboard', exit: 'Visitors, Gatepass, Inquiries, Fees', apis: ['GET /api/receptionist/stats'], db: ['Visitors', 'GatePasses', 'AdmissionInquiries'], perms: ['receptionist'], blocker: 'Module disabled', unblocker: 'Super Admin enables HasReceptionistModule' },
+          { id: 'rec_vis', type: 'page', color: 'green', label: 'Visitor Register', sub: 'Photo & Thermal Badge', x: 320, y: 120, route: '/receptionist/visitors', role: 'receptionist', purpose: 'Check-in visitors (parents, vendors), record purpose, capture webcam photo, print visitor badge.', entry: 'Sidebar -> Visitor Register', exit: 'Check In / Check Out', apis: ['GET /api/receptionist/visitors', 'POST /api/receptionist/visitors'], db: ['Visitors'], perms: ['receptionist.visitors'], blocker: 'Missing phone number or photo', unblocker: 'Complete mandatory fields' },
+          { id: 'rec_gate', type: 'page', color: 'purple', label: 'Gate Pass Desk', sub: 'Student Exit Authorization', x: 320, y: 250, route: '/receptionist/gatepass', role: 'receptionist', purpose: 'Issue early departure gate pass; parent phone verification; print security exit slip.', entry: 'Sidebar -> Gate Pass Desk', exit: 'Issue Gate Pass', apis: ['POST /api/receptionist/gatepass'], db: ['GatePasses', 'Students'], perms: ['receptionist.gatepass'], blocker: 'Student absent today', unblocker: 'Verify student presence on campus' },
+          { id: 'rec_inq', type: 'page', color: 'blue', label: 'Admission Leads', sub: 'Walk-In CRM Pipeline', x: 320, y: 380, route: '/receptionist/inquiries', role: 'receptionist', purpose: 'Capture walk-in inquiries, schedule campus tours, track follow-up calls, convert to applicant.', entry: 'Sidebar -> Admission Leads', exit: 'Add Lead, Convert to Admission', apis: ['GET /api/receptionist/inquiries', 'POST /api/receptionist/inquiries'], db: ['AdmissionInquiries'], perms: ['receptionist.inquiries'], blocker: 'Lead already converted', unblocker: 'Open student profile' },
+          { id: 'rec_fees', type: 'page', color: 'orange', label: 'Counter Fee Desk', sub: 'Walk-in Cash Collection', x: 580, y: 250, route: '/receptionist/fees', role: 'receptionist', purpose: 'Spot collection of tuition fees, uniform/book charges; instant print of thermal cash receipt.', entry: 'Sidebar -> Counter Fee Desk', exit: 'Record Payment', apis: ['POST /api/billing/pay-counter'], db: ['Transactions', 'Invoices'], perms: ['receptionist.fees'], blocker: 'Student invoice not found', unblocker: 'Verify admission roll number' },
+        ],
+        edges: [
+          { from: 'rec_dash', to: 'rec_vis', label: 'LOG VISITOR', type: 'nav' },
+          { from: 'rec_dash', to: 'rec_gate', label: 'ISSUE PASS', type: 'nav' },
+          { from: 'rec_dash', to: 'rec_inq', label: 'RECORD LEAD', type: 'nav' },
+          { from: 'rec_dash', to: 'rec_fees', label: 'COLLECT FEE', type: 'nav' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // MODULE: ADMISSION & STUDENT DOSSIER
+      // -------------------------------------------------------------
+      mod_admission: {
+        title: 'Admissions & 360° Dossier Architecture',
+        subtitle: 'Lead Generation, Verification, Enrollment & Cumulative Archive',
+        nodes: [
+          { id: 'ad_pub', type: 'page', color: 'blue', label: 'Public Admission Form', sub: 'Mobile Responsive Portal', x: 80, y: 250, route: '/apply/:schoolCode', role: 'public', purpose: 'External application form for prospective parents; class selection, student bio, document upload.', entry: 'School Website / WhatsApp Link', exit: 'Submit Application', apis: ['GET /api/public/classes/{code}', 'POST /api/public/apply'], db: ['Students (Pending)'], perms: ['Anonymous'], blocker: 'Exceeded rate limit (>10/hr per IP)', unblocker: 'Wait 1 hour or submit from distinct IP' },
+          { id: 'ad_desk', type: 'page', color: 'blue', label: 'Admissions Desk', sub: 'School Admin Review', x: 320, y: 250, route: '/school-admin/admission', role: 'schooladmin', purpose: 'Review incoming applications, schedule parent interviews, verify birth certificate & Aadhaar.', entry: 'Sidebar -> Admission', exit: 'Approve / Reject / Enroll', apis: ['GET /api/public/applications', 'PUT /api/public/applications/{id}/status'], db: ['Students'], perms: ['schooladmin.admission'], blocker: 'Mandatory documents missing', unblocker: 'Upload birth certificate' },
+          { id: 'ad_enroll', type: 'decision', color: 'green', label: 'Enroll Student?', sub: 'Capacity & Fee Setup', x: 560, y: 250, route: 'POST /api/academics/onboard-student', role: 'schooladmin', purpose: 'Generates permanent Admission Number; assigns Section, Roll No; generates initial admission invoice.', entry: 'Click "Enroll"', exit: 'YES -> Student Directory / NO -> Lead Rejected', apis: ['POST /api/academics/onboard-student'], db: ['Students', 'Enrollments', 'Invoices'], perms: ['schooladmin'], blocker: 'Class capacity limit reached', unblocker: 'Increase capacity in Academic Setup' },
+          { id: 'ad_dossier', type: 'page', color: 'blue', label: 'Student 360° Dossier', sub: '20-Year Archive', x: 800, y: 250, route: '/school-admin/student-dossier', role: 'schooladmin', purpose: 'Comprehensive longitudinal archive across multiple academic sessions with tamper-evident audit logs.', entry: 'Sidebar -> Student Dossier', exit: 'View History, Clear Dues, TC', apis: ['GET /api/academics/student-dossier/{id}'], db: ['Students', 'ExamResults', 'Attendances'], perms: ['schooladmin.student_dossier'], blocker: 'None', unblocker: 'N/A' },
+          { id: 'ad_tc_check', type: 'decision', color: 'yellow', label: 'Clearance Check', sub: 'Financial & Library Gate', x: 1040, y: 250, route: 'GET /api/academics/students/{id}/clearance', role: 'schooladmin', purpose: 'Verifies zero unpaid fee invoices and zero unreturned library books before Transfer Certificate issuance.', entry: 'Click "Generate TC"', exit: 'CLEAR -> Issue TC / DUES -> Block', apis: ['GET /api/academics/students/{id}/clearance'], db: ['Invoices', 'LibraryTransactions'], perms: ['schooladmin'], blocker: 'Pending fee balance > ₹0 or unreturned book', unblocker: 'Settle dues in billing counter / return books' },
+          { id: 'ad_tc_gen', type: 'page', color: 'green', label: 'Transfer Certificate (TC)', sub: 'QR Verified Security PDF', x: 1280, y: 250, route: 'TC Document', role: 'schooladmin', purpose: 'Generates formal Transfer Certificate with cryptographic Aadhaar hash and verification QR code.', entry: 'Clearance check PASS', exit: 'Download TC PDF', apis: ['POST /api/academics/students/{id}/generate-tc'], db: ['Students'], perms: ['schooladmin'], blocker: 'None', unblocker: 'N/A' },
+        ],
+        edges: [
+          { from: 'ad_pub', to: 'ad_desk', label: 'SUBMIT', type: 'nav' },
+          { from: 'ad_desk', to: 'ad_enroll', label: 'REVIEWED', type: 'nav' },
+          { from: 'ad_enroll', to: 'ad_dossier', label: 'ENROLLED', type: 'success' },
+          { from: 'ad_dossier', to: 'ad_tc_check', label: 'REQUEST TC', type: 'nav' },
+          { from: 'ad_tc_check', to: 'ad_dossier', label: 'DUES PENDING', type: 'failure' },
+          { from: 'ad_tc_check', to: 'ad_tc_gen', label: 'CLEARED', type: 'success' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // MODULE: FEES & BILLING
+      // -------------------------------------------------------------
+      mod_fees: {
+        title: 'Fees & Billing Architecture',
+        subtitle: 'Invoicing, Online Gateways, Counter Cash & Tally Accounting',
+        nodes: [
+          { id: 'f_struct', type: 'page', color: 'blue', label: 'Fee Structure Setup', sub: 'Tuition, Lab, Transport', x: 80, y: 250, route: '/school-admin/fees', role: 'schooladmin', purpose: 'Define periodic fee heads, discounts (sibling, merit), and due date schedules per class.', entry: 'Sidebar -> Fees Overview', exit: 'Save Structure', apis: ['POST /api/billing/structures'], db: ['FeeStructures'], perms: ['schooladmin.fees'], blocker: 'Invalid amount or overlapping structure', unblocker: 'Correct monetary values' },
+          { id: 'f_gen', type: 'api', color: 'orange', label: 'Invoice Engine', sub: 'Bulk Generation Engine', x: 320, y: 250, route: 'POST /api/billing/generate', role: 'system', purpose: 'Generates monthly/quarterly invoices for all enrolled students with automated late fee calculation.', entry: 'Admin triggers "Generate Invoices"', exit: 'Invoices created in DB', apis: ['POST /api/billing/generate'], db: ['Invoices'], perms: ['schooladmin'], blocker: 'Invoices already generated for period', unblocker: 'Edit individual invoice' },
+          { id: 'f_collect', type: 'decision', color: 'orange', label: 'Payment Channel?', sub: 'Online Gateway vs Counter', x: 560, y: 250, route: 'Billing Hub', role: 'all', purpose: 'Routes payment execution through student portal (Razorpay) or front desk counter (Cash/POS).', entry: 'Invoice generated', exit: 'Online Gateway OR Counter Desk', apis: ['None'], db: ['Invoices'], perms: ['All'], blocker: 'None', unblocker: 'N/A' },
+          { id: 'f_online', type: 'page', color: 'green', label: 'Razorpay Online Gateway', sub: 'UPI, NetBanking, Cards', x: 800, y: 140, route: 'Student Portal / Checkout', role: 'student', purpose: 'Secure client-side checkout modal; signature verification on backend; instant invoice status update.', entry: 'Student clicks "Pay Now"', exit: 'Success Callback', apis: ['POST /api/billing/create-order', 'POST /api/billing/verify-payment'], db: ['Transactions', 'Invoices'], perms: ['student.fees'], blocker: 'Payment failed at bank', unblocker: 'Retry with alternate card / UPI' },
+          { id: 'f_counter', type: 'page', color: 'green', label: 'Spot Counter Desk', sub: 'Front Desk / Cashier', x: 800, y: 360, route: '/receptionist/fees', role: 'receptionist', purpose: 'Receptionist or Account Manager collects cash/cheque, enters transaction, prints thermal receipt.', entry: 'Parent visits counter', exit: 'Print Thermal Receipt', apis: ['POST /api/billing/pay-counter'], db: ['Transactions', 'Invoices'], perms: ['receptionist.fees', 'account.billing'], blocker: 'Overpayment or underpayment mismatch', unblocker: 'Enter exact collected amount' },
+          { id: 'f_receipt', type: 'page', color: 'green', label: 'Receipt & Accounting', sub: 'PDF Voucher & Tally XML', x: 1060, y: 250, route: 'Receipt Desk', role: 'all', purpose: 'Generates digital tax invoice and prepares voucher entries for Tally XML export.', entry: 'Successful payment', exit: 'Tally XML Sync', apis: ['GET /api/billing/receipt/{id}', 'GET /api/tally/export'], db: ['Transactions'], perms: ['All'], blocker: 'None', unblocker: 'N/A' },
+        ],
+        edges: [
+          { from: 'f_struct', to: 'f_gen', label: 'ASSIGN', type: 'nav' },
+          { from: 'f_gen', to: 'f_collect', label: 'ISSUED', type: 'success' },
+          { from: 'f_collect', to: 'f_online', label: 'ONLINE', type: 'nav' },
+          { from: 'f_collect', to: 'f_counter', label: 'OFFLINE / CASH', type: 'nav' },
+          { from: 'f_online', to: 'f_receipt', label: 'VERIFIED', type: 'success' },
+          { from: 'f_counter', to: 'f_receipt', label: 'COLLECTED', type: 'success' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // MODULE: EXAMS & RESULTS
+      // -------------------------------------------------------------
+      mod_exams: {
+        title: 'Exams & Results Architecture',
+        subtitle: 'Datesheet Scheduling, Marks Entry, Moderation & Report Cards',
+        nodes: [
+          { id: 'ex_setup', type: 'page', color: 'blue', label: 'Exam Configuration', sub: 'Exam Types & Datesheet', x: 80, y: 250, route: '/school-admin/exams', role: 'schooladmin', purpose: 'Setup Unit Tests, Mid-Terms, Finals; define passing marks and maximum marks per subject.', entry: 'Sidebar -> Exams', exit: 'Create Datesheet', apis: ['POST /api/exams', 'POST /api/academics/exam-types'], db: ['Exams', 'ExamTypes'], perms: ['schooladmin.exams'], blocker: 'Subject missing in class curriculum', unblocker: 'Add subject to class first' },
+          { id: 'ex_entry', type: 'page', color: 'purple', label: 'Teacher Marks Entry', sub: 'Subject Teacher Evaluation', x: 340, y: 250, route: '/teacher/marks', role: 'teacher', purpose: 'Subject teacher inputs marks obtained for each student; validation prevents marks > MaxMarks.', entry: 'Sidebar -> Marks Entry', exit: 'Save Marks', apis: ['POST /api/academics/classes/{id}/save-marks'], db: ['ExamResults'], perms: ['teacher.marks'], blocker: 'Entered marks exceed maximum marks', unblocker: 'Enter marks within valid range' },
+          { id: 'ex_mod', type: 'decision', color: 'yellow', label: 'Admin Moderation', sub: 'Approval & Result Review', x: 600, y: 250, route: 'Exams Moderation Desk', role: 'schooladmin', purpose: 'School Admin reviews submitted marks for anomalies, grace marks, or discrepancies.', entry: 'Teacher completes submission', exit: 'APPROVE -> Publish / REJECT -> Deny', apis: ['POST /api/academics/classes/{id}/deny-marks'], db: ['Classes'], perms: ['schooladmin'], blocker: 'Unsubmitted subjects pending', unblocker: 'Prompt remaining teachers to submit' },
+          { id: 'ex_pub', type: 'page', color: 'green', label: 'Results Publication', sub: 'Lock & Publish to Portal', x: 860, y: 250, route: 'POST /api/academics/classes/{id}/publish-marks', role: 'schooladmin', purpose: 'Locks marks entry; marks IsResultsPublished=true; triggers student portal visibility.', entry: 'Admin clicks "Publish Results"', exit: 'Report Card Generation', apis: ['POST /api/academics/classes/{id}/publish-marks'], db: ['Classes'], perms: ['schooladmin'], blocker: 'None', unblocker: 'N/A' },
+          { id: 'ex_card', type: 'page', color: 'green', label: 'Report Card PDF', sub: 'Official Printed Transcript', x: 1120, y: 250, route: '/student/results', role: 'student', purpose: 'Official CBSE/State board format report card with grading scale, remarks, and school crest.', entry: 'Student/Parent clicks "View Report Card"', exit: 'Print Transcript', apis: ['GET /api/exams/results/student/{id}'], db: ['ExamResults'], perms: ['student.results'], blocker: 'Results not yet published', unblocker: 'Wait for admin publication' },
+        ],
+        edges: [
+          { from: 'ex_setup', to: 'ex_entry', label: 'SCHEDULED', type: 'nav' },
+          { from: 'ex_entry', to: 'ex_mod', label: 'SUBMITTED', type: 'nav' },
+          { from: 'ex_mod', to: 'ex_entry', label: 'DENIED / REVISE', type: 'failure' },
+          { from: 'ex_mod', to: 'ex_pub', label: 'APPROVED', type: 'success' },
+          { from: 'ex_pub', to: 'ex_card', label: 'PUBLISHED', type: 'success' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // HRM & PAYROLL DEEP-DIVE FLOW
+      // -------------------------------------------------------------
+      hrm_deep: {
+        title: 'HRM & Payroll Engine Architecture',
+        subtitle: 'Statutory Compliance (PF/ESI/PT/TDS), Attendance Sync & Payroll Disbursal',
+        nodes: [
+          { id: 'hrm_stat', type: 'page', color: 'orange', label: 'Statutory Rules Engine', sub: 'PF, ESI, PT, TDS Configuration', x: 80, y: 250, route: '/super-admin/schools/:schoolId/hrm', role: 'superadmin', purpose: 'Platform configuration for EPF (12%), ESIC (0.75%), Professional Tax slab brackets, and TDS calculation rules.', entry: 'SuperAdmin -> Schools -> HRM', exit: 'Save Configuration', apis: ['POST /api/superadmin/hrm/{schoolId}'], db: ['StatutoryConfigurations'], perms: ['superadmin'], blocker: 'Invalid tax bracket percentages', unblocker: 'Set valid statutory percentage rates' },
+          { id: 'hrm_struct', type: 'page', color: 'blue', label: 'Salary Structure Master', sub: 'Basic, Allowances, CTC', x: 320, y: 250, route: '/account/salary-rules', role: 'accountmanager', purpose: 'Create salary templates: Basic Salary (50%), HRA (20%), Special Allowance, EPF, and ESIC.', entry: 'Account -> Salary Rules', exit: 'Assign to Employees', apis: ['POST /api/hrm/salary-structures'], db: ['SalaryStructures', 'SalaryStructureComponents'], perms: ['account.salary_rules'], blocker: 'Basic + Allowances != CTC', unblocker: 'Balance component values' },
+          { id: 'hrm_att_sync', type: 'api', color: 'green', label: 'Attendance Sync Engine', sub: 'Days Worked & LWP Computation', x: 560, y: 250, route: 'POST /api/hrm/payroll/sync-attendance', role: 'system', purpose: 'Aggregates punch logs, approved leaves, and unexcused absences to compute billable days vs LWP deductions.', entry: 'Payroll batch initialization', exit: 'Attendance snapshots created', apis: ['POST /api/hrm/payroll/sync-attendance'], db: ['AttendanceSyncRecords', 'LeaveRequests'], perms: ['accountmanager'], blocker: 'Unapproved leave requests pending', unblocker: 'Approve or reject pending leaves' },
+          { id: 'hrm_pay_run', type: 'page', color: 'purple', label: 'Monthly Payroll Run', sub: 'Net Salary Computation', x: 800, y: 250, route: '/account/salaries', role: 'accountmanager', purpose: 'Computes Gross Earnings, Statutory Deductions, and Net Pay for all active employees.', entry: 'Account -> Salaries', exit: 'Approve Payroll', apis: ['POST /api/hrm/payroll/calculate'], db: ['Payrolls', 'SalaryRecords'], perms: ['account.salaries'], blocker: 'Payroll already run for this month', unblocker: 'Roll back or edit payroll' },
+          { id: 'hrm_slip', type: 'page', color: 'green', label: 'Payslip & Disbursal', sub: 'Bank NEFT Export & Slip PDF', x: 1040, y: 250, route: 'Payslip View', role: 'all', purpose: 'Generates bank NEFT salary disbursal CSV and encrypted employee payslips.', entry: 'Payroll approved', exit: 'Download Payslip', apis: ['GET /api/hrm/payslip/{id}'], db: ['SalaryRecords'], perms: ['accountmanager', 'teacher'], blocker: 'None', unblocker: 'N/A' },
+        ],
+        edges: [
+          { from: 'hrm_stat', to: 'hrm_struct', label: 'STATUTORY RULES', type: 'nav' },
+          { from: 'hrm_struct', to: 'hrm_att_sync', label: 'APPLIED', type: 'nav' },
+          { from: 'hrm_att_sync', to: 'hrm_pay_run', label: 'DAYS SYNCED', type: 'success' },
+          { from: 'hrm_pay_run', to: 'hrm_slip', label: 'DISBURSED', type: 'success' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // ERROR & RECOVERY MASTER FLOW
+      // -------------------------------------------------------------
+      error_recovery: {
+        title: 'Error & Recovery Master Flow',
+        subtitle: 'Multi-Layered Interception, Diagnostic Failure & Self-Healing Paths',
+        nodes: [
+          { id: 'err_act', type: 'page', color: 'blue', label: 'User Action', sub: 'Form Submit / Page Open', x: 80, y: 300, route: 'Any Client View', role: 'all', purpose: 'User triggers navigation or submits data.', entry: 'Browser', exit: 'Validation Layer', apis: ['Any'], db: ['Any'], perms: ['All'], blocker: 'None', unblocker: 'N/A' },
+          { id: 'err_val', type: 'decision', color: 'yellow', label: 'Validation Pass?', sub: 'Client & DTO Data Integrity', x: 280, y: 300, route: 'FluentValidation / Schema', role: 'client/api', purpose: 'Validates non-empty strings, email formatting, date ranges, duplicate rolls.', entry: 'Action initiated', exit: 'PASS -> Auth / FAIL -> Inline Error', apis: ['Model Validation'], db: ['None'], perms: ['All'], blocker: 'Missing mandatory field / invalid format', unblocker: 'Correct form input' },
+          { id: 'err_auth', type: 'decision', color: 'purple', label: 'Auth & JWT Valid?', sub: 'Token Expiry & Signature', x: 500, y: 300, route: 'JwtBearerHandler', role: 'server', purpose: 'Validates JWT cryptographic signature against JWT_SECRET and checks token expiration.', entry: 'Validation pass', exit: 'PASS -> Tenant / FAIL -> 401 Redirect', apis: ['AddJwtBearer()'], db: ['None'], perms: ['All'], blocker: 'Token expired (>7 days) or missing', unblocker: 'Axios interceptor clears storage and redirects to /login' },
+          { id: 'err_tnt', type: 'decision', color: 'orange', label: 'Tenant Scoped?', sub: 'SchoolId Boundary Guard', x: 720, y: 300, route: 'GetSchoolId() / Global Filter', role: 'server', purpose: 'Extracts schoolId from claims; verifies school status is "Active"; enforces EF Core query filter.', entry: 'Auth pass', exit: 'PASS -> API Execution / FAIL -> 403 Block', apis: ['UnitOfWork'], db: ['Schools'], perms: ['All'], blocker: 'School suspended or cross-school access attempt', unblocker: 'Renew subscription / scope request to own school' },
+          { id: 'err_exec', type: 'decision', color: 'blue', label: 'Database Execution?', sub: 'PostgreSQL Transactions', x: 940, y: 300, route: 'SaveChangesAsync()', role: 'server', purpose: 'Executes relational query or commit with retry-on-failure policy (max 5 retries).', entry: 'Tenant pass', exit: 'PASS -> 200 OK / FAIL -> 500 Error', apis: ['DbContext'], db: ['PostgreSQL'], perms: ['All'], blocker: 'Foreign key constraint violation / DB offline', unblocker: 'Resolve dependent entity or reconnect database' },
+          { id: 'err_ok', type: 'page', color: 'green', label: 'Operation Success', sub: 'UI Feedback & Next Action', x: 1180, y: 300, route: 'Destination View', role: 'all', purpose: 'Shows green success toast, updates state, and advances to next navigation destination.', entry: 'DB execution pass', exit: 'Normal application flow', apis: ['200 OK'], db: ['Committed'], perms: ['All'], blocker: 'None', unblocker: 'N/A' },
+
+          { id: 'err_ui_fix', type: 'page', color: 'red', label: 'Form Error Feedback', sub: 'Inline Highlight', x: 280, y: 120, route: 'Form State', role: 'all', purpose: 'Highlights error input fields with red helper text.', entry: 'Validation failure', exit: 'User fixes input', apis: ['None'], db: ['None'], perms: ['All'], blocker: 'Unfixed errors', unblocker: 'User corrects input' },
+          { id: 'err_login_red', type: 'page', color: 'red', label: 'Session Expiry Redirect', sub: 'Purge & Relogin', x: 500, y: 120, route: '/login', role: 'all', purpose: 'Purges localStorage and prompts user for credentials.', entry: 'Auth failure (401)', exit: 'Re-authenticate', apis: ['POST /api/auth/login'], db: ['Users'], perms: ['All'], blocker: 'User lacks credentials', unblocker: 'User enters credentials' },
+          { id: 'err_susp_scr', type: 'page', color: 'red', label: 'Suspension Screen', sub: 'Account Locked Banner', x: 720, y: 120, route: '/maintenance', role: 'all', purpose: 'Displays account locked / maintenance warning message.', entry: 'Tenant failure (403/503)', exit: 'Contact Admin', apis: ['GET /api/auth/settings'], db: ['PlatformSettings'], perms: ['All'], blocker: 'School suspended', unblocker: 'Contact Super Admin for renewal' },
+        ],
+        edges: [
+          { from: 'err_act', to: 'err_val', label: 'EXECUTE', type: 'nav' },
+          { from: 'err_val', to: 'err_ui_fix', label: 'INVALID', type: 'failure' },
+          { from: 'err_ui_fix', to: 'err_val', label: 'RETRY', type: 'warning' },
+          { from: 'err_val', to: 'err_auth', label: 'VALID', type: 'success' },
+          
+          { from: 'err_auth', to: 'err_login_red', label: '401 UNAUTHORIZED', type: 'failure' },
+          { from: 'err_login_red', to: 'err_auth', label: 'RE-LOGIN', type: 'success' },
+          { from: 'err_auth', to: 'err_tnt', label: 'AUTHORIZED', type: 'success' },
+
+          { from: 'err_tnt', to: 'err_susp_scr', label: '403 FORBIDDEN', type: 'failure' },
+          { from: 'err_tnt', to: 'err_exec', label: 'ACTIVE TENANT', type: 'success' },
+
+          { from: 'err_exec', to: 'err_ok', label: '200 COMMITTED', type: 'success' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // API ARCHITECTURE FLOW
+      // -------------------------------------------------------------
+      api_flow: {
+        title: 'API Architecture & Middleware Pipeline',
+        subtitle: 'Client Axios &rarr; Rate Limiter &rarr; JWT Auth &rarr; Controller &rarr; PostgreSQL / Express Mongo',
+        nodes: [
+          { id: 'api_client', type: 'page', color: 'blue', label: 'React Axios Client', sub: 'apiClient & expressClient', x: 80, y: 250, route: 'apiClient.js', role: 'client', purpose: 'Injects Bearer token in headers; intercepts 401s for login redirection.', entry: 'Component API call', exit: 'HTTP Request', apis: ['Axios Interceptors'], db: ['None'], perms: ['All'], blocker: 'CORS policy violation', unblocker: 'Origin whitelisted in ALLOWED_ORIGINS' },
+          { id: 'api_rate', type: 'decision', color: 'yellow', label: 'Rate Limiter', sub: 'AspNetCore.RateLimiting', x: 300, y: 250, route: 'RateLimiter Middleware', role: 'server', purpose: 'Enforces fixed window limits: 300/min general, 15/min strict auth, 10/hr admissions.', entry: 'Incoming HTTP request', exit: 'PASS -> JWT Auth / EXCEEDED -> 429', apis: ['Status 429 Too Many Requests'], db: ['MemoryCache'], perms: ['All'], blocker: 'Rapid automated requests', unblocker: 'Back off request rate' },
+          { id: 'api_jwt', type: 'decision', color: 'purple', label: 'JWT Authentication', sub: 'Microsoft.AspNetCore.Authentication', x: 520, y: 250, route: 'UseAuthentication()', role: 'server', purpose: 'Validates HMAC-SHA256 signature using centralized JWT_SECRET.', entry: 'Rate limiter pass', exit: 'PASS -> Controller / FAIL -> 401', apis: ['JwtBearerDefaults'], db: ['None'], perms: ['All'], blocker: 'Invalid token signature', unblocker: 'Re-authenticate on /login' },
+          { id: 'api_ctrl', type: 'page', color: 'blue', label: '.NET 8/9 Controllers', sub: '18 Modular Controllers', x: 740, y: 150, route: 'EduVault.Api/Controllers', role: 'server', purpose: 'Handles business logic across Academics, Billing, Exams, HRM, RBAC, etc.', entry: 'JWT pass', exit: 'Unit of Work -> DB', apis: ['268 API Endpoints'], db: ['EduVaultDbContext'], perms: ['Authorized'], blocker: 'Unhandled exception', unblocker: 'ExceptionHandler middleware logs traceId' },
+          { id: 'api_express', type: 'page', color: 'orange', label: 'Express Aux Service', sub: 'Node.js on Port 5005', x: 740, y: 350, route: 'EduVault.Express/server.js', role: 'server', purpose: 'Handles real-time chat, notifications, remarks feeds, homework files, teacher punch-in.', entry: 'JWT pass', exit: 'Mongoose / Socket.io', apis: ['28 Auxiliary Endpoints'], db: ['MongoDB'], perms: ['Authorized'], blocker: 'Express service down', unblocker: 'Run npm run dev:express' },
+          { id: 'api_pg', type: 'database', color: 'blue', label: 'PostgreSQL Relational DB', sub: '50+ Entity Framework Tables', x: 980, y: 150, route: 'PostgreSQL Server', role: 'database', purpose: 'Persistent multi-tenant storage for schools, users, fees, exams, students.', entry: 'EF Core DbContext', exit: 'SQL Result', apis: ['Npgsql Driver'], db: ['PostgreSQL'], perms: ['Database'], blocker: 'Connection pool timeout', unblocker: 'EnableRetryOnFailure policy handles transient drops' },
+          { id: 'api_mongo', type: 'database', color: 'green', label: 'MongoDB Document DB', sub: 'Mongoose Schemas', x: 980, y: 350, route: 'MongoDB Server', role: 'database', purpose: 'High-write storage for audit logs, real-time chats, notices, punch-ins.', entry: 'Mongoose Driver', exit: 'Document Result', apis: ['Mongoose ODM'], db: ['MongoDB'], perms: ['Database'], blocker: 'Mongo disconnected', unblocker: 'Connect to active MongoDB URI' },
+        ],
+        edges: [
+          { from: 'api_client', to: 'api_rate', label: 'HTTP CALL', type: 'nav' },
+          { from: 'api_rate', to: 'api_jwt', label: 'RATE OK', type: 'success' },
+          { from: 'api_jwt', to: 'api_ctrl', label: ':5265 (.NET)', type: 'nav' },
+          { from: 'api_jwt', to: 'api_express', label: ':5005 (Express)', type: 'nav' },
+          { from: 'api_ctrl', to: 'api_pg', label: 'EF CORE', type: 'success' },
+          { from: 'api_express', to: 'api_mongo', label: 'MONGOOSE', type: 'success' },
+        ]
+      },
+
+      // -------------------------------------------------------------
+      // DATA & TENANT ISOLATION FLOW
+      // -------------------------------------------------------------
+      data_flow: {
+        title: 'Data Flow & Multi-Tenant Boundaries',
+        subtitle: 'Cryptographic & Relational Isolation Between Independent School Enclaves',
+        nodes: [
+          { id: 'tnt_req', type: 'page', color: 'purple', label: 'Incoming Request', sub: 'Bearer JWT Header', x: 80, y: 250, route: 'Any Scoped Endpoint', role: 'all', purpose: 'Carries user credentials and target operation.', entry: 'Client Browser', exit: 'Tenant Context Extractor', apis: ['Bearer Token'], db: ['None'], perms: ['All'], blocker: 'Missing Authorization header', unblocker: 'Include Bearer {token}' },
+          { id: 'tnt_ext', type: 'decision', color: 'purple', label: 'Extract SchoolId', sub: 'Token Claim vs Param', x: 300, y: 250, route: 'GetSchoolId()', role: 'server', purpose: 'Extracts Guid from "schoolId" JWT claim. If SuperAdmin, reads ?schoolId= query param.', entry: 'Incoming request', exit: 'Scoped School Guid', apis: ['ClaimTypes'], db: ['None'], perms: ['All'], blocker: 'Empty schoolId claim for regular user', unblocker: '401 Unauthorized' },
+          { id: 'tnt_sch_a', type: 'database', color: 'blue', label: 'School A Enclave', sub: 'SchoolId: a1b2c3d4...', x: 600, y: 140, route: 'School A Dataset', role: 'tenant', purpose: 'Students, Teachers, Invoices, Classes belonging exclusively to School A.', entry: 'e.SchoolId == School A', exit: 'Isolated Dataset A', apis: ['EF Query Filter'], db: ['PostgreSQL'], perms: ['School A Users'], blocker: 'School B user attempts query', unblocker: 'Filtered out automatically (Empty result)' },
+          { id: 'tnt_sch_b', type: 'database', color: 'orange', label: 'School B Enclave', sub: 'SchoolId: e5f6g7h8...', x: 600, y: 360, route: 'School B Dataset', role: 'tenant', purpose: 'Students, Teachers, Invoices, Classes belonging exclusively to School B.', entry: 'e.SchoolId == School B', exit: 'Isolated Dataset B', apis: ['EF Query Filter'], db: ['PostgreSQL'], perms: ['School B Users'], blocker: 'School A user attempts query', unblocker: 'Filtered out automatically (Empty result)' },
+          { id: 'tnt_barrier', type: 'decision', color: 'red', label: 'Cross-Tenant Access Barrier', sub: 'Zero Cross-School Leakage', x: 850, y: 250, route: 'Security Enforcement', role: 'system', purpose: 'Enforces mathematical and relational guarantee that School A CANNOT view or edit School B records.', entry: 'Query execution', exit: '100% Tenant Isolation', apis: ['EF Core Query Filters'], db: ['PostgreSQL'], perms: ['System'], blocker: 'Malicious query with foreign ID', unblocker: 'EF query returns 404 or empty list' },
+        ],
+        edges: [
+          { from: 'tnt_req', to: 'tnt_ext', label: 'PARSE TOKEN', type: 'nav' },
+          { from: 'tnt_ext', to: 'tnt_sch_a', label: 'School A Scope', type: 'nav' },
+          { from: 'tnt_ext', to: 'tnt_sch_b', label: 'School B Scope', type: 'nav' },
+          { from: 'tnt_sch_a', to: 'tnt_barrier', label: 'ISOLATED', type: 'success' },
+          { from: 'tnt_sch_b', to: 'tnt_barrier', label: 'ISOLATED', type: 'success' },
+        ]
+      }
+    };
+
+    // =========================================================================
+    // 2. STATE MANAGEMENT & DOM INITIALIZATION
+    // =========================================================================
+
+    let currentSectionId = 'master';
+    let currentTransform = { x: 0, y: 0, k: 1 };
+    let isPanning = false;
+    let panStart = { x: 0, y: 0 };
+    let selectedNodeId = null;
+
+    const svg = document.getElementById('flow-svg');
+    const viewportGroup = document.getElementById('viewport-group');
+    const edgesLayer = document.getElementById('edges-layer');
+    const nodesLayer = document.getElementById('nodes-layer');
+    const inspector = document.getElementById('inspector');
+    const canvasContainer = document.getElementById('canvas-container');
+    const tableViewport = document.getElementById('table-viewport');
+
+    // Populate Sidebar Navigation
+    const navListEl = document.getElementById('nav-list');
+    let navHtml = '';
+    
+    // Group 1: Core Lifecycles
+    navHtml += '<div class="nav-group-title">Master Systems</div>';
+    FLOW_SECTIONS.slice(0, 1).forEach(sec => {
+      navHtml += `
+        <div class="nav-item ${sec.id === currentSectionId ? 'active' : ''}" data-id="${sec.id}">
+          <span class="icon">${sec.icon}</span>
+          <span>${sec.name}</span>
+          <span class="badge">${sec.count}</span>
+        </div>`;
+    });
+
+    // Group 2: Role Flows
+    navHtml += '<div class="nav-group-title">Role-Wise Flows (7 Roles)</div>';
+    FLOW_SECTIONS.slice(1, 8).forEach(sec => {
+      navHtml += `
+        <div class="nav-item ${sec.id === currentSectionId ? 'active' : ''}" data-id="${sec.id}">
+          <span class="icon">${sec.icon}</span>
+          <span>${sec.name}</span>
+          <span class="badge">${sec.count}</span>
+        </div>`;
+    });
+
+    // Group 3: Module Deep Dives
+    navHtml += '<div class="nav-group-title">Module Deep-Dives</div>';
+    FLOW_SECTIONS.slice(8, 13).forEach(sec => {
+      navHtml += `
+        <div class="nav-item ${sec.id === currentSectionId ? 'active' : ''}" data-id="${sec.id}">
+          <span class="icon">${sec.icon}</span>
+          <span>${sec.name}</span>
+          <span class="badge">${sec.count}</span>
+        </div>`;
+    });
+
+    // Group 4: Architecture & Matrices
+    navHtml += '<div class="nav-group-title">Architecture & Matrices</div>';
+    FLOW_SECTIONS.slice(13).forEach(sec => {
+      navHtml += `
+        <div class="nav-item ${sec.id === currentSectionId ? 'active' : ''}" data-id="${sec.id}">
+          <span class="icon">${sec.icon}</span>
+          <span>${sec.name}</span>
+          <span class="badge">${sec.count}</span>
+        </div>`;
+    });
+
+    navListEl.innerHTML = navHtml;
+
+    // Sidebar navigation click handler
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+        const sectionId = item.getAttribute('data-id');
+        loadSection(sectionId);
+      });
+    });
+
+    function loadSection(sectionId) {
+      currentSectionId = sectionId;
+      const section = FLOW_SECTIONS.find(s => s.id === sectionId);
+      document.getElementById('current-view-name').textContent = section ? section.name : 'Flow Viewer';
+      
+      closeInspector();
+
+      if (section && section.type === 'table') {
+        canvasContainer.style.display = 'none';
+        tableViewport.style.display = 'block';
+        renderTableView(sectionId);
+      } else {
+        tableViewport.style.display = 'none';
+        canvasContainer.style.display = 'block';
+        renderGraphView(sectionId);
+        setTimeout(() => fitToScreen(), 50);
+      }
+    }
+
+    // =========================================================================
+    // 3. GRAPH RENDERING ENGINE (SVG DAG WITH BEZIER EDGES & SHAPES)
+    // =========================================================================
+
+    function getNodeColorHex(color) {
+      switch(color) {
+        case 'green': return '#10b981';
+        case 'red': return '#ef4444';
+        case 'yellow': return '#f59e0b';
+        case 'blue': return '#3b82f6';
+        case 'purple': return '#8b5cf6';
+        case 'orange': return '#f97316';
+        default: return '#6b7280';
+      }
+    }
+
+    function renderGraphView(sectionId) {
+      edgesLayer.innerHTML = '';
+      nodesLayer.innerHTML = '';
+
+      const data = FLOW_DATA[sectionId];
+      if (!data) return;
+
+      const nodeMap = new Map();
+      data.nodes.forEach(n => nodeMap.set(n.id, n));
+
+      // 1. Render Edges
+      data.edges.forEach(edge => {
+        const source = nodeMap.get(edge.from);
+        const target = nodeMap.get(edge.to);
+        if (!source || !target) return;
+
+        // Calculate connection points
+        const sx = source.x + (source.type === 'decision' ? 70 : 90);
+        const sy = source.y + 35;
+        const tx = target.x - (target.type === 'decision' ? 70 : 0);
+        const ty = target.y + 35;
+
+        const dx = tx - sx;
+        const dy = ty - sy;
+        const cx1 = sx + Math.max(40, dx * 0.45);
+        const cy1 = sy;
+        const cx2 = tx - Math.max(40, dx * 0.45);
+        const cy2 = ty;
+
+        const pathStr = `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`;
+
+        // Marker type
+        let markerId = 'arrow-default';
+        if (edge.type === 'success') markerId = 'arrow-success';
+        if (edge.type === 'failure') markerId = 'arrow-failure';
+        if (edge.type === 'warning') markerId = 'arrow-warning';
+        if (edge.type === 'nav') markerId = 'arrow-nav';
+
+        const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathEl.setAttribute('d', pathStr);
+        pathEl.setAttribute('class', `edge-line ${edge.type || 'nav'}`);
+        pathEl.setAttribute('marker-end', `url(#${markerId})`);
+        pathEl.setAttribute('data-from', edge.from);
+        pathEl.setAttribute('data-to', edge.to);
+        edgesLayer.appendChild(pathEl);
+
+        // Edge label
+        if (edge.label) {
+          const mx = (sx + tx) / 2;
+          const my = (sy + ty) / 2 - 4;
+
+          const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          labelText.setAttribute('x', mx);
+          labelText.setAttribute('y', my);
+          labelText.setAttribute('class', 'edge-label-text');
+          labelText.textContent = edge.label;
+
+          const textLen = edge.label.length * 6.5 + 14;
+          const labelRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          labelRect.setAttribute('x', mx - textLen / 2);
+          labelRect.setAttribute('y', my - 8);
+          labelRect.setAttribute('width', textLen);
+          labelRect.setAttribute('height', 16);
+          labelRect.setAttribute('class', 'edge-label-rect');
+
+          edgesLayer.appendChild(labelRect);
+          edgesLayer.appendChild(labelText);
+        }
+      });
+
+      // 2. Render Nodes
+      data.nodes.forEach(node => {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'node-group');
+        g.setAttribute('data-id', node.id);
+        g.setAttribute('data-role', node.role || 'all');
+        g.setAttribute('data-type', node.type || 'page');
+
+        const colorHex = getNodeColorHex(node.color);
+
+        if (node.type === 'decision') {
+          // Diamond shape for conditions / guards
+          const w = 150;
+          const h = 75;
+          const pathStr = `M ${node.x} ${node.y - h/2} L ${node.x + w/2} ${node.y} L ${node.x} ${node.y + h/2} L ${node.x - w/2} ${node.y} Z`;
+          
+          const diamond = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          diamond.setAttribute('d', pathStr);
+          diamond.setAttribute('fill', '#111827');
+          diamond.setAttribute('stroke', colorHex);
+          diamond.setAttribute('stroke-width', '2.5');
+          g.appendChild(diamond);
+
+          const titleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          titleText.setAttribute('x', node.x);
+          titleText.setAttribute('y', node.y - 4);
+          titleText.setAttribute('text-anchor', 'middle');
+          titleText.setAttribute('fill', '#ffffff');
+          titleText.setAttribute('font-size', '11.5px');
+          titleText.setAttribute('font-weight', '700');
+          titleText.textContent = node.label;
+          g.appendChild(titleText);
+
+          const subText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          subText.setAttribute('x', node.x);
+          subText.setAttribute('y', node.y + 13);
+          subText.setAttribute('text-anchor', 'middle');
+          subText.setAttribute('fill', '#9ca3af');
+          subText.setAttribute('font-size', '9.5px');
+          subText.textContent = node.sub || '';
+          g.appendChild(subText);
+
+        } else if (node.type === 'database') {
+          // Database cylinder-style card
+          const w = 180;
+          const h = 70;
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', node.x);
+          rect.setAttribute('y', node.y);
+          rect.setAttribute('width', w);
+          rect.setAttribute('height', h);
+          rect.setAttribute('rx', '14');
+          rect.setAttribute('fill', '#111827');
+          rect.setAttribute('stroke', colorHex);
+          rect.setAttribute('stroke-width', '2');
+          rect.setAttribute('stroke-dasharray', '5,3');
+          g.appendChild(rect);
+
+          const dbTag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          dbTag.setAttribute('x', node.x + 14);
+          dbTag.setAttribute('y', node.y + 22);
+          dbTag.setAttribute('fill', colorHex);
+          dbTag.setAttribute('font-size', '12px');
+          dbTag.textContent = '🗄️';
+          g.appendChild(dbTag);
+
+          const titleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          titleText.setAttribute('x', node.x + 38);
+          titleText.setAttribute('y', node.y + 24);
+          titleText.setAttribute('fill', '#ffffff');
+          titleText.setAttribute('font-size', '12px');
+          titleText.setAttribute('font-weight', '700');
+          titleText.textContent = node.label;
+          g.appendChild(titleText);
+
+          const subText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          subText.setAttribute('x', node.x + 14);
+          subText.setAttribute('y', node.y + 50);
+          subText.setAttribute('fill', '#9ca3af');
+          subText.setAttribute('font-size', '10px');
+          subText.textContent = node.sub || '';
+          g.appendChild(subText);
+
+        } else {
+          // Standard Page / API node (Rounded Glassmorphic Rect)
+          const w = 180;
+          const h = 70;
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', node.x);
+          rect.setAttribute('y', node.y);
+          rect.setAttribute('width', w);
+          rect.setAttribute('height', h);
+          rect.setAttribute('rx', '10');
+          rect.setAttribute('fill', '#111827');
+          rect.setAttribute('stroke', colorHex);
+          rect.setAttribute('stroke-width', '2');
+          g.appendChild(rect);
+
+          // Top accent strip
+          const accent = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          accent.setAttribute('d', `M ${node.x + 2} ${node.y + 10} A 8 8 0 0 1 ${node.x + 10} ${node.y + 2} L ${node.x + w - 10} ${node.y + 2} A 8 8 0 0 1 ${node.x + w - 2} ${node.y + 10} Z`);
+          accent.setAttribute('fill', colorHex);
+          accent.setAttribute('opacity', '0.35');
+          g.appendChild(accent);
+
+          const titleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          titleText.setAttribute('x', node.x + 14);
+          titleText.setAttribute('y', node.y + 30);
+          titleText.setAttribute('fill', '#ffffff');
+          titleText.setAttribute('font-size', '12.5px');
+          titleText.setAttribute('font-weight', '700');
+          titleText.textContent = node.label;
+          g.appendChild(titleText);
+
+          const subText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          subText.setAttribute('x', node.x + 14);
+          subText.setAttribute('y', node.y + 50);
+          subText.setAttribute('fill', '#9ca3af');
+          subText.setAttribute('font-size', '10.5px');
+          subText.textContent = node.sub || '';
+          g.appendChild(subText);
+        }
+
+        // Node click opens Inspector
+        g.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectNode(node);
+        });
+
+        nodesLayer.appendChild(g);
+      });
+    }
+
+    // =========================================================================
+    // 4. NODE SELECTION & DETAIL INSPECTOR
+    // =========================================================================
+
+    function selectNode(node) {
+      selectedNodeId = node.id;
+      
+      // Update SVG node classes
+      document.querySelectorAll('.node-group').forEach(g => {
+        g.classList.toggle('selected', g.getAttribute('data-id') === node.id);
+      });
+
+      // Highlight connecting edges
+      document.querySelectorAll('.edge-line').forEach(line => {
+        const from = line.getAttribute('data-from');
+        const to = line.getAttribute('data-to');
+        line.classList.toggle('highlighted', from === node.id || to === node.id);
+      });
+
+      // Populate Inspector
+      document.getElementById('insp-title').textContent = node.label;
+      const typeBadge = document.getElementById('insp-type-badge');
+      typeBadge.textContent = (node.type || 'Page Node').toUpperCase();
+      typeBadge.style.background = getNodeColorHex(node.color) + '25';
+      typeBadge.style.color = getNodeColorHex(node.color);
+
+      document.getElementById('insp-route').textContent = node.route || 'N/A';
+      document.getElementById('insp-purpose').textContent = node.purpose || 'No description available.';
+      document.getElementById('insp-entry').textContent = node.entry || 'N/A';
+      document.getElementById('insp-exit').textContent = node.exit || 'N/A';
+
+      // Roles
+      const rolesEl = document.getElementById('insp-roles');
+      const roles = Array.isArray(node.role) ? node.role : [node.role || 'all'];
+      rolesEl.innerHTML = roles.map(r => `<span class="tag purple">${r}</span>`).join('');
+
+      // APIs
+      const apisEl = document.getElementById('insp-apis');
+      const apis = node.apis || ['N/A'];
+      apisEl.innerHTML = apis.map(a => `<span class="tag blue">${a}</span>`).join('');
+
+      // Database
+      const dbEl = document.getElementById('insp-database');
+      const db = node.db || ['None'];
+      dbEl.innerHTML = db.map(d => `<span class="tag green">${d}</span>`).join('');
+
+      // Permissions
+      const permsEl = document.getElementById('insp-permissions');
+      const perms = node.perms || ['None'];
+      permsEl.innerHTML = perms.map(p => `<span class="tag orange">${p}</span>`).join('');
+
+      // Blockers
+      const blockerEl = document.getElementById('insp-blocker-wrap');
+      blockerEl.innerHTML = node.blocker ? `
+        <div class="blocker-box">
+          <h4>🛑 Potential Blocker</h4>
+          <p>${node.blocker}</p>
+        </div>` : '<div class="meta-content">No active blockers identified.</div>';
+
+      // Unblockers
+      const unblockerEl = document.getElementById('insp-unblocker-wrap');
+      unblockerEl.innerHTML = node.unblocker ? `
+        <div class="unblocker-box">
+          <h4>✅ Resolution / Unblocker</h4>
+          <p>${node.unblocker}</p>
+        </div>` : '<div class="meta-content">Standard operational flow.</div>';
+
+      inspector.classList.add('open');
+    }
+
+    function closeInspector() {
+      inspector.classList.remove('open');
+      selectedNodeId = null;
+      document.querySelectorAll('.node-group').forEach(g => g.classList.remove('selected'));
+      document.querySelectorAll('.edge-line').forEach(line => line.classList.remove('highlighted'));
+    }
+
+    document.getElementById('btn-close-inspector').addEventListener('click', closeInspector);
+    svg.addEventListener('click', (e) => {
+      if (e.target === svg || e.target.id === 'viewport-group') {
+        closeInspector();
+      }
+    });
+
+    // =========================================================================
+    // 5. PAN & ZOOM ENGINE
+    // =========================================================================
+
+    function updateTransform() {
+      viewportGroup.setAttribute('transform', `translate(${currentTransform.x}, ${currentTransform.y}) scale(${currentTransform.k})`);
+      document.getElementById('zoom-text').textContent = `${Math.round(currentTransform.k * 100)}%`;
+    }
+
+    canvasContainer.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.node-group')) return;
+      isPanning = true;
+      panStart = { x: e.clientX - currentTransform.x, y: e.clientY - currentTransform.y };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      currentTransform.x = e.clientX - panStart.x;
+      currentTransform.y = e.clientY - panStart.y;
+      updateTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      isPanning = false;
+    });
+
+    canvasContainer.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
+      const newScale = Math.min(Math.max(0.25, currentTransform.k * zoomFactor), 3.0);
+
+      const rect = canvasContainer.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      currentTransform.x = mouseX - (mouseX - currentTransform.x) * (newScale / currentTransform.k);
+      currentTransform.y = mouseY - (mouseY - currentTransform.y) * (newScale / currentTransform.k);
+      currentTransform.k = newScale;
+
+      updateTransform();
+    });
+
+    document.getElementById('ctrl-zoom-in').addEventListener('click', () => {
+      currentTransform.k = Math.min(3.0, currentTransform.k * 1.25);
+      updateTransform();
+    });
+
+    document.getElementById('ctrl-zoom-out').addEventListener('click', () => {
+      currentTransform.k = Math.max(0.25, currentTransform.k * 0.8);
+      updateTransform();
+    });
+
+    document.getElementById('ctrl-recenter').addEventListener('click', () => {
+      fitToScreen();
+    });
+
+    document.getElementById('btn-reset-zoom').addEventListener('click', () => {
+      currentTransform = { x: 50, y: 50, k: 1 };
+      updateTransform();
+    });
+
+    document.getElementById('btn-fit-screen').addEventListener('click', () => {
+      fitToScreen();
+    });
+
+    function fitToScreen() {
+      const data = FLOW_DATA[currentSectionId];
+      if (!data || !data.nodes.length) return;
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      data.nodes.forEach(n => {
+        minX = Math.min(minX, n.x);
+        maxX = Math.max(maxX, n.x + 200);
+        minY = Math.min(minY, n.y);
+        maxY = Math.max(maxY, n.y + 90);
+      });
+
+      const bboxWidth = maxX - minX;
+      const bboxHeight = maxY - minY;
+      const containerWidth = canvasContainer.clientWidth || 1000;
+      const containerHeight = canvasContainer.clientHeight || 700;
+
+      const scaleX = (containerWidth - 140) / bboxWidth;
+      const scaleY = (containerHeight - 140) / bboxHeight;
+      const scale = Math.min(Math.max(0.35, Math.min(scaleX, scaleY)), 1.4);
+
+      currentTransform.k = scale;
+      currentTransform.x = (containerWidth - bboxWidth * scale) / 2 - minX * scale;
+      currentTransform.y = (containerHeight - bboxHeight * scale) / 2 - minY * scale;
+
+      updateTransform();
+    }
+
+    // =========================================================================
+    // 6. SEARCH & REAL-TIME FILTERS
+    // =========================================================================
+
+    const searchInput = document.getElementById('global-search');
+    const roleFilter = document.getElementById('role-filter');
+    const typeFilter = document.getElementById('type-filter');
+
+    function applyFilters() {
+      const query = searchInput.value.toLowerCase().trim();
+      const roleVal = roleFilter.value;
+      const typeVal = typeFilter.value;
+
+      document.querySelectorAll('.node-group').forEach(g => {
+        const id = g.getAttribute('data-id');
+        const role = g.getAttribute('data-role');
+        const type = g.getAttribute('data-type');
+        
+        const data = FLOW_DATA[currentSectionId];
+        const node = data ? data.nodes.find(n => n.id === id) : null;
+
+        let matchesSearch = true;
+        if (query && node) {
+          const textCorpus = `${node.label} ${node.sub} ${node.route} ${node.purpose} ${(node.apis||[]).join(' ')} ${(node.db||[]).join(' ')} ${node.blocker} ${node.unblocker}`.toLowerCase();
+          matchesSearch = textCorpus.includes(query);
+        }
+
+        let matchesRole = true;
+        if (roleVal !== 'all' && node) {
+          const roles = Array.isArray(node.role) ? node.role : [node.role];
+          matchesRole = roles.includes('all') || roles.includes(roleVal);
+        }
+
+        let matchesType = true;
+        if (typeVal !== 'all') {
+          matchesType = type === typeVal;
+        }
+
+        const isVisible = matchesSearch && matchesRole && matchesType;
+        g.classList.toggle('dimmed', !isVisible);
+      });
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+    roleFilter.addEventListener('change', applyFilters);
+    typeFilter.addEventListener('change', applyFilters);
+
+    // =========================================================================
+    // 7. TABLE VIEWS (NAVIGATION MATRIX & ACCESS CONTROL MATRIX)
+    // =========================================================================
+
+    function renderTableView(sectionId) {
+      if (sectionId === 'nav_matrix') {
+        renderNavigationMatrixTable();
+      } else if (sectionId === 'access_matrix') {
+        renderAccessControlMatrixTable();
+      }
+    }
+
+    function renderNavigationMatrixTable() {
+      const rows = [
+        { from: 'Landing Page', role: 'Public', action: 'Click "Sign In"', to: 'Login', route: '/login', cond: 'None', perm: 'None', blk: 'Network Down', unblk: 'Refresh' },
+        { from: 'Login', role: 'Anonymous', action: 'Submit SuperAdmin Auth', to: 'Super Admin Dashboard', route: '/super-admin/dashboard', cond: 'role == superadmin', perm: 'superadmin JWT', blk: 'Bad Password', unblk: 'Enter valid env password' },
+        { from: 'Login', role: 'Anonymous', action: 'Submit SchoolAdmin Auth', to: 'School Admin Dashboard', route: '/school-admin/dashboard', cond: 'role == schooladmin', perm: 'schooladmin JWT', blk: 'School Suspended', unblk: 'Renew subscription' },
+        { from: 'Login', role: 'Anonymous', action: 'Submit Teacher Auth', to: 'Teacher Dashboard', route: '/teacher/dashboard', cond: 'role == teacher', perm: 'teacher JWT', blk: 'Deactivated Account', unblk: 'Admin sets IsActive=true' },
+        { from: 'Login', role: 'Anonymous', action: 'Submit Student Auth', to: 'Student Dashboard', route: '/student/dashboard', cond: 'role == student', perm: 'student JWT', blk: 'Deactivated Account', unblk: 'Admin sets IsActive=true' },
+        { from: 'School Admin Dash', role: 'School Admin', action: 'Click "Students"', to: 'Student Directory', route: '/school-admin/students', cond: 'School Active', perm: 'schooladmin.students', blk: 'Database 500', unblk: 'Ensure .NET API running' },
+        { from: 'School Admin Students', role: 'School Admin', action: 'Click "Generate TC"', to: 'TC Dialog', route: 'Modal', cond: 'Clearance PASS', perm: 'schooladmin.students', blk: 'Pending Fee Dues', unblk: 'Clear dues in billing counter' },
+        { from: 'School Admin Dash', role: 'School Admin', action: 'Click "Admissions"', to: 'Admission Leads', route: '/school-admin/admission', cond: 'School Active', perm: 'schooladmin.admission', blk: 'Capacity Reached', unblk: 'Increase capacity' },
+        { from: 'Teacher Dash', role: 'Teacher', action: 'Click "Attendance"', to: 'Student Attendance Register', route: '/teacher/attendance', cond: 'Assigned Class', perm: 'teacher.attendance', blk: 'Attendance Locked', unblk: 'Admin unlocks date' },
+        { from: 'Student Dash', role: 'Student', action: 'Click "Fees"', to: 'Student Fee Invoices', route: '/student/fees', cond: 'Active Student', perm: 'student.fees', blk: 'Gateway Timeout', unblk: 'Retry with UPI / Card' },
+        { from: 'Account Dash', role: 'Account Manager', action: 'Click "Salaries"', to: 'Payroll Desk', route: '/account/salaries', cond: 'HasAccountModule', perm: 'account.salaries', blk: 'Attendance Not Synced', unblk: 'Run attendance sync' },
+        { from: 'Librarian Dash', role: 'Librarian', action: 'Click "Issue/Return"', to: 'Circulation Desk', route: '/library/issue-return', cond: 'HasLibraryModule', perm: 'library.issue_return', blk: 'Book Out of Stock', unblk: 'Return previous copy' },
+        { from: 'Front Desk Hub', role: 'Receptionist', action: 'Click "Gate Pass"', to: 'Gate Pass Desk', route: '/receptionist/gatepass', cond: 'HasReceptionistModule', perm: 'receptionist.gatepass', blk: 'Student Absent', unblk: 'Verify student presence' },
+      ];
+
+      let html = `
+        <h2 style="font-size:1.2rem; font-weight:700; margin-bottom:16px; color:#fff;">🧭 Complete Navigation Matrix (Codebase Trace)</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>From Page</th>
+              <th>Role</th>
+              <th>Action</th>
+              <th>Destination</th>
+              <th>Route</th>
+              <th>Condition</th>
+              <th>Permission</th>
+              <th>Blocker</th>
+              <th>Unblocker</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td style="font-weight:600; color:#fff;">${r.from}</td>
+                <td><span class="badge-cell perm">${r.role}</span></td>
+                <td>${r.action}</td>
+                <td style="color:#93c5fd;">${r.to}</td>
+                <td><code style="font-family:'JetBrains Mono'; font-size:0.75rem; color:#c7d2fe;">${r.route}</code></td>
+                <td>${r.cond}</td>
+                <td><span class="badge-cell allowed">${r.perm}</span></td>
+                <td style="color:#f87171;">${r.blk}</td>
+                <td style="color:#34d399;">${r.unblk}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      tableViewport.innerHTML = html;
+    }
+
+    function renderAccessControlMatrixTable() {
+      const features = [
+        { name: 'Public Landing & Demo', sa: '✓', sch: '✓', tea: '✓', stu: '✓', acc: '✓', lib: '✓', rec: '✓' },
+        { name: 'Super Admin Dashboard', sa: '✓', sch: '✗', tea: '✗', stu: '✗', acc: '✗', lib: '✗', rec: '✗' },
+        { name: 'Manage Multiple Schools', sa: '✓', sch: '✗', tea: '✗', stu: '✗', acc: '✗', lib: '✗', rec: '✗' },
+        { name: 'School Admin Dashboard', sa: '✗', sch: '✓', tea: '✗', stu: '✗', acc: '✗', lib: '✗', rec: '✗' },
+        { name: 'Student 360° Dossier Archive', sa: '✗', sch: 'P', tea: '✗', stu: '✗', acc: '✗', lib: '✗', rec: '✗' },
+        { name: 'Admissions & Online Forms', sa: '✗', sch: '✓', tea: '✗', stu: '✗', acc: '✗', lib: '✗', rec: 'S' },
+        { name: 'Classes, Sections & Rooms', sa: '✗', sch: 'P', tea: '✗', stu: '✗', acc: '✗', lib: '✗', rec: '✗' },
+        { name: 'Fees & Invoicing Desk', sa: '✗', sch: 'P', tea: '✗', stu: '✗', acc: 'S', lib: '✗', rec: '✗' },
+        { name: 'Spot Counter Fee Collection', sa: '✗', sch: '✓', tea: '✗', stu: '✗', acc: 'S', lib: '✗', rec: 'S' },
+        { name: 'Teacher Marks Entry', sa: '✗', sch: '✓', tea: 'P', stu: '✗', acc: '✗', lib: '✗', rec: '✗' },
+        { name: 'Exams Datesheet & Moderation', sa: '✗', sch: 'P', tea: '✗', stu: '✗', acc: '✗', lib: '✗', rec: '✗' },
+        { name: 'Staff Salaries & Payroll', sa: '✗', sch: 'S', tea: '✗', stu: '✗', acc: 'P', lib: '✗', rec: '✗' },
+        { name: 'Book Catalog & Checkout Desk', sa: '✗', sch: 'S', tea: '✗', stu: '✗', acc: '✗', lib: 'P', rec: '✗' },
+        { name: 'Visitor Entry & Thermal Badge', sa: '✗', sch: 'S', tea: '✗', stu: '✗', acc: '✗', lib: '✗', rec: 'P' },
+        { name: 'Daily Student Attendance Register', sa: '✗', sch: '✓', tea: 'P', stu: '✗', acc: '✗', lib: '✗', rec: '✗' },
+        { name: 'Teacher Self Attendance (Punch)', sa: '✗', sch: '✗', tea: 'P', stu: '✗', acc: '✗', lib: '✗', rec: '✗' },
+        { name: 'Student Timetable & Schedule', sa: '✗', sch: '✗', tea: '✗', stu: 'P', acc: '✗', lib: '✗', rec: '✗' },
+        { name: 'Online Fee Payment (Razorpay)', sa: '✗', sch: '✗', tea: '✗', stu: 'P', acc: '✗', lib: '✗', rec: '✗' },
+        { name: 'Report Cards & Result Transcripts', sa: '✗', sch: 'P', tea: '✗', stu: 'P', acc: '✗', lib: '✗', rec: '✗' },
+      ];
+
+      function renderCell(val) {
+        if (val === '✓') return '<span class="badge-cell allowed">✓ Allowed</span>';
+        if (val === '✗') return '<span class="badge-cell blocked">✗ Blocked</span>';
+        if (val === 'P') return '<span class="badge-cell perm">P (RBAC)</span>';
+        if (val === 'S') return '<span class="badge-cell sub">S (Module)</span>';
+        return val;
+      }
+
+      let html = `
+        <h2 style="font-size:1.2rem; font-weight:700; margin-bottom:16px; color:#fff;">🛡️ Role-Based Access Control (RBAC) Matrix</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Feature / Page Area</th>
+              <th>Super Admin</th>
+              <th>School Admin</th>
+              <th>Teacher</th>
+              <th>Student</th>
+              <th>Account Mgr</th>
+              <th>Librarian</th>
+              <th>Receptionist</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${features.map(f => `
+              <tr>
+                <td style="font-weight:600; color:#fff;">${f.name}</td>
+                <td>${renderCell(f.sa)}</td>
+                <td>${renderCell(f.sch)}</td>
+                <td>${renderCell(f.tea)}</td>
+                <td>${renderCell(f.stu)}</td>
+                <td>${renderCell(f.acc)}</td>
+                <td>${renderCell(f.lib)}</td>
+                <td>${renderCell(f.rec)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      tableViewport.innerHTML = html;
+    }
+
+    // Initialize application with Master Flow
+    loadSection('master');
+  </script>
+</body>
+</html>

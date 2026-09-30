@@ -1,0 +1,21 @@
+FirstName,LastName,Email,EmployeeCode,Department,Designation,Qualification,Subjects,BaseSalary,DateOfBirth,Phone
+Rajesh,Sharma,rajesh.sharma@school.edu,EMP-T-101,Mathematics,Senior PGT Teacher,M.Sc B.Ed,Mathematics,45000,1985-04-12,9876500001
+Sunita,Verma,sunita.verma@school.edu,EMP-T-102,Languages,Head of Department,M.A B.Ed,Hindi,42000,1988-06-25,9876500002
+Amitabh,Sen,amitabh.sen@school.edu,EMP-T-103,Languages,TGT English,M.A English,English,38000,1990-11-15,9876500003
+Pooja,Rathore,pooja.rathore@school.edu,EMP-T-104,Science,PGT Physics,M.Sc Physics B.Ed,Physics,44000,1987-03-08,9876500004
+Manoj,Tiwari,manoj.tiwari@school.edu,EMP-T-105,Science,PGT Chemistry,M.Sc Chemistry,Chemistry,43000,1989-09-19,9876500005
+Anjali,Desai,anjali.desai@school.edu,EMP-T-106,Science,TGT Biology,M.Sc Zoology B.Ed,Biology,40000,1991-01-28,9876500006
+Vikram,Malik,vikram.malik@school.edu,EMP-T-107,Social Sciences,PGT History,M.A History,History,39000,1986-07-14,9876500007
+Kavita,Menon,kavita.menon@school.edu,EMP-T-108,Social Sciences,TGT Geography,M.A Geography B.Ed,Geography,37000,1992-12-05,9876500008
+Suresh,Iyer,suresh.iyer@school.edu,EMP-T-109,Commerce,PGT Accountancy,M.Com CA Inter B.Ed,Accountancy,46000,1984-05-30,9876500009
+Meenakshi,Sundaram,meenakshi.s@school.edu,EMP-T-110,Commerce,PGT Economics,M.A Economics,Economics,41000,1989-08-11,9876500010
+Deepak,Chawla,deepak.chawla@school.edu,EMP-T-111,Computer Science & IT,IT Head & PGT,MCA B.Ed,Computer Science,48000,1986-10-22,9876500011
+Ritu,Bhardwaj,ritu.bhardwaj@school.edu,EMP-T-112,Arts & Humanities,Art & Craft Teacher,B.F.A M.F.A,Drawing & Art,35000,1993-02-17,9876500012
+Harish,Rawat,harish.rawat@school.edu,EMP-T-113,Physical Education & Sports,Sports Director,M.P.Ed NIS Coach,Physical Education,40000,1985-12-01,9876500013
+Neelam,Goyal,neelam.goyal@school.edu,EMP-T-114,Languages,TGT Sanskrit,M.A Sanskrit B.Ed,Sanskrit,36000,1990-04-18,9876500014
+Prashant,Jadhav,prashant.j@school.edu,EMP-T-115,Science,General Science Teacher,B.Sc B.Ed,Science,34000,1994-06-09,9876500015
+Swati,Bansal,swati.bansal@school.edu,EMP-T-116,Mathematics,Primary Math Teacher,B.Sc Math B.Ed,Mathematics,33000,1995-09-24,9876500016
+Alok,Pandey,alok.pandey@school.edu,EMP-T-117,Social Sciences,Political Science PGT,M.A Political Science,Political Science,40000,1988-03-12,9876500017
+Bhavna,Nair,bhavna.nair@school.edu,EMP-T-118,Languages,Primary English Educator,B.A English NTT,English,32000,1996-11-04,9876500018
+Girish,Saxena,girish.saxena@school.edu,EMP-T-119,Commerce,Business Studies PGT,MBA B.Ed,Business Studies,42000,1987-08-16,9876500019
+Monika,Bhatt,monika.bhatt@school.edu,EMP-T-120,Science,Lab Instructor,B.Sc Physics,General Science,30000,1997-01-19,9876500020

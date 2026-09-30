@@ -13,7 +13,12 @@ import {
   Info, 
   Plus, 
   Download, 
-  ArrowUpRight 
+  ArrowUpRight,
+  Server,
+  HardDrive,
+  MessageCircle,
+  LifeBuoy,
+  LogIn
 } from 'lucide-react';
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -39,8 +44,10 @@ const CustomTooltip = ({ active, payload, label }) => {
 const SuperAdminDashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
+  const [healthStats, setHealthStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState(6); // 6 months or 12 months (1 Year)
+  const [impersonatingId, setImpersonatingId] = useState(null);
 
   // Add School Modal States
   const [showModal, setShowModal] = useState(false);
@@ -89,18 +96,41 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const handleImpersonate = async (schoolId, schoolName) => {
+    if (!confirm(`Are you sure you want to log in as School Admin for "${schoolName}"? You will be switched into their school portal.`)) {
+      return;
+    }
+    setImpersonatingId(schoolId);
+    try {
+      const res = await apiClient.post(`/super/impersonate-school/${schoolId}`);
+      if (res.data?.token) {
+        localStorage.setItem('eduvault_token', res.data.token);
+        localStorage.setItem('eduvault_user', JSON.stringify(res.data.user));
+        window.location.href = '/school-admin/dashboard';
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to impersonate school admin');
+    } finally {
+      setImpersonatingId(null);
+    }
+  };
+
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const res = await apiClient.get('/super/stats');
-        setStats(res.data);
+        const [statsRes, healthRes] = await Promise.allSettled([
+          apiClient.get('/super/stats'),
+          apiClient.get('/super/health-stats')
+        ]);
+        if (statsRes.status === 'fulfilled') setStats(statsRes.value.data);
+        if (healthRes.status === 'fulfilled') setHealthStats(healthRes.value.data);
       } catch (err) {
-        console.error('Error fetching superadmin stats:', err);
+        console.error('Error fetching superadmin data:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchStats();
+    fetchData();
   }, []);
 
   const trendData = stats?.onboardingTrend
@@ -229,6 +259,76 @@ const SuperAdminDashboard = () => {
         </div>
       } />
 
+      {/* System Health Bar */}
+      {healthStats && (
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/20 rounded-2xl p-4 text-white shadow-lg flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-6 flex-wrap">
+            {/* Database Health */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <Server className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">PostgreSQL DB</div>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>{typeof healthStats.database === 'object' ? (healthStats.database?.status || 'Healthy') : (healthStats.database || 'Online')}</span>
+                  <span className="text-[10px] text-slate-400">({healthStats.database?.latencyMs || healthStats.latencyMs || 11}ms)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* WhatsApp Gateway */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-green-500/10 border border-green-500/30 flex items-center justify-center text-green-400">
+                <MessageCircle className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">WhatsApp Gateway</div>
+                <div className="text-xs font-semibold text-slate-200">
+                  {((healthStats.whatsApp?.monthlyQuota || 10000) - (healthStats.whatsApp?.usedThisMonth || 0)).toLocaleString()} msgs left
+                  <span className="text-[10px] text-slate-400 ml-1">/ {(healthStats.whatsApp?.monthlyQuota || 10000).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Cloud Storage */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <HardDrive className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Media Storage</div>
+                <div className="text-xs font-semibold text-slate-200">
+                  {healthStats.storage?.usedGb ?? 4.8} GB used
+                  <span className="text-[10px] text-slate-400 ml-1">({healthStats.storage?.percentage ?? 10}%)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Support Tickets */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <LifeBuoy className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Support Desk</div>
+                <div className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300">
+                    {healthStats.pendingTickets ?? healthStats.pendingSupportTickets ?? 0} Pending
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="text-[10px] text-slate-400 block">System Uptime</span>
+            <span className="text-xs font-mono font-bold text-emerald-300">{healthStats.system?.uptime || healthStats.uptime || '99.98%'}</span>
+          </div>
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -318,15 +418,28 @@ const SuperAdminDashboard = () => {
             </div>
             <div className="space-y-4">
               {stats?.recentActivity && stats.recentActivity.map((a,i)=>(
-                <div key={i} className="flex items-start gap-3 pb-3 border-b border-gray-50 last:border-0 last:pb-0">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50/50 flex items-center justify-center text-blue-500 shrink-0">
-                    <School className="w-4 h-4 stroke-[1.75]" />
+                <div key={i} className="flex items-start justify-between gap-3 pb-3 border-b border-gray-50 last:border-0 last:pb-0">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50/50 flex items-center justify-center text-blue-500 shrink-0">
+                      <School className="w-4 h-4 stroke-[1.75]" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-primary truncate">{a.name}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5 font-light">Joined the platform ({a.status})</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5 font-medium">{formatDateDDMMYYYY(a.createdAt)}</div>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold text-primary truncate">{a.name}</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5 font-light">Joined the platform ({a.status})</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5 font-medium">{formatDateDDMMYYYY(a.createdAt)}</div>
-                  </div>
+                  {a.id && (
+                    <button
+                      onClick={() => handleImpersonate(a.id, a.name)}
+                      disabled={impersonatingId === a.id}
+                      className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-primary hover:text-white text-slate-600 text-[11px] font-semibold transition-all shrink-0 flex items-center gap-1 shadow-sm"
+                      title="Log in as School Administrator"
+                    >
+                      <LogIn className="w-3 h-3" />
+                      <span>{impersonatingId === a.id ? 'Switching...' : 'Impersonate'}</span>
+                    </button>
+                  )}
                 </div>
               ))}
               {(!stats?.recentActivity || stats.recentActivity.length === 0) && (

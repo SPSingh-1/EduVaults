@@ -28,6 +28,7 @@ import {
   CreditCard,
   Check
 } from 'lucide-react';
+import { printDirectHtml, printRenderedDocument } from '../../components/print/PrintIframe';
 
 const FrontDeskDashboard = () => {
   const location = useLocation();
@@ -970,7 +971,36 @@ const FrontDeskDashboard = () => {
 
                 <div className="flex gap-2 justify-center pt-2">
                   <button
-                    onClick={() => window.print()}
+                    onClick={() => {
+                      const fallback = `
+                        <div class="print-zone-thermal" style="padding: 10px; font-size: 11px; text-align: center;">
+                          <h3 style="margin: 0; font-size: 15px; font-weight: bold;">EduVault School</h3>
+                          <p style="margin: 2px 0 8px; font-size: 10px; color: #555;">Official Fee Receipt</p>
+                          <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 6px 0; margin-bottom: 8px; text-align: left;">
+                            <div><strong>Receipt #:</strong> ${paymentSuccessReceipt?.referenceNumber || 'N/A'}</div>
+                            <div><strong>Student:</strong> ${paymentSuccessReceipt?.studentName || selectedStudent?.name || ''}</div>
+                            <div><strong>Adm No:</strong> ${paymentSuccessReceipt?.admissionNumber || selectedStudent?.admissionNumber || ''}</div>
+                            <div><strong>Class:</strong> ${paymentSuccessReceipt?.className || selectedStudent?.className || ''}</div>
+                            <div><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')}</div>
+                          </div>
+                          <table style="width: 100%; font-size: 11px; margin-bottom: 8px;">
+                            <tr style="border-bottom: 1px solid #ddd;">
+                              <th style="text-align: left; padding: 3px 0;">Description</th>
+                              <th style="text-align: right; padding: 3px 0;">Amount</th>
+                            </tr>
+                            <tr>
+                              <td style="padding: 4px 0;">Fee Payment (${paymentSuccessReceipt?.paymentMethod || 'Cash'})</td>
+                              <td style="text-align: right; font-weight: bold;">₹${(paymentSuccessReceipt?.amount || 0).toLocaleString()}</td>
+                            </tr>
+                          </table>
+                          <div style="border-top: 1px dashed #000; padding-top: 6px; text-align: right;">
+                            <div><strong>Paid Amount:</strong> ₹${(paymentSuccessReceipt?.amount || 0).toLocaleString()}</div>
+                          </div>
+                          <p style="margin-top: 12px; font-size: 9px; color: #777;">Thank you for your timely payment.<br/>Computer generated receipt.</p>
+                        </div>
+                      `;
+                      printRenderedDocument('FeeReceipt', paymentSuccessReceipt?.transactionId || paymentSuccessReceipt?.referenceNumber || '', fallback);
+                    }}
                     className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5"
                   >
                     <Printer className="w-3.5 h-3.5" />
@@ -1152,7 +1182,27 @@ const FrontDeskDashboard = () => {
                   </div>
                 </div>
                 <div className="flex gap-2 justify-center pt-2">
-                  <button onClick={() => window.print()} className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5">
+                  <button 
+                    onClick={() => {
+                      const fallback = `
+                        <div class="print-zone-thermal" style="padding: 10px; font-size: 11px; text-align: center;">
+                          <h3 style="margin: 0; font-size: 15px; font-weight: bold;">EduVault School</h3>
+                          <p style="margin: 2px 0 8px; font-size: 10px; color: #555;">Official Student Gate Pass</p>
+                          <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 6px 0; margin-bottom: 8px; text-align: left;">
+                            <div><strong>Pass #:</strong> ${issuedGatePassResult?.passNumber || 'N/A'}</div>
+                            <div><strong>Student:</strong> ${issuedGatePassResult?.studentName || ''}</div>
+                            <div><strong>Class:</strong> ${issuedGatePassResult?.classSection || ''}</div>
+                            <div><strong>Picked by:</strong> ${issuedGatePassResult?.parentName || ''}</div>
+                            <div><strong>Reason:</strong> ${issuedGatePassResult?.reason || ''}</div>
+                            <div><strong>Issued:</strong> ${new Date().toLocaleTimeString()}</div>
+                          </div>
+                          <p style="margin-top: 12px; font-size: 9px; color: #777;">Please present this pass at the security gate.<br/>Valid only for today.</p>
+                        </div>
+                      `;
+                      printRenderedDocument('GatePass', issuedGatePassResult?.id || issuedGatePassResult?.passNumber || '', fallback);
+                    }} 
+                    className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5"
+                  >
                     <Printer className="w-3.5 h-3.5" />
                     <span>Print Exit Pass</span>
                   </button>

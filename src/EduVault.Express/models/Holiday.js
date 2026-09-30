@@ -7,7 +7,7 @@ const HolidaySchema = new mongoose.Schema({
   endDate: { type: String }, // YYYY-MM-DD
   category: { 
     type: String, 
-    enum: ['NATIONAL', 'FESTIVAL', 'ACADEMIC', 'RESTRICTED', 'EMERGENCY'], 
+    enum: ['NATIONAL', 'FESTIVAL', 'ACADEMIC', 'RESTRICTED', 'EMERGENCY', 'EVENT', 'OTHER'], 
     default: 'FESTIVAL' 
   },
   description: { type: String },

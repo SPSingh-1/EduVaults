@@ -147,6 +147,41 @@ export default function Notices() {
     }
   };
 
+  // Manage Holidays Directory State
+  const [showManageHolidaysModal, setShowManageHolidaysModal] = useState(false);
+  const [holidayDirectory, setHolidayDirectory] = useState([]);
+  const [loadingDirectory, setLoadingDirectory] = useState(false);
+  const [holidayFilterCategory, setHolidayFilterCategory] = useState('ALL');
+  const [holidaySearchQuery, setHolidaySearchQuery] = useState('');
+
+  const fetchHolidayDirectory = async () => {
+    setLoadingDirectory(true);
+    try {
+      const res = await expressClient.get('/holidays');
+      setHolidayDirectory(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.warn('Failed to load holidays:', err);
+    } finally {
+      setLoadingDirectory(false);
+    }
+  };
+
+  const handleOpenManageHolidays = () => {
+    setShowManageHolidaysModal(true);
+    fetchHolidayDirectory();
+  };
+
+  const handleDeleteHoliday = async (id, title) => {
+    if (!window.confirm(`Are you sure you want to remove the holiday "${title}"?`)) return;
+    try {
+      await expressClient.delete(`/holidays/${id}`);
+      setHolidayDirectory(prev => prev.filter(h => h._id !== id));
+      alert(`Holiday "${title}" removed successfully.`);
+    } catch (err) {
+      alert('Failed to delete holiday: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
   const handleCreateHoliday = async (e) => {
     e.preventDefault();
     if (!holidayTitle || !holidayDate) return;
@@ -165,6 +200,7 @@ export default function Notices() {
       setHolidayTitle('');
       setHolidayDescription('');
       fetchNotices();
+      fetchHolidayDirectory();
     } catch (err) {
       alert('Failed to declare holiday: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -172,15 +208,20 @@ export default function Notices() {
     }
   };
 
+
   return (
     <div>
       <Topbar title="Notices & Announcements" actions={
         <div className="flex items-center gap-2">
+          <button onClick={handleOpenManageHolidays} className="btn-outline text-xs py-2 px-3 flex items-center gap-1.5 border-amber-300 text-amber-800 hover:bg-amber-50 font-bold">
+            📅 School Holidays Directory
+          </button>
           <button onClick={() => setShowHolidayModal(true)} className="btn-outline text-xs py-2 px-3 flex items-center gap-1.5 border-purple-300 text-purple-700 hover:bg-purple-50">
             🎉 Declare School Holiday
           </button>
           <button onClick={() => setShowNew(true)} className="btn-primary text-xs py-2 px-4">+ New Notice</button>
         </div>
+
       } />
 
       <div className="grid grid-cols-3 gap-6">
@@ -444,6 +485,149 @@ export default function Notices() {
           </form>
         </div>
       )}
+
+      {/* Manage Holidays Directory Modal */}
+      {showManageHolidaysModal && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center text-xl font-bold">
+                  📅
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white">School Holidays Directory</h3>
+                  <p className="text-xs text-slate-300">View, search, and manage statutory and declared school holidays</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowManageHolidaysModal(false);
+                    setShowHolidayModal(true);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow transition-all"
+                >
+                  + Declare Holiday
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowManageHolidaysModal(false)}
+                  className="text-slate-400 hover:text-white text-lg px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Filters */}
+            <div className="p-4 bg-slate-50 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  type="text"
+                  placeholder="Search holiday name or detail..."
+                  value={holidaySearchQuery}
+                  onChange={e => setHolidaySearchQuery(e.target.value)}
+                  className="input text-xs w-64 bg-white"
+                />
+                <select
+                  value={holidayFilterCategory}
+                  onChange={e => setHolidayFilterCategory(e.target.value)}
+                  className="input text-xs w-40 bg-white font-semibold"
+                >
+                  <option value="ALL">All Categories</option>
+                  <option value="NATIONAL">🇮🇳 National</option>
+                  <option value="FESTIVAL">🎉 Festival</option>
+                  <option value="ACADEMIC">📚 Academic</option>
+                  <option value="RESTRICTED">✝️ Restricted</option>
+                  <option value="EMERGENCY">🚨 Emergency</option>
+                </select>
+              </div>
+              <div className="text-xs font-bold text-slate-600">
+                Total: <span className="text-primary font-black">{holidayDirectory.length}</span> Holidays
+              </div>
+            </div>
+
+            {/* Modal Body: Holidays Table */}
+            <div className="p-4 overflow-y-auto flex-1 max-h-[55vh]">
+              {loadingDirectory ? (
+                <div className="py-12 text-center text-slate-400 text-xs font-semibold animate-pulse">
+                  Loading school holidays directory...
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                      <th className="py-2.5 px-3">Date / Duration</th>
+                      <th className="py-2.5 px-3">Title</th>
+                      <th className="py-2.5 px-3">Category</th>
+                      <th className="py-2.5 px-3">Description</th>
+                      <th className="py-2.5 px-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {holidayDirectory
+                      .filter(h => {
+                        const matchCat = holidayFilterCategory === 'ALL' || h.category === holidayFilterCategory;
+                        const matchQuery = !holidaySearchQuery ||
+                          h.title?.toLowerCase().includes(holidaySearchQuery.toLowerCase()) ||
+                          h.description?.toLowerCase().includes(holidaySearchQuery.toLowerCase());
+                        return matchCat && matchQuery;
+                      })
+                      .map(h => (
+                        <tr key={h._id || h.date} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3 px-3 font-mono font-bold text-slate-800 whitespace-nowrap">
+                            {formatDateDDMMYYYY(h.date)}{h.endDate && h.endDate !== h.date ? ` → ${formatDateDDMMYYYY(h.endDate)}` : ''}
+                          </td>
+                          <td className="py-3 px-3 font-bold text-slate-900">{h.title}</td>
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
+                              {h.category}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-slate-500 max-w-xs truncate" title={h.description}>
+                            {h.description || 'Official school holiday'}
+                          </td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteHoliday(h._id, h.title)}
+                              className="px-2.5 py-1 text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition-colors"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    {holidayDirectory.length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="text-center py-10 text-slate-400 text-xs italic">
+                          No holidays recorded yet. Click "+ Declare Holiday" to announce a holiday.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowManageHolidaysModal(false)}
+                className="btn-outline text-xs px-5 py-2 font-bold"
+              >
+                Close Directory
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

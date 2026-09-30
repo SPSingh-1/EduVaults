@@ -5,6 +5,7 @@ import Topbar from '../../components/layout/Topbar';
 import Loader from '../../components/common/Loader';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { formatDateDDMMYYYY, formatDateRangeDDMMYYYY } from '../../utils/dateUtils';
+import { formatClassLabel, formatGrade } from '../../utils/classUtils';
 import { io } from 'socket.io-client';
 import { useNotifications } from '../../contexts/NotificationContext';
 import {
@@ -121,6 +122,18 @@ export const TeacherDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [scheduleView, setScheduleView] = useState('today');
   const [teacherChartMode, setTeacherChartMode] = useState('attendance'); // 'attendance', 'enrollment'
+  const [showAiPaperModal, setShowAiPaperModal] = useState(false);
+  const [generatingPaper, setGeneratingPaper] = useState(false);
+  const [generatedPaper, setGeneratedPaper] = useState(null);
+  const [paperForm, setPaperForm] = useState({
+    className: 'Class 10',
+    subject: 'Science',
+    topic: 'Light Reflection & Refraction',
+    totalMarks: 50,
+    durationMinutes: 90,
+    difficulty: 'Moderate',
+    instructions: 'Include MCQs, 3-mark conceptual questions, and 5-mark diagram questions.'
+  });
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -166,9 +179,36 @@ export const TeacherDashboard = () => {
   const reviewsWidget = getWidgetInfo('card.teacher.pending_reviews', 'Pending Reviews / Homework');
   const salaryWidget = getWidgetInfo('card.teacher.salary_payout', 'Monthly Base Salary');
 
+  const handleGenerateQuestionPaper = async () => {
+    setGeneratingPaper(true);
+    try {
+      const res = await apiClient.post('/school-admin/plan/generate-question-paper', paperForm);
+      setGeneratedPaper(res.data);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to generate AI question paper.');
+    } finally {
+      setGeneratingPaper(false);
+    }
+  };
+
+  const handlePrintQuestionPaper = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-6">
-      <Topbar title="Teacher Dashboard" subtitle="Academic Year 2023-24 - Live Overview" />
+      <Topbar 
+        title="Teacher Dashboard" 
+        subtitle="Academic Year 2023-24 - Live Overview" 
+        actions={
+          <button
+            onClick={() => setShowAiPaperModal(true)}
+            className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5"
+          >
+            <span>✨ AI Question Paper</span>
+          </button>
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -456,6 +496,202 @@ export const TeacherDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* AI Question Paper Generator Modal */}
+      {showAiPaperModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden my-8 border border-slate-100 flex flex-col max-h-[90vh]">
+            <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-700 px-6 py-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">✨</span>
+                <div>
+                  <h3 className="font-display font-black text-lg m-0">AI Examination & Worksheet Generator</h3>
+                  <p className="text-xs text-purple-200 mt-0.5">Powered by Gemini AI curriculum intelligence</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setShowAiPaperModal(false); setGeneratedPaper(null); }}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              {!generatedPaper ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Target Class *</label>
+                      <input 
+                        value={paperForm.className}
+                        onChange={e => setPaperForm(p => ({ ...p, className: e.target.value }))}
+                        placeholder="e.g. Class 10"
+                        className="input text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Subject *</label>
+                      <input 
+                        value={paperForm.subject}
+                        onChange={e => setPaperForm(p => ({ ...p, subject: e.target.value }))}
+                        placeholder="e.g. Science / Mathematics"
+                        className="input text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Chapter / Topics Covered *</label>
+                    <input 
+                      value={paperForm.topic}
+                      onChange={e => setPaperForm(p => ({ ...p, topic: e.target.value }))}
+                      placeholder="e.g. Light Reflection and Refraction, Electricity"
+                      className="input text-xs"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Total Marks</label>
+                      <input 
+                        type="number"
+                        value={paperForm.totalMarks}
+                        onChange={e => setPaperForm(p => ({ ...p, totalMarks: parseInt(e.target.value) || 50 }))}
+                        className="input text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Duration (Mins)</label>
+                      <input 
+                        type="number"
+                        value={paperForm.durationMinutes}
+                        onChange={e => setPaperForm(p => ({ ...p, durationMinutes: parseInt(e.target.value) || 90 }))}
+                        className="input text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Difficulty</label>
+                      <select 
+                        value={paperForm.difficulty}
+                        onChange={e => setPaperForm(p => ({ ...p, difficulty: e.target.value }))}
+                        className="input text-xs"
+                      >
+                        <option value="Easy">Easy</option>
+                        <option value="Moderate">Moderate</option>
+                        <option value="Hard">Hard / Challenging</option>
+                        <option value="Mixed">Mixed (Standard Board)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Special Examiner Instructions (Optional)</label>
+                    <textarea 
+                      rows="2"
+                      value={paperForm.instructions}
+                      onChange={e => setPaperForm(p => ({ ...p, instructions: e.target.value }))}
+                      placeholder="e.g. Include 5 MCQs, 3 numerical problems, and 2 case-study questions."
+                      className="input text-xs"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      onClick={handleGenerateQuestionPaper}
+                      disabled={generatingPaper}
+                      className="px-6 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <span>{generatingPaper ? '🤖 AI is drafting exam paper...' : '🚀 Generate Question Paper'}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                      <span className="text-3xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md uppercase">Draft Ready</span>
+                      <h4 className="font-extrabold text-slate-900 text-base mt-1">{generatedPaper.examTitle}</h4>
+                      <p className="text-xs text-slate-400">{generatedPaper.className} • {generatedPaper.subject} • {generatedPaper.totalMarks} Marks ({generatedPaper.durationMinutes} Mins)</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setGeneratedPaper(null)}
+                        className="btn-outline text-xs"
+                      >
+                        ← Modify Prompt
+                      </button>
+                      <button 
+                        onClick={handlePrintQuestionPaper}
+                        className="btn-primary text-xs flex items-center gap-1.5"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Print / Export PDF</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Question Paper Printable Content Area */}
+                  <div id="printable-question-paper" className="bg-slate-50 p-6 rounded-2xl border border-slate-200 text-slate-800 font-serif leading-relaxed text-xs space-y-4">
+                    <div className="text-center border-b-2 border-slate-800 pb-3 mb-4">
+                      <h3 className="text-sm font-black uppercase tracking-wider">{generatedPaper.schoolName || 'EduVault Senior Secondary School'}</h3>
+                      <div className="text-xs font-bold">{generatedPaper.examTitle}</div>
+                      <div className="flex justify-between font-sans text-[11px] font-semibold mt-2 text-slate-600">
+                        <span>Class: {generatedPaper.className}</span>
+                        <span>Subject: {generatedPaper.subject}</span>
+                        <span>Max Marks: {generatedPaper.totalMarks}</span>
+                        <span>Time: {generatedPaper.durationMinutes} mins</span>
+                      </div>
+                    </div>
+
+                    {generatedPaper.generalInstructions?.length > 0 && (
+                      <div className="font-sans text-[11px] border-b border-slate-200 pb-2 mb-3">
+                        <strong>General Instructions:</strong>
+                        <ul className="list-disc list-inside mt-1 text-slate-600 space-y-0.5">
+                          {generatedPaper.generalInstructions.map((ins, i) => (
+                            <li key={i}>{ins}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {generatedPaper.sections?.map((sec, sIdx) => (
+                      <div key={sIdx} className="space-y-3 pt-2">
+                        <div className="font-sans font-bold text-slate-900 uppercase border-b border-slate-200 pb-1 flex justify-between">
+                          <span>{sec.sectionName}</span>
+                          <span>[{sec.sectionMarks} Marks]</span>
+                        </div>
+                        <div className="space-y-3 pl-2">
+                          {sec.questions?.map((q, qIdx) => (
+                            <div key={qIdx} className="space-y-1">
+                              <div className="flex justify-between gap-4 font-sans text-xs">
+                                <span className="font-semibold">{q.questionNo}. {q.text}</span>
+                                <span className="font-bold shrink-0 text-slate-600">[{q.marks}]</span>
+                              </div>
+                              {q.options && q.options.length > 0 && (
+                                <div className="grid grid-cols-2 gap-1.5 pl-4 font-sans text-[11px] text-slate-600 mt-1">
+                                  {q.options.map((opt, oIdx) => (
+                                    <div key={oIdx}>{opt}</div>
+                                  ))}
+                                </div>
+                              )}
+                              {q.answer && (
+                                <div className="no-print mt-1 text-[10px] text-purple-700 bg-purple-50 p-1.5 rounded border border-purple-100 font-sans">
+                                  <strong>Key:</strong> {q.answer}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -569,7 +805,7 @@ export const TeacherClasses = () => {
                 onClick={() => setSelectedClass(c)}
                 className={`w-full p-4 rounded-xl border text-left transition-all hover:scale-102 ${selectedClass?.id === c.id ? 'border-primary bg-primary/5 shadow-sm' : 'border-gray-100 hover:bg-gray-50'}`}
               >
-                <div className="font-bold text-sm text-primary">Class {c.grade} - {c.section}</div>
+                <div className="font-bold text-sm text-primary">{formatClassLabel(c.grade, c.section)}</div>
                 <div className="text-xs text-gray-400 mt-1">Room {c.room} · {c.enrolled} Students</div>
                 {c.isClassTeacher && <span className="inline-block mt-2 px-2 py-0.5 rounded bg-green-100 text-green-800 text-2xs font-extrabold">🏫 Advisory Class</span>}
               </button>
@@ -579,7 +815,7 @@ export const TeacherClasses = () => {
           {/* Timetable Grid Schedule */}
           <div className="col-span-3 card">
             <h3 className="font-display font-semibold text-primary text-base mb-4">
-              📅 Timetable Schedule: Class {selectedClass?.grade} - {selectedClass?.section}
+              📅 Timetable Schedule: {formatClassLabel(selectedClass?.grade, selectedClass?.section)}
             </h3>
 
             <div className="overflow-x-auto">
@@ -916,7 +1152,7 @@ export const TeacherStudents = () => {
           <select className="input w-48 text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
             <option value="">All My Classes</option>
             {classes.map(c => (
-              <option key={c.id} value={c.id}>Class {c.grade} - {c.section}</option>
+              <option key={c.id} value={c.id}>{formatClassLabel(c.grade, c.section)}</option>
             ))}
           </select>
         </div>
@@ -1268,6 +1504,36 @@ export const Attendance = () => {
   const [submitting, setSubmitting] = useState(false);
   const [attendanceSaved, setAttendanceSaved] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [rapidMode, setRapidMode] = useState(false);
+  const [rapidIndex, setRapidIndex] = useState(0);
+
+  useEffect(() => {
+    if (!rapidMode) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleRapidMark('Absent');
+      } else if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        handleRapidMark('Present');
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        handleRapidMark('Late');
+      } else if (e.key === 'Escape') {
+        setRapidMode(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [rapidMode, rapidIndex, students]);
+
+  const handleRapidMark = (status) => {
+    if (rapidIndex < students.length) {
+      const studentId = students[rapidIndex].id;
+      setStatus(studentId, status);
+      setRapidIndex(prev => prev + 1);
+    }
+  };
 
   // Load teacher's own classes for the dropdown
   const fetchClasses = async () => {
@@ -1398,7 +1664,7 @@ export const Attendance = () => {
 
       {submitted && (
         <div className="mb-4 bg-green-50 border border-green-200 rounded-xl px-5 py-3 text-sm text-green-700 flex items-center gap-2">
-          ✅ Attendance saved successfully for {selectedClass ? `Class ${selectedClass.grade} - ${selectedClass.section}` : 'this class'}!
+          ✅ Attendance saved successfully for {selectedClass ? formatClassLabel(selectedClass.grade, selectedClass.section) : 'this class'}!
         </div>
       )}
 
@@ -1414,7 +1680,7 @@ export const Attendance = () => {
             >
               <option value="">— Select a Class —</option>
               {classes.map(c => (
-                <option key={c.id} value={c.id}>Class {c.grade} - {c.section} ({c.room})</option>
+                <option key={c.id} value={c.id}>{formatClassLabel(c.grade, c.section, c.room)}</option>
               ))}
             </select>
           </div>
@@ -1451,6 +1717,13 @@ export const Attendance = () => {
                 className={`px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-all ${attendanceSaved && !isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 ✗ All Absent
+              </button>
+              <button
+                disabled={attendanceSaved && !isEditing}
+                onClick={() => { setRapidIndex(0); setRapidMode(true); }}
+                className={`px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 rounded-lg shadow-xs transition-all flex items-center gap-1.5 ${attendanceSaved && !isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <span>⚡ 15-Sec Roll Call</span>
               </button>
             </div>
           )}
@@ -1589,6 +1862,167 @@ export const Attendance = () => {
           </div>
         </>
       )}
+
+      {/* ⚡ 15-Sec Rapid Mobile Roll Call Modal */}
+      {rapidMode && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-6 animate-in zoom-in-95">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-sm">
+                  ⚡
+                </span>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">15-Sec Rapid Roll Call</h3>
+                  <p className="text-2xs text-slate-500">
+                    {rapidIndex < students.length
+                      ? `Student ${rapidIndex + 1} of ${students.length}`
+                      : 'Roll Call Finished!'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRapidMode(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-amber-500 to-emerald-500 h-full transition-all duration-200"
+                style={{
+                  width: `${students.length > 0 ? (Math.min(rapidIndex, students.length) / students.length) * 100 : 0}%`
+                }}
+              />
+            </div>
+
+            {/* Active Student Card */}
+            {rapidIndex < students.length ? (
+              <div className="space-y-4">
+                <div className="p-6 bg-gradient-to-b from-slate-50 to-slate-100/60 rounded-2xl border border-slate-200/80 text-center space-y-2">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 text-primary text-2xl font-black flex items-center justify-center mx-auto border-2 border-primary/20">
+                    {students[rapidIndex].name.charAt(0)}
+                  </div>
+                  <div>
+                    <h4 className="font-display font-extrabold text-xl text-slate-900">
+                      {students[rapidIndex].name}
+                    </h4>
+                    <p className="text-xs text-slate-500 font-mono font-semibold">
+                      Roll No: {students[rapidIndex].studentId || rapidIndex + 1}
+                    </p>
+                  </div>
+                  <div>
+                    <span className={`inline-block text-2xs font-bold uppercase tracking-wider px-3 py-1 rounded-full ${
+                      students[rapidIndex].status === 'Present'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : students[rapidIndex].status === 'Absent'
+                        ? 'bg-rose-100 text-rose-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      Current: {students[rapidIndex].status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3 Touch-Friendly Rapid Buttons */}
+                <div className="grid grid-cols-3 gap-2.5">
+                  <button
+                    onClick={() => handleRapidMark('Absent')}
+                    className="py-4 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border-2 border-rose-200 rounded-2xl flex flex-col items-center justify-center gap-1 transition"
+                  >
+                    <span className="text-xl">✗</span>
+                    <span className="text-xs font-black">ABSENT</span>
+                    <span className="text-3xs text-rose-500 font-semibold">[← Key]</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleRapidMark('Late')}
+                    className="py-4 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-700 border-2 border-amber-200 rounded-2xl flex flex-col items-center justify-center gap-1 transition"
+                  >
+                    <span className="text-xl">⏰</span>
+                    <span className="text-xs font-black">LATE</span>
+                    <span className="text-3xs text-amber-500 font-semibold">[↓ Key]</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleRapidMark('Present')}
+                    className="py-4 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-700 border-2 border-emerald-200 rounded-2xl flex flex-col items-center justify-center gap-1 transition"
+                  >
+                    <span className="text-xl">✓</span>
+                    <span className="text-xs font-black">PRESENT</span>
+                    <span className="text-3xs text-emerald-500 font-semibold">[→ Key]</span>
+                  </button>
+                </div>
+
+                {/* Navigation Back / Next Preview */}
+                <div className="flex items-center justify-between pt-2 text-2xs text-slate-500">
+                  <button
+                    disabled={rapidIndex === 0}
+                    onClick={() => setRapidIndex(Math.max(0, rapidIndex - 1))}
+                    className="hover:text-slate-800 disabled:opacity-40 font-semibold"
+                  >
+                    ← Previous Student
+                  </button>
+
+                  {rapidIndex + 1 < students.length && (
+                    <span className="truncate max-w-[180px]">
+                      Next: {students[rapidIndex + 1].name}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Finish Screen */
+              <div className="text-center space-y-4 py-4">
+                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">
+                  ✓
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-slate-900 text-lg">All Students Marked!</h4>
+                  <p className="text-xs text-slate-500 mt-1">Review the totals and submit attendance now</p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs">
+                  <div>
+                    <span className="text-2xs text-slate-400 font-bold block">PRESENT</span>
+                    <strong className="text-emerald-700 text-base">{presentCount}</strong>
+                  </div>
+                  <div>
+                    <span className="text-2xs text-slate-400 font-bold block">ABSENT</span>
+                    <strong className="text-rose-700 text-base">{absentCount}</strong>
+                  </div>
+                  <div>
+                    <span className="text-2xs text-slate-400 font-bold block">LATE</span>
+                    <strong className="text-amber-700 text-base">{lateCount}</strong>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setRapidIndex(0)}
+                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl"
+                  >
+                    Restart
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setRapidMode(false);
+                      await handleSubmit();
+                    }}
+                    className="flex-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs"
+                  >
+                    Save & Submit Now
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1606,11 +2040,52 @@ export const MarksEntry = () => {
   const [examTypes, setExamTypes] = useState([]);
   const [selectedExamType, setSelectedExamType] = useState('Semester Examination');
 
+  const [marksSubTab, setMarksSubTab] = useState('marks'); // 'marks' | 'question_papers'
+  const [examsList, setExamsList] = useState([]);
+  const [loadingExams, setLoadingExams] = useState(false);
+  const [uploadExamModal, setUploadExamModal] = useState(null);
+  const [paperUploadForm, setPaperUploadForm] = useState({ fileUrl: '', paperContent: '', notes: '' });
+  const [uploadingPaper, setUploadingPaper] = useState(false);
+  const [paperUploadMsg, setPaperUploadMsg] = useState({ error: '', success: '' });
+
   // States for marks entry popup
   const [showMarksPopup, setShowMarksPopup] = useState(false);
   const [popupForm, setPopupForm] = useState({ subjectId: '', theoryMarks: '', practicalMarks: '', remarks: '' });
   const [globalSubjects, setGlobalSubjects] = useState([]);
   const [studentClassSubjects, setStudentClassSubjects] = useState([]);
+
+  const fetchExamsList = async () => {
+    try {
+      setLoadingExams(true);
+      const res = await apiClient.get('/exams/schedule');
+      setExamsList(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Failed to load exams list:', err);
+    } finally {
+      setLoadingExams(false);
+    }
+  };
+
+  const handleUploadPaper = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!uploadExamModal) return;
+    setUploadingPaper(true);
+    setPaperUploadMsg({ error: '', success: '' });
+    try {
+      const res = await apiClient.post(`/exams/${uploadExamModal.id}/upload-question-paper`, paperUploadForm);
+      setPaperUploadMsg({ error: '', success: res.data?.message || 'Question paper submitted successfully!' });
+      fetchExamsList();
+      setTimeout(() => {
+        setUploadExamModal(null);
+        setPaperUploadForm({ fileUrl: '', paperContent: '', notes: '' });
+        setPaperUploadMsg({ error: '', success: '' });
+      }, 2000);
+    } catch (err) {
+      setPaperUploadMsg({ error: err.response?.data?.error || 'Failed to submit question paper.', success: '' });
+    } finally {
+      setUploadingPaper(false);
+    }
+  };
 
   const fetchRosterData = async () => {
     try {
@@ -1817,27 +2292,209 @@ export const MarksEntry = () => {
   }
 
   return (
-    <div>
-      <Topbar title="Student Marks Entry" />
-      
-      {isApproved && (
-        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-5 py-3 text-sm text-amber-800 flex items-center gap-2 font-medium">
-          ⚠️ Reports for this class have been approved and published by the administration. Editing is locked.
-        </div>
-      )}
+    <div className="space-y-4">
+      <Topbar title="Examination Management & Marks" subtitle="Curriculum assessment records and teacher question paper submissions" />
 
-      <div className="card">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-5 border-b border-gray-50 pb-4">
-          <div className="flex flex-wrap items-center gap-4 flex-1">
-            <div className="w-72">
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Select Student from Class Roster</label>
-              <select value={selectedStudentId} onChange={e => setSelectedStudentId(e.target.value)} className="input text-sm">
-                <option value="">Choose student...</option>
-                {students.map(s => (
-                  <option key={s.id} value={s.id}>{s.name} ({s.class} {s.section})</option>
-                ))}
-              </select>
+      {/* Subtabs Switcher */}
+      <div className="flex gap-2 border-b border-gray-200 pb-2">
+        <button
+          onClick={() => setMarksSubTab('marks')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            marksSubTab === 'marks'
+              ? 'bg-primary text-white shadow-sm'
+              : 'bg-white text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          <Edit className="w-3.5 h-3.5" />
+          <span>Student Marks Entry</span>
+        </button>
+        <button
+          onClick={() => { setMarksSubTab('question_papers'); fetchExamsList(); }}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            marksSubTab === 'question_papers'
+              ? 'bg-primary text-white shadow-sm'
+              : 'bg-white text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>📄 Question Paper Submissions (3-Day Rule)</span>
+        </button>
+      </div>
+
+      {marksSubTab === 'question_papers' ? (
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-3">
+            <div>
+              <h3 className="font-display font-extrabold text-slate-900 text-sm m-0">
+                Scheduled Exams & Question Paper Deadlines
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                School Policy: Teachers must upload question papers at least <strong>3 days prior</strong> to the scheduled exam date.
+              </p>
             </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={async () => {
+                  try {
+                    const res = await apiClient.post('/exams/send-pending-paper-alerts');
+                    alert(res.data?.message || '5-Day pending paper alerts checked & sent.');
+                  } catch (e) {
+                    alert('Failed to trigger alert check.');
+                  }
+                }}
+                className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center gap-1"
+                title="Test 5-Day countdown WhatsApp & notice engine"
+              >
+                <span>🔔 Test 5-Day Alerts</span>
+              </button>
+              <button onClick={fetchExamsList} className="btn-outline text-xs">
+                🔄 Refresh List
+              </button>
+            </div>
+          </div>
+
+          {/* 5-Day Alert Policy Banner */}
+          <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-900 flex items-center gap-2.5">
+            <span className="text-base">📢</span>
+            <p className="m-0 leading-relaxed">
+              <strong>Automated 5-Day Warning Engine:</strong> EduVault automatically begins dispatching daily in-app notices and WhatsApp alerts to subject teachers starting <strong>5 days before exam day</strong> until the question paper is submitted. Paper submissions strictly lock <strong>3 days prior</strong> to the exam.
+            </p>
+          </div>
+
+          {loadingExams ? (
+            <div className="py-12 text-center text-slate-400 text-xs">Loading scheduled exams...</div>
+          ) : examsList.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs">No upcoming examinations scheduled.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-100 text-left">
+                    <th className="table-th">Subject & Class</th>
+                    <th className="table-th">Exam Date</th>
+                    <th className="table-th">Upload Deadline (3-Day)</th>
+                    <th className="table-th">Submission Status</th>
+                    <th className="table-th">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {examsList.map(exam => {
+                    return (
+                      <tr key={exam.id} className="border-b border-slate-50 hover:bg-slate-50/60">
+                        <td className="table-td">
+                          <div className="font-bold text-slate-800">{exam.subject}</div>
+                          <div className="text-[11px] text-slate-400">{exam.grade} • {exam.section || 'All Sections'} ({exam.examType})</div>
+                        </td>
+                        <td className="table-td">
+                          <div className="font-semibold text-slate-700">{exam.date}</div>
+                          <div className="text-[10px] text-slate-400">{exam.time || 'Morning Session'}</div>
+                        </td>
+                        <td className="table-td">
+                          <div className="font-bold text-slate-800">{exam.deadlineDate}</div>
+                          {exam.daysUntilExam !== undefined && (
+                            <div className={`text-[10px] font-semibold ${
+                              exam.daysUntilExam < 3 ? 'text-rose-600' : 'text-emerald-600'
+                            }`}>
+                              {exam.daysUntilExam > 0 ? `${exam.daysUntilExam} day(s) until exam` : 'Exam today/passed'}
+                            </div>
+                          )}
+                        </td>
+                        <td className="table-td">
+                          {exam.paperStatus === 'Submitted' ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              ✅ Paper Submitted
+                            </span>
+                          ) : exam.paperStatus === 'DeadlineMissed' ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              ⛔ Deadline Missed (Locked)
+                            </span>
+                          ) : (
+                            <div>
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                ⏳ Pending Submission
+                              </span>
+                              {exam.daysUntilExam <= 5 && exam.daysUntilExam >= 3 && (
+                                <span className="block mt-1 px-2 py-0.5 rounded-md text-[9px] font-black bg-rose-100 text-rose-800 border border-rose-200 animate-pulse text-center">
+                                  🚨 5-Day Alert Active
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="table-td">
+                          {exam.paperStatus === 'Submitted' ? (
+                            <div className="flex items-center gap-2">
+                              {exam.questionPaperUrl?.startsWith('http') ? (
+                                <a 
+                                  href={exam.questionPaperUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-600 font-bold hover:underline"
+                                >
+                                  View Doc
+                                </a>
+                              ) : (
+                                <button 
+                                  onClick={() => alert(`Paper Content:\n\n${exam.questionPaperUrl}`)}
+                                  className="text-xs text-blue-600 font-bold hover:underline"
+                                >
+                                  View Paper
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  setUploadExamModal(exam);
+                                  setPaperUploadForm({ fileUrl: exam.questionPaperUrl || '', paperContent: '', notes: exam.questionPaperNotes || '' });
+                                }}
+                                className="text-[11px] text-slate-500 hover:text-slate-800"
+                              >
+                                Re-upload
+                              </button>
+                            </div>
+                          ) : exam.canUpload ? (
+                            <button
+                              onClick={() => {
+                                setUploadExamModal(exam);
+                                setPaperUploadForm({ fileUrl: '', paperContent: '', notes: '' });
+                              }}
+                              className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold shadow-sm transition"
+                            >
+                              📤 Upload Paper
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">
+                              Submission Closed
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {isApproved && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-5 py-3 text-sm text-amber-800 flex items-center gap-2 font-medium">
+              ⚠️ Reports for this class have been approved and published by the administration. Editing is locked.
+            </div>
+          )}
+
+          <div className="card">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-5 border-b border-gray-50 pb-4">
+              <div className="flex flex-wrap items-center gap-4 flex-1">
+                <div className="w-72">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Select Student from Class Roster</label>
+                  <select value={selectedStudentId} onChange={e => setSelectedStudentId(e.target.value)} className="input text-sm">
+                    <option value="">Choose student...</option>
+                    {students.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.class} {s.section})</option>
+                    ))}
+                  </select>
+                </div>
             <div className="w-72">
               <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Select Examination Type</label>
               <select value={selectedExamType} onChange={e => setSelectedExamType(e.target.value)} className="input text-sm">
@@ -1938,6 +2595,138 @@ export const MarksEntry = () => {
           </div>
         )}
       </div>
+        </>
+      )}
+
+      {/* Upload Question Paper Modal (Enforcing 3-Day Submission Policy) */}
+      {uploadExamModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100">
+            <div className="bg-gradient-to-r from-primary to-primary/90 px-6 py-5 flex justify-between items-center text-white">
+              <div>
+                <h3 className="font-display font-extrabold text-base flex items-center gap-2">
+                  <span>📄 Upload Exam Question Paper</span>
+                </h3>
+                <p className="text-blue-100 text-xs mt-0.5">
+                  {uploadExamModal.subject} — {uploadExamModal.grade} ({uploadExamModal.examType})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setUploadExamModal(null);
+                  setPaperUploadMsg({ error: '', success: '' });
+                }}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-bold transition text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadPaper} className="p-6 space-y-4">
+              {/* Deadline reminder banner */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 text-xs text-blue-900 space-y-1">
+                <div className="font-bold flex items-center justify-between">
+                  <span>📅 Exam Date: {uploadExamModal.date}</span>
+                  <span className="text-rose-600 font-extrabold">⏰ Deadline: {uploadExamModal.deadlineDate}</span>
+                </div>
+                <p className="text-[11px] text-blue-700 leading-relaxed">
+                  School rule: Teachers must submit final question papers at least <strong>3 days</strong> in advance to ensure admin review, proofreading, and secure printing.
+                </p>
+              </div>
+
+              {paperUploadMsg.error && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700 font-medium flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>{paperUploadMsg.error}</span>
+                </div>
+              )}
+
+              {paperUploadMsg.success && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-700 font-medium flex items-center gap-2">
+                  <span>✅</span>
+                  <span>{paperUploadMsg.success}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Question Paper Document URL / Cloud Link (Google Drive, Dropbox, PDF)
+                </label>
+                <input
+                  type="url"
+                  value={paperUploadForm.fileUrl}
+                  onChange={e => setPaperUploadForm(p => ({ ...p, fileUrl: e.target.value }))}
+                  placeholder="https://drive.google.com/file/d/... or secure cloud link"
+                  className="input text-xs"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Provide a cloud link to the PDF/Word question paper.
+                </p>
+              </div>
+
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink mx-3 text-[11px] font-bold text-slate-400 uppercase">OR Paste Text</span>
+                <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Question Paper Text / Raw Questions
+                </label>
+                <textarea
+                  rows={4}
+                  value={paperUploadForm.paperContent}
+                  onChange={e => setPaperUploadForm(p => ({ ...p, paperContent: e.target.value }))}
+                  placeholder="Section A: Multiple Choice Questions (10 Marks)...&#10;Section B: Long Answer Questions (40 Marks)..."
+                  className="input text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Notes for Exam Controller / Headmaster (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={paperUploadForm.notes}
+                  onChange={e => setPaperUploadForm(p => ({ ...p, notes: e.target.value }))}
+                  placeholder="e.g. Graph paper required for Q4, 2 extra blank sheets needed per student."
+                  className="input text-xs"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadExamModal(null);
+                    setPaperUploadMsg({ error: '', success: '' });
+                  }}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploadingPaper || (!paperUploadForm.fileUrl.trim() && !paperUploadForm.paperContent.trim())}
+                  className="px-5 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary/90 disabled:opacity-50 transition flex items-center gap-1.5 shadow-sm"
+                >
+                  {uploadingPaper ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <span>🚀 Submit Question Paper</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Enter Subject Mark Popup Modal */}
       {showMarksPopup && selectedStudentId && (
@@ -2250,7 +3039,7 @@ export const Homework = () => {
       setSyllabi(sylRes.data);
       if (clsRes.data.length > 0) {
         setClassSelector(clsRes.data[0].id);
-        setSClass(`Class ${clsRes.data[0].grade} - ${clsRes.data[0].section}`);
+        setSClass(formatClassLabel(clsRes.data[0].grade, clsRes.data[0].section));
       }
     } catch (err) {
       console.error('Error fetching homeworks/syllabus:', err);
@@ -2274,8 +3063,8 @@ export const Homework = () => {
       const matchedClassObj = classes.find(c => c.id === classSelector);
       const totalStudents = matchedClassObj ? (matchedClassObj.enrolled || 0) : 0;
       const formattedClassName = matchedClassObj
-      ? `Class ${matchedClassObj.grade} - ${matchedClassObj.section}`
-      : `Class ${classSelector}`;
+      ? formatClassLabel(matchedClassObj.grade, matchedClassObj.section)
+      : formatGrade(classSelector);
 
       await expressClient.post('/homework', {
         title,
@@ -2326,9 +3115,10 @@ export const Homework = () => {
       try {
       // Find the matching class by name to get current enrolled count
       const match = classes.find(c =>
+      formatClassLabel(c.grade, c.section) === className ||
+      formatGrade(c.grade) === className ||
       `Class ${c.grade} - ${c.section}` === className ||
-      `Class ${c.grade}` === className ||
-      `Class ${c.grade} ${c.section}` === className
+      `Class ${c.grade}` === className
       );
       const totalStudents = match ? (match.enrolled || 0) : 0;
       await expressClient.put(`/homework/${id}/sync-count`, {totalStudents});
@@ -2618,7 +3408,7 @@ export const Homework = () => {
                     <select value={classSelector} onChange={e => setClassSelector(e.target.value)} className="input text-sm">
                       <option value="">Choose Class...</option>
                       {classes.map(c => (
-                        <option key={c.id} value={c.id}>Class {c.grade} - {c.section} ({c.enrolled} enrolled)</option>
+                        <option key={c.id} value={c.id}>{formatClassLabel(c.grade, c.section)} ({c.enrolled || 0} enrolled)</option>
                       ))}
                     </select>
                   </div>
@@ -2731,7 +3521,7 @@ export const Homework = () => {
                   <label className="block text-xs font-bold text-gray-700 mb-1">Target Class *</label>
                   <select value={sClass} onChange={e => setSClass(e.target.value)} className="input text-xs font-semibold">
                     {classes.map(c => (
-                      <option key={c.id} value={`Class ${c.grade} - ${c.section}`}>Class {c.grade} - {c.section}</option>
+                      <option key={c.id} value={formatClassLabel(c.grade, c.section)}>{formatClassLabel(c.grade, c.section)}</option>
                     ))}
                   </select>
                 </div>
@@ -3192,11 +3982,14 @@ export const TeacherSelfAttendance = () => {
   }
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dateObj = new Date(year, month, day);
+    const isSunday = dateObj.getDay() === 0;
     const record = attendanceList.find(a => a.date === dateStr);
     calendarDays.push({
       padding: false,
       day,
       dateStr,
+      isSunday,
       record,
       key: `day-${day}`
     });
@@ -3390,8 +4183,10 @@ export const TeacherSelfAttendance = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="py-2">{d}</div>)}
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-xs font-bold uppercase tracking-wider">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+              <div key={d} className={`py-2 ${d === 'Sun' ? 'text-rose-500 font-extrabold' : 'text-gray-400'}`}>{d}</div>
+            ))}
           </div>
 
           <div className="grid grid-cols-7 gap-1 sm:gap-2">
@@ -3400,6 +4195,21 @@ export const TeacherSelfAttendance = () => {
                 return <div key={item.key} className="h-16 bg-gray-50/30 rounded-xl border border-dashed border-gray-100" />;
               }
               const hasRecord = !!item.record;
+
+              if (item.isSunday && !hasRecord) {
+                return (
+                  <div
+                    key={item.key}
+                    className="h-16 rounded-xl border border-rose-200/80 bg-rose-50/40 flex flex-col justify-between p-2 text-left relative text-rose-700 shadow-3xs"
+                  >
+                    <span className="text-xs font-bold text-rose-600">{item.day}</span>
+                    <span className="text-[8px] sm:text-[9px] font-extrabold uppercase leading-none text-rose-500">
+                      Sunday Off
+                    </span>
+                  </div>
+                );
+              }
+
               return (
                 <button
                   key={item.key}
@@ -3539,9 +4349,9 @@ export const TeacherNotices = () => {
   const fetchNotices = async () => {
     try {
       const res = await expressClient.get('/notifications');
-      setNoticesList(res.data);
+      setNoticesList(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error('Error fetching notices:', err);
+      console.warn('Notice fetch warning:', err.message);
     }
   };
 
@@ -3574,24 +4384,45 @@ export const TeacherNotices = () => {
     e.preventDefault();
     if (!title || !body) return;
     setLoading(true);
+    let whatsAppSent = false;
     try {
-      await expressClient.post('/notifications', {
-        recipientId: target,
-        title,
-        body,
-        type
-      });
-      if (sendWhatsApp) {
-        await apiClient.post('/academics/whatsapp/send-broadcast', {
+      try {
+        await expressClient.post('/notifications', {
+          recipientId: target,
           title,
-          body
+          body,
+          type
         });
+      } catch (inAppErr) {
+        console.warn('In-app notification note:', inAppErr.message);
       }
+
+      if (sendWhatsApp) {
+        try {
+          const waRes = await apiClient.post('/academics/whatsapp/send-broadcast', {
+            title,
+            body
+          });
+          if (waRes.data?.success) {
+            whatsAppSent = true;
+          }
+        } catch (waErr) {
+          console.error('WhatsApp send error:', waErr);
+          alert('WhatsApp sending error: ' + (waErr.response?.data?.error || waErr.message));
+        }
+      }
+
       setShowNew(false);
       setTitle('');
       setBody('');
       setSendWhatsApp(false);
       fetchNotices();
+
+      if (whatsAppSent) {
+        alert('Notice published and WhatsApp message sent successfully to parents!');
+      } else {
+        alert('Notice published successfully!');
+      }
     } catch (err) {
       console.error('Error publishing notice:', err);
     } finally {
@@ -3733,6 +4564,29 @@ export const TeacherNotices = () => {
   );
 };
 
+const CLIENT_DEFAULT_HOLIDAYS = [
+  { _id: 'h1', title: 'Republic Day', date: '2026-01-26', endDate: '2026-01-26', category: 'NATIONAL', description: 'National celebration of Republic Day of India. Flag hoisting ceremony.' },
+  { _id: 'h2', title: 'Maha Shivratri', date: '2026-02-15', endDate: '2026-02-15', category: 'FESTIVAL', description: 'School holiday on account of Maha Shivratri.' },
+  { _id: 'h3', title: 'Holi Festival', date: '2026-03-04', endDate: '2026-03-05', category: 'FESTIVAL', description: 'School closed for Holi and Dhulandi celebrations.' },
+  { _id: 'h4', title: 'Eid-ul-Fitr', date: '2026-03-20', endDate: '2026-03-20', category: 'FESTIVAL', description: 'School holiday for Eid-ul-Fitr observance.' },
+  { _id: 'h5', title: 'Good Friday', date: '2026-04-03', endDate: '2026-04-03', category: 'RESTRICTED', description: 'School closed for Good Friday.' },
+  { _id: 'h6', title: 'Ambedkar Jayanti', date: '2026-04-14', endDate: '2026-04-14', category: 'NATIONAL', description: 'Commemoration of Dr. B.R. Ambedkar Jayanti.' },
+  { _id: 'h7', title: 'Mahavir Jayanti', date: '2026-04-15', endDate: '2026-04-15', category: 'FESTIVAL', description: 'School holiday on account of Mahavir Jayanti.' },
+  { _id: 'h8', title: 'Summer Vacation', date: '2026-05-18', endDate: '2026-06-30', category: 'ACADEMIC', description: 'Annual summer vacation for students and faculty.' },
+  { _id: 'h9', title: 'Muharram', date: '2026-06-26', endDate: '2026-06-26', category: 'FESTIVAL', description: 'Gazetted school holiday for Muharram.' },
+  { _id: 'h10', title: 'Independence Day', date: '2026-08-15', endDate: '2026-08-15', category: 'NATIONAL', description: 'Independence Day celebration. Flag hoisting at 8:00 AM.' },
+  { _id: 'h11', title: 'Raksha Bandhan', date: '2026-08-28', endDate: '2026-08-28', category: 'FESTIVAL', description: 'School closed for Raksha Bandhan festival.' },
+  { _id: 'h12', title: 'Janmashtami', date: '2026-09-04', endDate: '2026-09-04', category: 'FESTIVAL', description: 'School holiday on Sri Krishna Janmashtami.' },
+  { _id: 'h13', title: 'Eid-e-Milad', date: '2026-09-25', endDate: '2026-09-25', category: 'FESTIVAL', description: 'School holiday for Milad-un-Nabi.' },
+  { _id: 'h14', title: 'Mahatma Gandhi Jayanti', date: '2026-10-02', endDate: '2026-10-02', category: 'NATIONAL', description: 'National Holiday in honor of Mahatma Gandhi.' },
+  { _id: 'h15', title: 'Dussehra Break', date: '2026-10-20', endDate: '2026-10-23', category: 'FESTIVAL', description: 'School closed for Vijayadashami Dussehra festivities.' },
+  { _id: 'h16', title: 'Diwali & Chhath Vacation', date: '2026-11-08', endDate: '2026-11-15', category: 'FESTIVAL', description: 'Deepawali, Govardhan Puja, Bhai Dooj and Chhath Puja holidays.' },
+  { _id: 'h17', title: 'Guru Nanak Jayanti', date: '2026-11-24', endDate: '2026-11-24', category: 'RESTRICTED', description: 'School holiday on Guru Nanak Gurpurab.' },
+  { _id: 'h18', title: 'Winter Vacation & Christmas', date: '2026-12-25', endDate: '2027-01-05', category: 'ACADEMIC', description: 'Winter break and Christmas holidays.' },
+  { _id: 'h19', title: 'Republic Day', date: '2027-01-26', endDate: '2027-01-26', category: 'NATIONAL', description: 'National celebration of Republic Day of India.' },
+  { _id: 'h20', title: 'Holi Festival', date: '2027-03-23', endDate: '2027-03-24', category: 'FESTIVAL', description: 'Festival of colours holiday.' }
+];
+
 // --- Teacher School Holiday Calendar ---
 export const TeacherHolidays = () => {
   const [holidays, setHolidays] = useState([]);
@@ -3745,13 +4599,19 @@ export const TeacherHolidays = () => {
   const fetchHolidays = async () => {
     try {
       const res = await expressClient.get('/holidays');
-      setHolidays(res.data);
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        setHolidays(res.data);
+      } else {
+        setHolidays(CLIENT_DEFAULT_HOLIDAYS);
+      }
     } catch (err) {
-      console.error('Error fetching holidays:', err);
+      console.warn('Error fetching holidays from API, falling back to statutory calendar:', err);
+      setHolidays(CLIENT_DEFAULT_HOLIDAYS);
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchHolidays();
@@ -3779,6 +4639,8 @@ export const TeacherHolidays = () => {
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dateObj = new Date(year, month, day);
+    const isSunday = dateObj.getDay() === 0;
     const matchedHoliday = holidays.find(h => {
       const hStart = h.date;
       const hEnd = h.endDate || h.date;
@@ -3788,6 +4650,7 @@ export const TeacherHolidays = () => {
       padding: false,
       day,
       dateStr,
+      isSunday,
       holiday: matchedHoliday,
       key: `day-${day}`
     });
@@ -3795,6 +4658,8 @@ export const TeacherHolidays = () => {
 
   const getCategoryBadge = (cat) => {
     switch (cat) {
+      case 'WEEKLY_OFF':
+        return { bg: 'bg-rose-500/10 text-rose-700 border-rose-200', badge: '☀️ Weekly Off', dot: 'bg-rose-500' };
       case 'NATIONAL':
         return { bg: 'bg-orange-500/10 text-orange-700 border-orange-200', badge: '🇮🇳 National Holiday', dot: 'bg-orange-500' };
       case 'FESTIVAL':
@@ -3863,12 +4728,15 @@ export const TeacherHolidays = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 card bg-white shadow-sm border border-slate-200/80 rounded-2xl p-6">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-bold font-display text-primary">
                 {monthNames[month]} {year}
               </h2>
-              <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 font-bold text-slate-600 border border-slate-200">
-                {calendarDays.filter(d => !d.padding && d.holiday).length} Holidays This Month
+              <span className="text-xs px-2.5 py-1 rounded-full bg-purple-50 font-bold text-purple-700 border border-purple-200">
+                🎉 {calendarDays.filter(d => !d.padding && d.holiday).length} Declared Holidays
+              </span>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-rose-50 font-bold text-rose-700 border border-rose-200">
+                ☀️ {calendarDays.filter(d => !d.padding && d.isSunday).length} Sundays (Off)
               </span>
             </div>
 
@@ -3897,9 +4765,9 @@ export const TeacherHolidays = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold uppercase tracking-wider">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-              <div key={d} className="py-2">{d}</div>
+              <div key={d} className={`py-2 ${d === 'Sun' ? 'text-rose-500 font-black' : 'text-slate-400'}`}>{d}</div>
             ))}
           </div>
 
@@ -3911,8 +4779,17 @@ export const TeacherHolidays = () => {
 
               const isToday = cell.dateStr === getTodayStr();
               const hasHoliday = !!cell.holiday;
-              const isSelected = selectedHoliday && (cell.holiday?._id === selectedHoliday._id || cell.dateStr === selectedHoliday.date);
-              const categoryStyle = hasHoliday ? getCategoryBadge(cell.holiday.category) : null;
+              const isSunday = cell.isSunday;
+              const isSelected = selectedHoliday && (
+                (cell.holiday && (cell.holiday?._id === selectedHoliday._id || cell.dateStr === selectedHoliday.date)) ||
+                (!cell.holiday && isSunday && selectedHoliday.date === cell.dateStr)
+              );
+
+              const categoryStyle = hasHoliday
+                ? getCategoryBadge(cell.holiday.category)
+                : isSunday
+                ? getCategoryBadge('WEEKLY_OFF')
+                : null;
 
               return (
                 <button
@@ -3921,6 +4798,15 @@ export const TeacherHolidays = () => {
                   onClick={() => {
                     if (hasHoliday) {
                       setSelectedHoliday(cell.holiday);
+                    } else if (isSunday) {
+                      setSelectedHoliday({
+                        _id: `sunday-${cell.dateStr}`,
+                        title: 'Sunday - Weekly Off',
+                        date: cell.dateStr,
+                        endDate: cell.dateStr,
+                        category: 'WEEKLY_OFF',
+                        description: 'Official weekly holiday. Campus, classes, and regular academic operations remain closed.'
+                      });
                     }
                   }}
                   className={`h-24 p-2 rounded-xl border text-left transition-all relative flex flex-col justify-between ${
@@ -3928,6 +4814,8 @@ export const TeacherHolidays = () => {
                       ? 'ring-2 ring-primary ring-offset-2 border-primary shadow-md'
                       : hasHoliday
                       ? `${categoryStyle.bg} border-2 hover:scale-[1.02] shadow-2xs cursor-pointer`
+                      : isSunday
+                      ? 'bg-rose-50/35 border-rose-200/70 hover:bg-rose-50/80 hover:border-rose-300 shadow-3xs cursor-pointer'
                       : isToday
                       ? 'bg-blue-50/40 border-blue-300 hover:bg-blue-50'
                       : 'bg-white border-slate-100 hover:bg-slate-50'
@@ -3935,13 +4823,19 @@ export const TeacherHolidays = () => {
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className={`text-xs font-black ${
-                      isToday ? 'w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center' : 'text-slate-700'
+                      isToday
+                        ? 'w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center'
+                        : isSunday
+                        ? 'text-rose-600'
+                        : 'text-slate-700'
                     }`}>
                       {cell.day}
                     </span>
-                    {hasHoliday && (
+                    {hasHoliday ? (
                       <span className={`w-2 h-2 rounded-full ${categoryStyle.dot}`} />
-                    )}
+                    ) : isSunday ? (
+                      <span className="w-2 h-2 rounded-full bg-rose-400" />
+                    ) : null}
                   </div>
 
                   {hasHoliday ? (
@@ -3951,6 +4845,15 @@ export const TeacherHolidays = () => {
                       </div>
                       <span className="text-[9px] font-semibold opacity-80 block truncate mt-0.5 text-primary">
                         👉 Click for details
+                      </span>
+                    </div>
+                  ) : isSunday ? (
+                    <div className="mt-1">
+                      <div className="text-[10px] font-black text-rose-600 leading-tight">
+                        Weekly Off
+                      </div>
+                      <span className="text-[9px] text-rose-500/80 font-semibold block truncate mt-0.5">
+                        Sunday Holiday
                       </span>
                     </div>
                   ) : (

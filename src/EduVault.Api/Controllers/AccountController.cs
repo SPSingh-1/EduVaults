@@ -15,7 +15,7 @@ namespace EduVault.Api.Controllers
 {
     [ApiController]
     [Route("api/account")]
-    [Authorize(Roles = "accountmanager,AccountManager,schooladmin,SchoolAdmin")]
+    [Authorize(Roles = "accountmanager,AccountManager,schooladmin,SchoolAdmin,superadmin,SuperAdmin")]
     public class AccountController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -31,6 +31,22 @@ namespace EduVault.Api.Controllers
 
         private Guid GetSchoolId()
         {
+            if (User.IsInRole("superadmin") || User.IsInRole("SuperAdmin"))
+            {
+                var qSchoolId = HttpContext.Request.Query["schoolId"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(qSchoolId) && Guid.TryParse(qSchoolId, out var saSchoolId))
+                    return saSchoolId;
+
+                var hSchoolId = HttpContext.Request.Headers["X-School-Id"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(hSchoolId) && Guid.TryParse(hSchoolId, out var headerSchoolId))
+                    return headerSchoolId;
+
+                var firstSchool = _context.Schools.Select(s => s.Id).FirstOrDefault();
+                if (firstSchool != Guid.Empty) return firstSchool;
+
+                throw new UnauthorizedAccessException("Super Admin must provide schoolId via query parameter (?schoolId=...) or X-School-Id header.");
+            }
+
             var schoolIdStr = User.FindFirst("schoolId")?.Value;
             if (string.IsNullOrEmpty(schoolIdStr)) throw new UnauthorizedAccessException("School ID missing in token");
             return Guid.Parse(schoolIdStr);
@@ -61,7 +77,7 @@ namespace EduVault.Api.Controllers
                 .Where(s => s.SchoolId == schoolId && s.Month == m && s.Year == y)
                 .Select(s => new { s.NetPay, s.Status }).ToListAsync();
             int pendingLeavesCount = await _context.LeaveRequests.AsNoTracking()
-                .CountAsync(l => l.SchoolId == schoolId && l.Status == "Pending");
+                .CountAsync(l => l.SchoolId == schoolId && (l.Status == "Pending" || l.Status == "ForwardedToAccounts"));
             var expenses = await _context.Expenses.AsNoTracking()
                 .Where(e => e.SchoolId == schoolId && e.Date.Month == m && e.Date.Year == y)
                 .Select(e => new { e.Category, e.Amount })
@@ -238,7 +254,11 @@ namespace EduVault.Api.Controllers
                     l.Reason,
                     l.Status,
                     l.AppliedAt,
-                    l.RejectionNote
+                    l.RejectionNote,
+                    l.ForwardedById,
+                    l.ForwardedByName,
+                    l.ForwardedAt,
+                    l.ForwardNote
                 };
             }).ToList();
 
@@ -258,6 +278,11 @@ namespace EduVault.Api.Controllers
             string previousStatus = leave.Status;
             leave.Status = request.Status; // "Approved" or "Rejected"
             leave.RejectionNote = request.RejectionNote;
+            if (request.Status == "Approved")
+            {
+                leave.ApprovedAt = DateTime.UtcNow;
+                leave.FinalApprovedById = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            }
             _unitOfWork.LeaveRequests.Update(leave);
 
             // If newly approved, update quota used
@@ -547,7 +572,7 @@ namespace EduVault.Api.Controllers
                 }
 
                 decimal lwpDeduction = Math.Round(lwpDays * perDayRate, 2);
-                decimal netPay = Math.Max(0, basicEarned + ruleAllowances - ruleDeductions - lwpDeduction);
+                decimal netPay = Math.Max(0, basicEarned + ruleAllowances - ruleDeductions);
 
                 var existing = existingSalaries.FirstOrDefault(s => s.TeacherUserId == teacher.Id);
                 if (existing != null)
@@ -563,7 +588,7 @@ namespace EduVault.Api.Controllers
                     existing.RuleBasedAllowances = ruleAllowances;
                     existing.RuleBasedDeductions = ruleDeductions;
                     existing.LwpDeduction = lwpDeduction;
-                    existing.NetPay = Math.Max(0, basicEarned + ruleAllowances + existing.ManualAllowances - ruleDeductions - existing.ManualDeductions - lwpDeduction);
+                    existing.NetPay = Math.Max(0, basicEarned + ruleAllowances + existing.ManualAllowances - ruleDeductions - existing.ManualDeductions);
                     _unitOfWork.SalaryRecords.Update(existing);
                 }
                 else

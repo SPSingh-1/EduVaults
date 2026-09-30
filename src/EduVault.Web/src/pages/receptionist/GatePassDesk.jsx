@@ -12,6 +12,7 @@ import {
   Phone,
   User
 } from 'lucide-react';
+import { printRenderedDocument } from '../../components/print/PrintIframe';
 
 const GatePassDesk = () => {
   const [gatePasses, setGatePasses] = useState([]);
@@ -394,7 +395,24 @@ const GatePassDesk = () => {
 
             <div className="flex gap-2">
               <button
-                onClick={() => window.print()}
+                onClick={() => {
+                  const fallback = `
+                    <div class="print-zone-thermal" style="padding: 10px; font-size: 11px; text-align: center;">
+                      <h3 style="margin: 0; font-size: 15px; font-weight: bold;">EduVault School</h3>
+                      <p style="margin: 2px 0 8px; font-size: 10px; color: #555;">Official Student Gate Pass</p>
+                      <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 6px 0; margin-bottom: 8px; text-align: left;">
+                        <div><strong>Pass #:</strong> ${printablePass?.passNumber || 'N/A'}</div>
+                        <div><strong>Student:</strong> ${printablePass?.studentName || ''}</div>
+                        <div><strong>Class:</strong> ${printablePass?.classSection || ''}</div>
+                        <div><strong>Guardian:</strong> ${printablePass?.parentName || ''}</div>
+                        <div><strong>Reason:</strong> ${printablePass?.reason || ''}</div>
+                        <div><strong>Issued At:</strong> ${new Date(printablePass?.issuedAt || Date.now()).toLocaleTimeString()}</div>
+                      </div>
+                      <p style="margin-top: 12px; font-size: 9px; color: #777;">Please present this pass at the security gate.<br/>Valid only for today.</p>
+                    </div>
+                  `;
+                  printRenderedDocument('GatePass', printablePass?.id || printablePass?.passNumber || '', fallback);
+                }}
                 className="btn-primary text-xs py-2 flex-1 justify-center"
               >
                 🖨️ Print Exit Slip

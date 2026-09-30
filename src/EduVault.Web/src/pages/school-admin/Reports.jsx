@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Topbar from "../../components/layout/Topbar";
 import { apiClient, expressClient } from "../../api/apiClient";
+import { formatClassLabel, formatGrade } from "../../utils/classUtils";
 import { 
   Check, 
   AlertCircle, 
@@ -11,8 +12,11 @@ import {
   CheckCircle2, 
   Loader2,
   Printer,
-  X 
+  X,
+  FileText,
+  LayoutDashboard
 } from "lucide-react";
+import { printRenderedDocument } from "../../components/print/PrintIframe";
 
 
 const getBadgeStyle = (examType) => {
@@ -37,6 +41,10 @@ const Reports = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [reportDetails, setReportDetails] = useState(null);
   const [loadingReport, setLoadingReport] = useState(false);
+  const [renderedTemplateHtml, setRenderedTemplateHtml] = useState("");
+  const [activeModalTab, setActiveModalTab] = useState("template"); // 'template' | 'summary'
+  const [printingStudentId, setPrintingStudentId] = useState(null);
+  const [printingModal, setPrintingModal] = useState(false);
   const [selectedReportExamType, setSelectedReportExamType] = useState("Semester Examination");
 
   // Per-student approval state map: { [studentId]: { isApproved, approvedAt } }
@@ -237,7 +245,7 @@ const Reports = () => {
             await expressClient.post("/notifications", {
               recipientId: approvedStudentIds,
               title: "🎉 Result Published!",
-              body: `Your ${selectedReportExamType} result for Class ${selectedClass?.grade} - ${selectedClass?.section} has been published. You can now view your report card.`,
+              body: `Your ${selectedReportExamType} result for ${formatClassLabel(selectedClass?.grade, selectedClass?.section)} has been published. You can now view your report card.`,
               type: "GENERAL",
             });
           } catch (e) {
@@ -260,15 +268,60 @@ const Reports = () => {
     setSelectedStudent(student);
     setLoadingReport(true);
     setReportDetails(null);
+    setRenderedTemplateHtml("");
+    setActiveModalTab("template");
     try {
+      // 1. Fetch performance breakdown
       const res = await apiClient.get(
         `/exams/student/performance?studentId=${student.id}&examType=${encodeURIComponent(selectedReportExamType)}`
       );
       setReportDetails(res.data);
+
+      // 2. Fetch rendered linked template for this school & student
+      try {
+        const renderRes = await apiClient.get(`/print-templates/render/ReportCard/${student.id}`, {
+          params: { examType: selectedReportExamType }
+        });
+        if (renderRes.data?.renderedHtml) {
+          setRenderedTemplateHtml(renderRes.data.renderedHtml);
+        }
+      } catch (tmplErr) {
+        console.warn("Could not fetch rendered template HTML:", tmplErr);
+      }
     } catch (err) {
       console.error("Failed to load performance report:", err);
     } finally {
       setLoadingReport(false);
+    }
+  };
+
+  // --- Print Modal Document ---
+  const handlePrintModal = async () => {
+    if (!selectedStudent) return;
+    setPrintingModal(true);
+    try {
+      await printRenderedDocument("ReportCard", selectedStudent.id, "", {
+        examType: selectedReportExamType
+      });
+    } catch (e) {
+      console.error("Print error:", e);
+      window.print();
+    } finally {
+      setPrintingModal(false);
+    }
+  };
+
+  // --- Direct Print from Table ---
+  const handleDirectPrint = async (student) => {
+    setPrintingStudentId(student.id);
+    try {
+      await printRenderedDocument("ReportCard", student.id, "", {
+        examType: selectedReportExamType
+      });
+    } catch (e) {
+      console.error("Direct print error:", e);
+    } finally {
+      setPrintingStudentId(null);
     }
   };
 
@@ -337,7 +390,7 @@ const Reports = () => {
                 <option value="">— Select Class —</option>
                 {classesList.map((c) => (
                   <option key={c.id} value={c.id}>
-                    Class {c.grade} - {c.section}
+                    {formatClassLabel(c.grade, c.section)}
                   </option>
                 ))}
               </select>
@@ -408,7 +461,7 @@ const Reports = () => {
               <h3 className="font-display font-semibold text-primary m-0">
                 Student Roster:{" "}
                 {selectedClass
-                  ? `Class ${selectedClass.grade} - ${selectedClass.section}`
+                  ? formatClassLabel(selectedClass.grade, selectedClass.section)
                   : "No Class Selected"}
               </h3>
               <p className="text-2xs text-gray-400 mt-0.5">
@@ -505,6 +558,19 @@ const Reports = () => {
                             >
                               <Eye className="w-3.5 h-3.5" /> View
                             </button>
+                            <button
+                              onClick={() => handleDirectPrint(student)}
+                              disabled={approvals[student.id]?.hasMarks === false || printingStudentId === student.id}
+                              className="px-2.5 py-1.5 text-[10px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                              title="Print using School's Linked Marksheet Format"
+                            >
+                              {printingStudentId === student.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-600" />
+                              ) : (
+                                <Printer className="w-3.5 h-3.5 text-purple-600" />
+                              )}
+                              Print
+                            </button>
                             {!isApproved ? (
                               <button
                                 onClick={() => handleApprove(student)}
@@ -542,10 +608,10 @@ const Reports = () => {
 
       {/* Individual Report Card Modal */}
       {selectedStudent && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 print-modal-backdrop overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden printable-card-modal">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print-modal-backdrop overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden printable-card-modal my-6">
             {/* Modal Header */}
-            <div className="bg-primary p-5 text-white flex justify-between items-center no-print">
+            <div className="bg-primary p-4 px-6 text-white flex justify-between items-center no-print">
               <div>
                 <h4 className="font-bold text-base">Student Performance Record</h4>
                 <p className="text-blue-200 text-2xs">
@@ -554,10 +620,17 @@ const Reports = () => {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => window.print()}
-                  className="px-3 py-1.5 text-xs font-bold bg-white/10 hover:bg-white/20 border border-white/10 text-white rounded-lg flex items-center gap-1.5 transition-all"
+                  onClick={handlePrintModal}
+                  disabled={printingModal}
+                  className="px-3.5 py-1.5 text-xs font-bold bg-white text-primary hover:bg-white/90 rounded-lg flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+                  title="Print using School's Linked Marksheet Format"
                 >
-                  <Printer className="w-4 h-4" /> Print / Save PDF
+                  {printingModal ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Printer className="w-4 h-4" />
+                  )}
+                  Print Official Marksheet
                 </button>
                 <button
                   onClick={() => setSelectedStudent(null)}
@@ -568,148 +641,181 @@ const Reports = () => {
               </div>
             </div>
 
+            {/* Modal Subheader Tabs */}
+            {renderedTemplateHtml && (
+              <div className="flex border-b border-gray-100 bg-gray-50/90 px-6 py-2 gap-2 no-print">
+                <button
+                  onClick={() => setActiveModalTab("template")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    activeModalTab === "template"
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-200/60"
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" /> Official Marksheet (Linked Format)
+                </button>
+                <button
+                  onClick={() => setActiveModalTab("summary")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    activeModalTab === "summary"
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-200/60"
+                  }`}
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" /> Quick Data Breakdown
+                </button>
+              </div>
+            )}
+
             {/* Report body */}
-            <div className="p-6">
-              <div className="border-b-2 border-primary pb-4 mb-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h1 className="font-display font-extrabold text-2xl text-primary tracking-tight">
-                      {schoolName.toUpperCase()}
-                    </h1>
-                    <p className="text-xs text-gray-400 font-light mt-0.5">
-                      Academic Progress Report Card · Official Record
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <h2 className="font-display font-bold text-sm text-primary uppercase">
-                      Report Summary
-                    </h2>
-                    <span className={`inline-block mt-1 px-2.5 py-0.5 rounded text-3xs font-extrabold border ${getBadgeStyle(selectedReportExamType)}`}>
-                      {selectedReportExamType}
-                    </span>
-                    <br />
-                    <span className={`inline-block mt-1 px-2.5 py-0.5 rounded text-3xs font-extrabold ${approvals[selectedStudent?.id]?.isApproved ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-600 border border-amber-200"}`}>
-                      {approvals[selectedStudent?.id]?.isApproved ? "APPROVED" : "PENDING APPROVAL"}
-                    </span>
-                  </div>
-                </div>
+            {loadingReport ? (
+              <div className="py-24 text-center text-gray-400 text-sm">
+                <Loader2 className="animate-spin w-8 h-8 text-primary mx-auto mb-3" />
+                Loading student report & official template...
               </div>
-
-              {/* Student info */}
-              <div className="mb-6 pb-6 border-b border-gray-100 text-sm space-y-2">
-                <div className="flex justify-between items-center w-full">
-                  <div className="flex gap-2">
-                    <span className="text-xs text-gray-400 font-semibold uppercase">Student Name:</span>
-                    <span className="font-bold text-primary">{selectedStudent.name}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-xs text-gray-400 font-semibold uppercase">Student ID:</span>
-                    <span className="font-mono text-gray-700 font-semibold">{selectedStudent.studentId || "N/A"}</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center w-full">
-                  <div className="flex gap-2">
-                    <span className="text-xs text-gray-400 font-semibold uppercase">Class:</span>
-                    <span className="font-semibold text-primary">
-                      Class {selectedClass?.grade} - {selectedClass?.section}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-xs text-gray-400 font-semibold uppercase">Guardian/Relationship:</span>
-                    <span className="font-medium text-gray-600">Father</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center w-full">
-                  <div className="flex gap-2">
-                    <span className="text-xs text-gray-400 font-semibold uppercase">Father Name:</span>
-                    <span className="font-semibold text-primary">{selectedStudent.father || "N/A"}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-xs text-gray-400 font-semibold uppercase">Contact Number:</span>
-                    <span className="font-medium text-gray-600">{selectedStudent.guardianPhone || "N/A"}</span>
-                  </div>
-                </div>
+            ) : activeModalTab === "template" && renderedTemplateHtml ? (
+              <div className="p-4 bg-slate-100 flex justify-center overflow-auto max-h-[72vh]">
+                <iframe
+                  srcDoc={renderedTemplateHtml}
+                  title="Official Marksheet Preview"
+                  className="w-full bg-white shadow-md rounded-xl border border-slate-300"
+                  style={{ minHeight: "820px", height: "100%", maxWidth: "820px" }}
+                />
               </div>
-
-              {loadingReport ? (
-                <div className="py-20 text-center text-gray-400 text-sm">
-                  <Loader2 className="animate-spin w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                  Fetching grades and analytics...
-                </div>
-              ) : reportDetails ? (
-                <div>
-                  <div className="flex flex-row justify-between border border-gray-100 rounded-xl p-4 mb-6 bg-gray-50/50 gap-4">
-                    {[
-                      { l: "Semester GPA", v: reportDetails.semesterGpa || "N/A", c: "text-primary" },
-                      { l: "Cumulative GPA", v: reportDetails.cumulativeGpa || "N/A", c: "text-blue-600" },
-                      { l: "Class Rank", v: reportDetails.classRank || "N/A", c: "text-green-600" },
-                      { l: "Attendance", v: reportDetails.attendance || "100.0%", c: "text-amber-600" },
-                    ].map((s, idx) => (
-                      <div key={s.l} className={`flex-1 ${idx > 0 ? 'border-l border-gray-200 pl-4' : ''}`}>
-                        <div className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">{s.l}</div>
-                        <div className={`font-display text-lg font-black ${s.c}`}>{s.v}</div>
-                      </div>
-                    ))}
+            ) : reportDetails ? (
+              <div className="p-6 overflow-auto max-h-[72vh]">
+                <div className="border-b-2 border-primary pb-4 mb-6">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h1 className="font-display font-extrabold text-2xl text-primary tracking-tight">
+                        {schoolName.toUpperCase()}
+                      </h1>
+                      <p className="text-xs text-gray-400 font-light mt-0.5">
+                        Academic Progress Report Card · Official Record
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <h2 className="font-display font-bold text-sm text-primary uppercase">
+                        Report Summary
+                      </h2>
+                      <span className={`inline-block mt-1 px-2.5 py-0.5 rounded text-3xs font-extrabold border ${getBadgeStyle(selectedReportExamType)}`}>
+                        {selectedReportExamType}
+                      </span>
+                      <br />
+                      <span className={`inline-block mt-1 px-2.5 py-0.5 rounded text-3xs font-extrabold ${approvals[selectedStudent?.id]?.isApproved ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-600 border border-amber-200"}`}>
+                        {approvals[selectedStudent?.id]?.isApproved ? "APPROVED" : "PENDING APPROVAL"}
+                      </span>
+                    </div>
                   </div>
+                </div>
 
-                  <h4 className="font-display font-semibold text-xs text-primary uppercase tracking-wider mb-3">
-                    Detailed Subject Breakdown
-                  </h4>
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="table-th text-left py-2">Subject</th>
-                        <th className="table-th py-2">Theory (70)</th>
-                        <th className="table-th py-2">Practical (30)</th>
-                        <th className="table-th py-2">Total (100)</th>
-                        <th className="table-th py-2">Grade</th>
-                        <th className="table-th py-2">Status</th>
+                {/* Student info */}
+                <div className="mb-6 pb-6 border-b border-gray-100 text-sm space-y-2">
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex gap-2">
+                      <span className="text-xs text-gray-400 font-semibold uppercase">Student Name:</span>
+                      <span className="font-bold text-primary">{selectedStudent.name}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-xs text-gray-400 font-semibold uppercase">Student ID:</span>
+                      <span className="font-mono text-gray-700 font-semibold">{selectedStudent.studentId || "N/A"}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex gap-2">
+                      <span className="text-xs text-gray-400 font-semibold uppercase">Class:</span>
+                      <span className="font-semibold text-primary">
+                        {formatClassLabel(selectedClass?.grade, selectedClass?.section)}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-xs text-gray-400 font-semibold uppercase">Guardian/Relationship:</span>
+                      <span className="font-medium text-gray-600">Father</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex gap-2">
+                      <span className="text-xs text-gray-400 font-semibold uppercase">Father Name:</span>
+                      <span className="font-semibold text-primary">{selectedStudent.father || "N/A"}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-xs text-gray-400 font-semibold uppercase">Contact Number:</span>
+                      <span className="font-medium text-gray-600">{selectedStudent.guardianPhone || "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-row justify-between border border-gray-100 rounded-xl p-4 mb-6 bg-gray-50/50 gap-4">
+                  {[
+                    { l: "Semester GPA", v: reportDetails.semesterGpa || "N/A", c: "text-primary" },
+                    { l: "Cumulative GPA", v: reportDetails.cumulativeGpa || "N/A", c: "text-blue-600" },
+                    { l: "Class Rank", v: reportDetails.classRank || "N/A", c: "text-green-600" },
+                    { l: "Attendance", v: reportDetails.attendance || "100.0%", c: "text-amber-600" },
+                  ].map((s, idx) => (
+                    <div key={s.l} className={`flex-1 ${idx > 0 ? 'border-l border-gray-200 pl-4' : ''}`}>
+                      <div className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">{s.l}</div>
+                      <div className={`font-display text-lg font-black ${s.c}`}>{s.v}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <h4 className="font-display font-semibold text-xs text-primary uppercase tracking-wider mb-3">
+                  Detailed Subject Breakdown
+                </h4>
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="table-th text-left py-2">Subject</th>
+                      <th className="table-th py-2">Theory (70)</th>
+                      <th className="table-th py-2">Practical (30)</th>
+                      <th className="table-th py-2">Total (100)</th>
+                      <th className="table-th py-2">Grade</th>
+                      <th className="table-th py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportDetails.subjectsBreakdown?.map((s, i) => (
+                      <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="table-td font-semibold text-xs text-primary py-2">{s.subject}</td>
+                        <td className="table-td text-xs text-center py-2">{s.exam}</td>
+                        <td className="table-td text-xs text-center py-2">{s.internal}</td>
+                        <td className="table-td text-xs font-bold text-center py-2">{s.total}</td>
+                        <td className="table-td text-center py-2">
+                          <span className="font-extrabold text-xs text-green-600">{s.grade}</span>
+                        </td>
+                        <td className="table-td text-center py-2">
+                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold ${s.status === "Pass" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>
+                            {s.status}
+                          </span>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {reportDetails.subjectsBreakdown?.map((s, i) => (
-                        <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                          <td className="table-td font-semibold text-xs text-primary py-2">{s.subject}</td>
-                          <td className="table-td text-xs text-center py-2">{s.exam}</td>
-                          <td className="table-td text-xs text-center py-2">{s.internal}</td>
-                          <td className="table-td text-xs font-bold text-center py-2">{s.total}</td>
-                          <td className="table-td text-center py-2">
-                            <span className="font-extrabold text-xs text-green-600">{s.grade}</span>
-                          </td>
-                          <td className="table-td text-center py-2">
-                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold ${s.status === "Pass" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>
-                              {s.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                      {(!reportDetails.subjectsBreakdown || reportDetails.subjectsBreakdown.length === 0) && (
-                        <tr>
-                          <td colSpan="6" className="text-center py-6 text-gray-400 text-xs">
-                            No grades submitted yet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                    ))}
+                    {(!reportDetails.subjectsBreakdown || reportDetails.subjectsBreakdown.length === 0) && (
+                      <tr>
+                        <td colSpan="6" className="text-center py-6 text-gray-400 text-xs">
+                          No grades submitted yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
 
-                  <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-100 text-center">
-                    <div className="w-40">
-                      <div className="h-8"></div>
-                      <div className="border-t border-gray-400 text-[10px] font-semibold text-gray-500 pt-1">Class Teacher</div>
-                    </div>
-                    <div className="w-40">
-                      <div className="h-8"></div>
-                      <div className="border-t border-gray-400 text-[10px] font-semibold text-gray-500 pt-1">Principal / Registrar</div>
-                    </div>
+                <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-100 text-center">
+                  <div className="w-40">
+                    <div className="h-8"></div>
+                    <div className="border-t border-gray-400 text-[10px] font-semibold text-gray-500 pt-1">Class Teacher</div>
+                  </div>
+                  <div className="w-40">
+                    <div className="h-8"></div>
+                    <div className="border-t border-gray-400 text-[10px] font-semibold text-gray-500 pt-1">Principal / Registrar</div>
                   </div>
                 </div>
-              ) : (
-                <div className="py-20 text-center text-red-500 text-sm">
-                  Failed to load performance report.
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="py-20 text-center text-red-500 text-sm">
+                Failed to load performance report.
+              </div>
+            )}
 
             <div className="flex justify-between items-center p-5 bg-gray-50 border-t border-gray-100 no-print">
               <div className="flex gap-2">

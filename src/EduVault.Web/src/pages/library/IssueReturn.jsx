@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
 import Loader from '../../components/common/Loader';
@@ -13,7 +13,9 @@ import {
   DollarSign, 
   BookOpen,
   Sparkles,
-  Check
+  Check,
+  Scan,
+  Zap
 } from 'lucide-react';
 
 const IssueReturn = () => {
@@ -28,10 +30,67 @@ const IssueReturn = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Continuous Barcode Scan Mode State
+  const [barcodeMode, setBarcodeMode] = useState(false);
+  const [scannedBarcode, setScannedBarcode] = useState('');
+  const [scanLog, setScanLog] = useState([]);
+  const barcodeInputRef = useRef(null);
+
   // Issue Form State
   const [selectedBookId, setSelectedBookId] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [dueDate, setDueDate] = useState('');
+
+  // Keep barcode input focused in Scan Mode
+  useEffect(() => {
+    if (barcodeMode && barcodeInputRef.current) {
+      barcodeInputRef.current.focus();
+    }
+  }, [barcodeMode, scannedBarcode]);
+
+  const handleBarcodeSubmit = async (e) => {
+    e.preventDefault();
+    if (!scannedBarcode.trim()) return;
+    const code = scannedBarcode.trim();
+    setScannedBarcode('');
+
+    const matchedLoan = activeLoans.find(l =>
+      (l.bookISBN && l.bookISBN.toLowerCase() === code.toLowerCase()) ||
+      (l.id && l.id.toLowerCase() === code.toLowerCase()) ||
+      (l.bookTitle && l.bookTitle.toLowerCase().includes(code.toLowerCase()))
+    );
+
+    if (matchedLoan) {
+      try {
+        const res = await apiClient.put(`/library/transactions/${matchedLoan.id}/return`, { finePaid: true });
+        const fineText = res.data?.fineAmount > 0 ? ` • Fine ₹${res.data.fineAmount} recorded` : ' • No Fine';
+        const msg = `Returned: "${matchedLoan.bookTitle}" (${matchedLoan.memberName})${fineText}`;
+        setSuccess(msg);
+        setScanLog(prev => [{ time: new Date().toLocaleTimeString(), text: msg, success: true }, ...prev.slice(0, 9)]);
+        await fetchData();
+        setTimeout(() => setSuccess(''), 4000);
+      } catch (err) {
+        const errMsg = `Return failed for "${matchedLoan.bookTitle}": ${err.response?.data?.error || err.message}`;
+        setError(errMsg);
+        setScanLog(prev => [{ time: new Date().toLocaleTimeString(), text: errMsg, success: false }, ...prev.slice(0, 9)]);
+      }
+    } else {
+      const matchedBook = books.find(b =>
+        (b.isbn && b.isbn.toLowerCase() === code.toLowerCase()) ||
+        (b.title && b.title.toLowerCase().includes(code.toLowerCase()))
+      );
+
+      if (matchedBook) {
+        const infoMsg = `Book "${matchedBook.title}" is already on shelf (not issued).`;
+        setError(infoMsg);
+        setScanLog(prev => [{ time: new Date().toLocaleTimeString(), text: infoMsg, success: false }, ...prev.slice(0, 9)]);
+      } else {
+        const notFoundMsg = `No book or active loan found with barcode "${code}".`;
+        setError(notFoundMsg);
+        setScanLog(prev => [{ time: new Date().toLocaleTimeString(), text: notFoundMsg, success: false }, ...prev.slice(0, 9)]);
+      }
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -160,7 +219,80 @@ const IssueReturn = () => {
               Return & Check-in ({activeLoans.length} Active Loans)
             </button>
           </div>
+
+          {/* Barcode Continuous Scan Mode Toggle */}
+          <button
+            onClick={() => setBarcodeMode(!barcodeMode)}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              barcodeMode
+                ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400/40 animate-pulse'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+            }`}
+          >
+            <Scan className="w-4 h-4" />
+            <span>{barcodeMode ? '⚡ Continuous Scan Mode: ACTIVE' : 'Enable Barcode Scan Mode'}</span>
+          </button>
         </div>
+
+        {/* Continuous Barcode Scanner Station */}
+        {barcodeMode && (
+          <div className="bg-gradient-to-r from-emerald-900 via-slate-900 to-emerald-950 text-white p-5 sm:p-6 rounded-3xl border border-emerald-500/30 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">Rapid Continuous Barcode Check-In</h3>
+                  <p className="text-2xs text-emerald-300/80">Scan books with hardware scanner gun • Instant auto-return on enter</p>
+                </div>
+              </div>
+              <span className="text-3xs font-mono uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full font-bold w-fit">
+                Scanner Gun Listening (Auto-Focused)
+              </span>
+            </div>
+
+            <form onSubmit={handleBarcodeSubmit} className="flex gap-2">
+              <div className="relative flex-1">
+                <Scan className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-400" />
+                <input
+                  ref={barcodeInputRef}
+                  type="text"
+                  value={scannedBarcode}
+                  onChange={e => setScannedBarcode(e.target.value)}
+                  placeholder="Scan ISBN or accession barcode number here..."
+                  className="w-full pl-11 pr-4 py-3 bg-slate-950/80 border-2 border-emerald-500/60 rounded-2xl text-sm font-mono text-emerald-300 focus:outline-none focus:ring-4 focus:ring-emerald-500/30 placeholder-slate-600"
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-black uppercase tracking-wider rounded-2xl shadow-lg transition"
+              >
+                Return
+              </button>
+            </form>
+
+            {/* Scan Activity Log */}
+            {scanLog.length > 0 && (
+              <div className="pt-2 border-t border-white/10 space-y-1.5">
+                <span className="text-3xs uppercase font-bold text-slate-400 tracking-wider">Recent Scans (Last 10):</span>
+                <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
+                  {scanLog.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`text-2xs font-mono px-2.5 py-1 rounded-lg flex items-center justify-between ${
+                        item.success ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/10 text-rose-300'
+                      }`}
+                    >
+                      <span className="truncate mr-2">{item.text}</span>
+                      <span className="text-3xs text-slate-500 shrink-0">{item.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Alerts */}
         {error && (

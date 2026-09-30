@@ -1,0 +1,21 @@
+StudentAdmissionNo,StudentName,Class,FeeCategory,Amount,DueDate,AcademicYear,Status
+ADM-2026-001,Aarav Sharma,1,Quarter 1 Tuition Fee,4500,2026-04-10,2026-27,PAID
+ADM-2026-002,Diya Patel,2,Quarter 1 Tuition Fee,4800,2026-04-10,2026-27,PAID
+ADM-2026-003,Vihaan Verma,3,Quarter 1 Tuition Fee,5000,2026-04-10,2026-27,UNPAID
+ADM-2026-004,Ananya Gupta,4,Quarter 1 Tuition Fee,5200,2026-04-10,2026-27,PAID
+ADM-2026-005,Kabir Singh,5,Quarter 1 Tuition Fee,5500,2026-04-10,2026-27,UNPAID
+ADM-2026-006,Rhea Mehta,6,Annual Computer & Lab Fee,2500,2026-04-15,2026-27,PAID
+ADM-2026-007,Ishaan Reddy,7,Quarter 1 Tuition Fee,5800,2026-04-10,2026-27,UNPAID
+ADM-2026-008,Sara Khan,8,School Bus Transport Fee,3200,2026-04-10,2026-27,PAID
+ADM-2026-009,Arjun Nair,9,Quarter 1 Tuition Fee,6500,2026-04-10,2026-27,PAID
+ADM-2026-010,Myra Iyer,10,Board Examination Fee,1800,2026-05-01,2026-27,PAID
+ADM-2026-011,Aditya Joshi,11,Senior Science Lab Fee,3500,2026-04-20,2026-27,UNPAID
+ADM-2026-012,Tanvi Bose,12,Senior Commerce Fee,7200,2026-04-10,2026-27,PAID
+ADM-2026-013,Advait Mishra,Play Group,Activity & Care Fee,4000,2026-04-10,2026-27,PAID
+ADM-2026-014,Kiara Chopra,Nursery,Quarter 1 Tuition Fee,4200,2026-04-10,2026-27,PAID
+ADM-2026-015,Reyansh Saxena,LKG,Quarter 1 Tuition Fee,4400,2026-04-10,2026-27,UNPAID
+ADM-2026-016,Saanvi Deshmukh,UKG,Annual Sports & Activity Fee,2000,2026-04-15,2026-27,PAID
+ADM-2026-017,Dev Bhatia,1,School Uniform & Books Kit,3800,2026-04-05,2026-27,PAID
+ADM-2026-018,Anvi Trivedi,2,Quarter 1 Tuition Fee,4800,2026-04-10,2026-27,UNPAID
+ADM-2026-019,Yash Kulkarni,3,School Bus Transport Fee,3000,2026-04-10,2026-27,PAID
+ADM-2026-020,Prisha Agarwal,4,Quarter 1 Tuition Fee,5200,2026-04-10,2026-27,UNPAID

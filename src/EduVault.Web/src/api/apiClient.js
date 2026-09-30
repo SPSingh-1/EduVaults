@@ -45,3 +45,6 @@ const handleResponseError = (error) => {
 
 apiClient.interceptors.response.use((res) => res, handleResponseError);
 expressClient.interceptors.response.use((res) => res, handleResponseError);
+
+export default apiClient;
+

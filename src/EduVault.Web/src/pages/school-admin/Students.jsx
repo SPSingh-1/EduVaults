@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
+import { formatGrade, formatSection, formatClassLabel, sortClasses, sortGrades } from '../../utils/classUtils';
 
 const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
   const [focused, setFocused] = useState(false);
@@ -59,27 +60,6 @@ const Students = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewStudentData, setViewStudentData] = useState(null);
 
-  // Promotion Modal state
-  const [showPromoteModal, setShowPromoteModal] = useState(false);
-  const [promotingStudent, setPromotingStudent] = useState(null);
-  const [promoteNextClassId, setPromoteNextClassId] = useState('');
-  const [promoteAcademicYear, setPromoteAcademicYear] = useState('2026-27');
-  const [promoteAdminOverride, setPromoteAdminOverride] = useState(false);
-  const [promoteOverrideReason, setPromoteOverrideReason] = useState('');
-  const [studentOutcome, setStudentOutcome] = useState(null);
-  const [loadingOutcome, setLoadingOutcome] = useState(false);
-  const [promoteError, setPromoteError] = useState('');
-  const [promoting, setPromoting] = useState(false);
-
-  // Retention (Fail/Repeat) Modal state
-  const [showRetainModal, setShowRetainModal] = useState(false);
-  const [retainingStudent, setRetainingStudent] = useState(null);
-  const [retainClassId, setRetainClassId] = useState('');
-  const [retainNewAcademicYear, setRetainNewAcademicYear] = useState('2026-27');
-  const [retainReason, setRetainReason] = useState('');
-  const [retainSendWhatsApp, setRetainSendWhatsApp] = useState(true);
-  const [retaining, setRetaining] = useState(false);
-  const [retainError, setRetainError] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -146,12 +126,13 @@ const Students = () => {
       setStudents(studRes.data);
 
       const classRes = await apiClient.get('/academics/enrollment-classes');
-      setClasses(classRes.data);
+      setClasses(sortGrades(classRes.data || []));
 
       const secRes = await apiClient.get('/academics/classes');
-      setClassSections(secRes.data);
-      if (secRes.data.length > 0 && !editMode) {
-        const firstAvailable = secRes.data.find(c => c.enrolled < c.capacity) || secRes.data[0];
+      const sortedSecs = sortClasses(secRes.data || []);
+      setClassSections(sortedSecs);
+      if (sortedSecs.length > 0 && !editMode) {
+        const firstAvailable = sortedSecs.find(c => c.enrolled < c.capacity) || sortedSecs[0];
         setForm(f => ({ ...f, classId: firstAvailable?.id || '' }));
       }
     } catch (err) {
@@ -283,47 +264,6 @@ const Students = () => {
     }
   };
 
-  const handlePromoteClick = async (student) => {
-    setPromotingStudent(student);
-    setPromoteError('');
-    setPromoteAdminOverride(false);
-    setPromoteOverrideReason('');
-    setStudentOutcome(null);
-    setLoadingOutcome(true);
-    setShowPromoteModal(true);
-
-    const currentGradeStr = (student.class || '').replace('Class ', '').trim();
-    const currentGradeNum = parseInt(currentGradeStr, 10);
-    if (!isNaN(currentGradeNum)) {
-      const nextGradeNum = currentGradeNum + 1;
-      const targetSection = student.section || 'Section A';
-      
-      const match = classSections.find(
-        c => String(c.grade) === String(nextGradeNum) && c.section === targetSection
-      );
-      
-      if (match) {
-        setPromoteNextClassId(match.id);
-      } else {
-        const fallback = classSections.find(c => String(c.grade) === String(nextGradeNum));
-        setPromoteNextClassId(fallback ? fallback.id : '');
-      }
-    } else {
-      setPromoteNextClassId('');
-    }
-
-    try {
-      const res = await apiClient.get(`/academics/students/${student.id}/academic-outcome`);
-      setStudentOutcome(res.data);
-      if (res.data.failedSubjectsCount > 0) {
-        setPromoteAdminOverride(true);
-      }
-    } catch (err) {
-      console.error('Error fetching academic outcome:', err);
-    } finally {
-      setLoadingOutcome(false);
-    }
-  };
 
   const handleOpenTcModal = async (student) => {
     setTcStudent(student);
@@ -368,68 +308,6 @@ const Students = () => {
     }
   };
 
-  const handlePromoteSubmit = async () => {
-    if (!promoteNextClassId || !promotingStudent) return;
-    setPromoting(true);
-    setPromoteError('');
-    try {
-      await apiClient.post(`/academics/students/${promotingStudent.id}/promote`, {
-        nextClassId: promoteNextClassId,
-        academicYear: promoteAcademicYear,
-        adminOverride: promoteAdminOverride,
-        overrideReason: promoteOverrideReason
-      });
-      setShowPromoteModal(false);
-      fetchData();
-    } catch (err) {
-      setPromoteError(err.response?.data?.error || 'Failed to promote student.');
-    } finally {
-      setPromoting(false);
-    }
-  };
-
-  const handleRetainClick = async (student) => {
-    setRetainingStudent(student);
-    setRetainError('');
-    setStudentOutcome(null);
-    setLoadingOutcome(true);
-    setRetainClassId(student.classId || '');
-    setRetainReason('Failed core subjects evaluation - Retained in current grade for academic reinforcement.');
-    setRetainSendWhatsApp(true);
-    setShowRetainModal(true);
-
-    try {
-      const res = await apiClient.get(`/academics/students/${student.id}/academic-outcome`);
-      setStudentOutcome(res.data);
-      if (res.data.classId) {
-        setRetainClassId(res.data.classId);
-      }
-    } catch (err) {
-      console.error('Error fetching outcome for retention:', err);
-    } finally {
-      setLoadingOutcome(false);
-    }
-  };
-
-  const handleRetainSubmit = async () => {
-    if (!retainingStudent) return;
-    setRetaining(true);
-    setRetainError('');
-    try {
-      await apiClient.post(`/academics/students/${retainingStudent.id}/retain`, {
-        currentClassId: retainClassId || null,
-        newAcademicYear: retainNewAcademicYear,
-        retentionReason: retainReason,
-        sendParentWhatsAppAlert: retainSendWhatsApp
-      });
-      setShowRetainModal(false);
-      fetchData();
-    } catch (err) {
-      setRetainError(err.response?.data?.error || 'Failed to retain student in current grade.');
-    } finally {
-      setRetaining(false);
-    }
-  };
 
   const handleOpenResetPass = (student) => {
     setResetStudentObj(student);
@@ -738,7 +616,7 @@ const Students = () => {
             <select className="input w-full text-xs sm:text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
               <option value="">Class All</option>
               {uniqueGrades.map(grade => (
-                <option key={grade} value={grade}>Class {grade}</option>
+                <option key={grade} value={grade}>{formatGrade(grade)}</option>
               ))}
             </select>
 
@@ -770,17 +648,17 @@ const Students = () => {
 
         <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
           <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
-            <table className="w-full" style={{ minWidth: '780px', borderCollapse: 'collapse' }}>
+            <table className="w-full" style={{ minWidth: '1050px', borderCollapse: 'collapse' }}>
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="table-th">Student Name</th>
-                  <th className="table-th">Student ID</th>
-                  <th className="table-th">Class</th>
-                  <th className="table-th">Section</th>
-                  <th className="table-th">Father's Name</th>
-                  <th className="table-th">Date of Birth</th>
-                  <th className="table-th">Status</th>
-                  <th className="table-th">Actions</th>
+                  <th className="table-th min-w-[200px]">Student Name</th>
+                  <th className="table-th whitespace-nowrap min-w-[130px]">Student ID</th>
+                  <th className="table-th whitespace-nowrap min-w-[110px]">Class</th>
+                  <th className="table-th whitespace-nowrap min-w-[120px]">Section</th>
+                  <th className="table-th min-w-[140px]">Father's Name</th>
+                  <th className="table-th whitespace-nowrap min-w-[130px]">Date of Birth</th>
+                  <th className="table-th whitespace-nowrap min-w-[100px]">Status</th>
+                  <th className="table-th whitespace-nowrap min-w-[170px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -788,7 +666,7 @@ const Students = () => {
                   <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="table-td">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
                           {s.name ? s.name[0] : '?'}
                         </div>
                         <div className="min-w-0 max-w-[200px]">
@@ -797,77 +675,75 @@ const Students = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="table-td text-xs font-mono text-gray-500">{s.studentId}</td>
-                    <td className="table-td text-sm">{s.class}</td>
-                    <td className="table-td text-sm">{s.section}</td>
+                    <td className="table-td text-xs font-mono text-gray-500 whitespace-nowrap">{s.studentId}</td>
+                    <td className="table-td text-sm font-semibold text-slate-800 whitespace-nowrap">{formatGrade(s.class)}</td>
+                    <td className="table-td text-sm text-slate-600 whitespace-nowrap">{formatSection(s.section) ? `Section ${formatSection(s.section)}` : (s.section || 'Unassigned')}</td>
                     <td className="table-td text-sm">{s.father}</td>
-                    <td className="table-td text-sm text-gray-500">{s.dateOfBirth || 'N/A'}</td>
-                    <td className="table-td"><span className={sc[s.status] || 'badge-success'}>{s.status}</span></td>
-                    <td className="table-td">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {/* Promote Button */}
-                        <button 
-                          onClick={() => handlePromoteClick(s)} 
-                          className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105 text-xs font-bold" 
-                          title="Promote Student (Normal / Admin Direct Override)"
-                        >
-                          🚀 Promote
-                        </button>
+                    <td className="table-td text-sm text-gray-500 whitespace-nowrap">{s.dateOfBirth || 'N/A'}</td>
+                    <td className="table-td whitespace-nowrap"><span className={sc[s.status] || 'badge-success'}>{s.status}</span></td>
+                    <td className="table-td whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 flex-nowrap">
 
-                        {/* Retain (Fail / Repeat Year) Button */}
-                        <button 
-                          onClick={() => handleRetainClick(s)} 
-                          className="p-1.5 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/60 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105 text-xs font-bold" 
-                          title="Retain Student (Fail / Repeat Year Detention)"
-                        >
-                          🔄 Retain
-                        </button>
+                        {/* Management Action Toolbar: View, Edit, Reset, TC, Delete */}
+                        <div className="inline-flex items-center gap-0.5 bg-white p-0.5 rounded-lg border border-slate-200/90 shadow-2xs">
+                          {/* View Profile */}
+                          <button 
+                            onClick={() => handleView(s.id)} 
+                            className="w-7 h-7 flex items-center justify-center text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-md transition-all" 
+                            title="View Student Profile"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
 
-                        {/* View Profile */}
-                        <button onClick={() => handleView(s.id)} className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105" title="View Profile">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </button>
+                          {/* Edit Profile */}
+                          <button 
+                            onClick={() => handleEdit(s.id)} 
+                            className="w-7 h-7 flex items-center justify-center text-amber-600 hover:bg-amber-50 hover:text-amber-700 rounded-md transition-all" 
+                            title="Edit Student Profile"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
 
-                        {/* Edit Profile */}
-                        <button onClick={() => handleEdit(s.id)} className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105" title="Edit Profile">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
+                          {/* Reset Password */}
+                          <button 
+                            onClick={() => handleOpenResetPass(s)} 
+                            className="w-7 h-7 flex items-center justify-center text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-all" 
+                            title="Reset Student Password (Instant Admin Reset)"
+                          >
+                            <span className="text-xs">🔑</span>
+                          </button>
 
-                        {/* Reset Password */}
-                        <button 
-                          onClick={() => handleOpenResetPass(s)} 
-                          className="p-1.5 text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200/60 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105 text-xs font-bold" 
-                          title="Reset Student Password (Instant Admin/Teacher Reset)"
-                        >
-                          🔑 Reset
-                        </button>
+                          {/* Transfer Certificate (TC) */}
+                          <button 
+                            onClick={() => handleOpenTcModal(s)} 
+                            className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${
+                              s.status === 'WITHDRAWN' 
+                                ? 'text-purple-600 hover:bg-purple-50' 
+                                : 'text-rose-600 hover:bg-rose-50'
+                            }`} 
+                            title={s.status === 'WITHDRAWN' ? 'View Issued Transfer Certificate (TC)' : 'Issue Transfer Certificate & No-Dues Clearance'}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </button>
 
-                        {/* Transfer Certificate (TC) */}
-                        <button 
-                          onClick={() => handleOpenTcModal(s)} 
-                          className={`p-1.5 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105 ${
-                            s.status === 'WITHDRAWN' 
-                              ? 'text-purple-600 bg-purple-50 hover:bg-purple-100' 
-                              : 'text-rose-600 bg-rose-50 hover:bg-rose-100'
-                          }`} 
-                          title={s.status === 'WITHDRAWN' ? 'View Issued Transfer Certificate (TC)' : 'Issue Transfer Certificate & No-Dues Clearance'}
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </button>
-
-                        {/* Delete Profile */}
-                        <button onClick={() => handleDelete(s.id)} className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 shadow-xs hover:shadow hover:scale-105" title="Delete Profile">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                          {/* Delete Profile */}
+                          <button 
+                            onClick={() => handleDelete(s.id)} 
+                            className="w-7 h-7 flex items-center justify-center text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-md transition-all" 
+                            title="Delete Student Record"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </td>
 
@@ -1062,7 +938,7 @@ const Students = () => {
                     <select required value={form.classId} onChange={e => handleClassChange(e.target.value)} className="input">
                       <option value="">Select Class Section</option>
                       {classSections.map(c => (
-                        <option key={c.id} value={c.id}>Class {c.grade} - {c.section} (Room {c.room}) [{c.enrolled}/{c.capacity}]</option>
+                        <option key={c.id} value={c.id}>{formatClassLabel(c.grade, c.section, c.room, c.enrolled, c.capacity)}</option>
                       ))}
                     </select>
                   </div>
@@ -1088,13 +964,13 @@ const Students = () => {
 
                   {capacityWarning && (
                     <div className="col-span-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold rounded-lg p-3.5 mb-2">
-                      ⚠️ <strong>Room Capacity Warning</strong>: Class {capacityWarning.grade} - {capacityWarning.section} ({capacityWarning.room}) has reached its capacity limit of {capacityWarning.capacity} students.
+                      ⚠️ <strong>Room Capacity Warning</strong>: {formatClassLabel(capacityWarning.grade, capacityWarning.section, capacityWarning.room)} has reached its capacity limit of {capacityWarning.capacity} students.
                       <span className="text-gray-600 font-normal mt-1 block">Suggestion: Consider enrolling in other rooms/sections with remaining capacity:</span>
                       <ul className="list-disc list-inside mt-1.5 pl-1 text-gray-700">
                         {suggestions.map((s, idx) => (
-                          <li key={idx}>Class {s.grade} - {s.section} (Room {s.room}) — {s.capacity - s.enrolled} seats available</li>
+                          <li key={idx}>{formatClassLabel(s.grade, s.section, s.room)} — {s.capacity - s.enrolled} seats available</li>
                         ))}
-                        {suggestions.length === 0 && <li>Create a new section (e.g., Section {String.fromCharCode(capacityWarning.section.charCodeAt(capacityWarning.section.length - 1) + 1)}) in the Setup tab.</li>}
+                        {suggestions.length === 0 && <li>Create a new section in the Setup tab.</li>}
                       </ul>
                     </div>
                   )}
@@ -1170,68 +1046,7 @@ const Students = () => {
         </div>
       )}
 
-      {/* Promote Student Modal */}
-      {showPromoteModal && promotingStudent && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
-              <div>
-                <h3 className="font-display font-bold text-lg">Promote Student</h3>
-                <p className="text-blue-200 text-xs">Advance student to the next academic grade level</p>
-              </div>
-              <button onClick={() => setShowPromoteModal(false)} className="text-white hover:text-blue-200 text-lg">✖</button>
-            </div>
-            <div className="p-6 space-y-4">
-              {promoteError && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{promoteError}</div>}
-              <div>
-                <div className="text-xs text-gray-400 font-bold uppercase mb-1">Student Details</div>
-                <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl">
-                  <div className="font-semibold text-primary">{promotingStudent.name}</div>
-                  <div className="text-xs text-gray-500 font-mono mt-0.5">ID: {promotingStudent.studentId}</div>
-                  <div className="text-xs text-gray-500 mt-1">Current Class: <span className="font-semibold text-primary">{promotingStudent.class} - {promotingStudent.section}</span></div>
-                  <div className="text-xs mt-2 flex items-center gap-1.5">
-                    <span>Exam Status:</span>
-                    {promotingStudent.finalResult === "Pass" ? (
-                      <span className="badge badge-success text-[10px] py-0.5 px-2 font-bold">✅ Pass (GPA: {promotingStudent.gpa})</span>
-                    ) : promotingStudent.finalResult === "Fail" ? (
-                      <span className="badge badge-danger text-[10px] py-0.5 px-2 font-bold">⚠️ Fail (GPA: {promotingStudent.gpa})</span>
-                    ) : (
-                      <span className="badge badge-gray text-[10px] py-0.5 px-2 font-bold">No Exam Records</span>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Target Promotion Class *</label>
-                <select
-                  value={promoteNextClassId}
-                  onChange={e => setPromoteNextClassId(e.target.value)}
-                  className="input w-full text-xs"
-                  required
-                >
-                  <option value="">Select Target Class</option>
-                  {classSections.map(c => (
-                    <option key={c.id} value={c.id}>
-                      Class {c.grade} - {c.section} {c.teacher ? `(Teacher: ${c.teacher})` : '(No Teacher)'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
-              <button onClick={() => setShowPromoteModal(false)} className="btn-outline text-xs">Cancel</button>
-              <button
-                onClick={handlePromoteSubmit}
-                disabled={promoting || !promoteNextClassId}
-                className="btn-primary text-xs"
-              >
-                {promoting ? 'Promoting...' : 'Promote Student'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Bulk Import Modal */}
       {showImportModal && (
@@ -1263,7 +1078,7 @@ const Students = () => {
                     >
                       <option value="">Select Target Class</option>
                       {classSections.map(c => (
-                        <option key={c.id} value={c.id}>Class {c.grade} - {c.section}</option>
+                        <option key={c.id} value={c.id}>{formatClassLabel(c.grade, c.section)}</option>
                       ))}
                     </select>
                   </div>
@@ -1711,287 +1526,6 @@ const Students = () => {
                   ) : null}
                 </>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Promote Student Modal (with Direct Admin Override) */}
-      {showPromoteModal && promotingStudent && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-scale-up">
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 px-6 py-4 flex justify-between items-center text-white shrink-0">
-              <div className="flex items-center gap-2.5">
-                <span className="text-xl">🚀</span>
-                <div>
-                  <h3 className="font-display font-bold text-base">Promote Student to Next Grade</h3>
-                  <p className="text-emerald-100 text-xs">{promotingStudent.name} • Current Class: {promotingStudent.class} ({promotingStudent.section})</p>
-                </div>
-              </div>
-              <button onClick={() => setShowPromoteModal(false)} className="text-white hover:text-emerald-200 text-lg">✖</button>
-            </div>
-
-            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
-              {promoteError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 font-semibold rounded-xl p-3 flex items-start gap-2">
-                  <span>⚠️</span>
-                  <span>{promoteError}</span>
-                </div>
-              )}
-
-              {/* Academic Outcome Evaluation Card */}
-              {loadingOutcome ? (
-                <div className="py-6 text-center text-gray-400">
-                  <div className="inline-block animate-spin text-lg mb-1">⏳</div>
-                  <div>Evaluating annual exam performance and subject scores...</div>
-                </div>
-              ) : studentOutcome ? (
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-gray-700 uppercase tracking-wide text-[11px]">Exam Performance Evaluation:</span>
-                    <span className={`px-2 py-0.5 rounded-full font-bold uppercase text-[10px] ${
-                      studentOutcome.failedSubjectsCount === 0 
-                        ? 'bg-emerald-100 text-emerald-800' 
-                        : studentOutcome.failedSubjectsCount <= 2 
-                        ? 'bg-amber-100 text-amber-800' 
-                        : 'bg-rose-100 text-rose-800'
-                    }`}>
-                      {studentOutcome.recommendedOutcome}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 bg-white p-2.5 rounded-lg border border-slate-100 text-center">
-                    <div>
-                      <div className="text-gray-400 text-[10px]">Total Subjects</div>
-                      <div className="font-bold text-gray-800 text-sm">{studentOutcome.totalSubjects}</div>
-                    </div>
-                    <div>
-                      <div className="text-emerald-600 text-[10px]">Passed (≥40%)</div>
-                      <div className="font-bold text-emerald-700 text-sm">{studentOutcome.passedSubjects}</div>
-                    </div>
-                    <div>
-                      <div className="text-rose-600 text-[10px]">Failed (&lt;40%)</div>
-                      <div className="font-bold text-rose-700 text-sm">{studentOutcome.failedSubjectsCount}</div>
-                    </div>
-                  </div>
-
-                  {studentOutcome.failedSubjectsCount > 0 && (
-                    <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 space-y-1 text-[11px]">
-                      <div className="font-bold flex items-center gap-1">
-                        <span>⚠️</span>
-                        <span>Student has failed in {studentOutcome.failedSubjectsCount} subject(s).</span>
-                      </div>
-                      <div>Standard auto-promotion is blocked. Direct Admin Override is required to grant promotion.</div>
-                    </div>
-                  )}
-                </div>
-              ) : null}
-
-              {/* Target Class Selection */}
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Target Class & Section *</label>
-                <select 
-                  value={promoteNextClassId} 
-                  onChange={e => setPromoteNextClassId(e.target.value)}
-                  className="input w-full text-xs"
-                >
-                  <option value="">Select Target Class</option>
-                  {classSections.map(c => (
-                    <option key={c.id} value={c.id}>
-                      Class {c.grade} - {c.section} (Room {c.room}) [{c.enrolled}/{c.capacity}]
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Target Academic Year */}
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Target Academic Session *</label>
-                <input 
-                  value={promoteAcademicYear} 
-                  onChange={e => setPromoteAcademicYear(e.target.value)}
-                  placeholder="e.g. 2026-27"
-                  className="input w-full text-xs font-mono"
-                />
-              </div>
-
-              {/* School Admin Direct Override Option */}
-              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2.5">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={promoteAdminOverride} 
-                    onChange={e => setPromoteAdminOverride(e.target.checked)}
-                    className="rounded text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="font-bold text-amber-900">
-                    School Admin Direct Override (Promote despite fail marks / Grace Promotion)
-                  </span>
-                </label>
-                
-                {promoteAdminOverride && (
-                  <div>
-                    <label className="block font-semibold text-amber-800 mb-1">Override Audit Reason *</label>
-                    <textarea 
-                      rows={2}
-                      value={promoteOverrideReason}
-                      onChange={e => setPromoteOverrideReason(e.target.value)}
-                      placeholder="e.g. Medical Leave Exemption / Principal Grace Promotion / Exceptional Extracurricular Discretion"
-                      className="input bg-white w-full text-xs"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="p-3 bg-slate-100 rounded-xl text-slate-600 space-y-1 text-[11px]">
-                <div>• Unpaid invoices from the current class will be consolidated into an <strong>Arrears Rollover</strong> invoice.</div>
-                <div>• New class fee schedule will be attached automatically.</div>
-                <div>• Automated WhatsApp promotion notice will be dispatched to guardian phone.</div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2.5 px-6 py-4 bg-gray-50 border-t border-gray-100 shrink-0">
-              <button 
-                type="button" 
-                onClick={() => setShowPromoteModal(false)}
-                className="btn-outline text-xs px-4 py-2"
-              >
-                Cancel
-              </button>
-              <button 
-                type="button" 
-                onClick={handlePromoteSubmit}
-                disabled={promoting || !promoteNextClassId || (studentOutcome?.failedSubjectsCount > 0 && !promoteAdminOverride)}
-                className="btn-primary text-xs px-4 py-2 bg-emerald-700 hover:bg-emerald-800 flex items-center gap-1.5"
-              >
-                <span>{promoting ? 'Promoting...' : '🚀 Confirm Promotion'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Retain Student in Same Class (Fail / Repeat Year) Modal */}
-      {showRetainModal && retainingStudent && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-scale-up">
-            <div className="bg-gradient-to-r from-amber-600 via-rose-600 to-rose-700 px-6 py-4 flex justify-between items-center text-white shrink-0">
-              <div className="flex items-center gap-2.5">
-                <span className="text-xl">🔄</span>
-                <div>
-                  <h3 className="font-display font-bold text-base">Retain Student (Fail / Repeat Year)</h3>
-                  <p className="text-amber-100 text-xs">{retainingStudent.name} • Current Class: {retainingStudent.class} ({retainingStudent.section})</p>
-                </div>
-              </div>
-              <button onClick={() => setShowRetainModal(false)} className="text-white hover:text-amber-200 text-lg">✖</button>
-            </div>
-
-            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
-              {retainError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 font-semibold rounded-xl p-3 flex items-start gap-2">
-                  <span>⚠️</span>
-                  <span>{retainError}</span>
-                </div>
-              )}
-
-              {/* Performance Evaluation */}
-              {loadingOutcome ? (
-                <div className="py-6 text-center text-gray-400">
-                  <div className="inline-block animate-spin text-lg mb-1">⏳</div>
-                  <div>Loading academic performance evaluation...</div>
-                </div>
-              ) : studentOutcome ? (
-                <div className="bg-rose-50/70 border border-rose-200 rounded-xl p-3.5 space-y-2">
-                  <div className="flex justify-between items-center text-rose-900 font-bold">
-                    <span>Performance Assessment:</span>
-                    <span className="bg-rose-600 text-white px-2 py-0.5 rounded-full text-[10px] uppercase">
-                      {studentOutcome.failedSubjectsCount} Subjects Failed
-                    </span>
-                  </div>
-                  <div className="text-rose-800 text-[11px]">
-                    Aggregate Score: <strong>{studentOutcome.aggregatePercentage}%</strong> across {studentOutcome.totalSubjects} subjects.
-                  </div>
-                </div>
-              ) : null}
-
-              {/* Target Section Selection */}
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Retention Class & Section *</label>
-                <select 
-                  value={retainClassId} 
-                  onChange={e => setRetainClassId(e.target.value)}
-                  className="input w-full text-xs"
-                >
-                  <option value="">Select Class Section</option>
-                  {classSections.map(c => (
-                    <option key={c.id} value={c.id}>
-                      Class {c.grade} - {c.section} (Room {c.room}) [{c.enrolled}/{c.capacity}]
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* New Academic Year */}
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">New Academic Session *</label>
-                <input 
-                  value={retainNewAcademicYear} 
-                  onChange={e => setRetainNewAcademicYear(e.target.value)}
-                  placeholder="e.g. 2026-27"
-                  className="input w-full text-xs font-mono"
-                />
-              </div>
-
-              {/* Retention Reason */}
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Retention Reason / Official Remark *</label>
-                <textarea 
-                  rows={2}
-                  value={retainReason} 
-                  onChange={e => setRetainReason(e.target.value)}
-                  placeholder="e.g. Failed in core subjects - Retained in current grade for academic reinforcement and subject mastery."
-                  className="input w-full text-xs"
-                />
-              </div>
-
-              {/* Send Parent WhatsApp Notice Toggle */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={retainSendWhatsApp} 
-                    onChange={e => setRetainSendWhatsApp(e.target.checked)}
-                    className="rounded text-rose-600 focus:ring-rose-500"
-                  />
-                  <span className="font-bold text-gray-800">
-                    Send Automated WhatsApp Academic Performance & Retention Notice to Parent
-                  </span>
-                </label>
-              </div>
-
-              <div className="p-3 bg-slate-100 rounded-xl text-slate-600 space-y-1 text-[11px]">
-                <div>• Student enrollment status will be marked as <strong>RETAINED_REPEAT</strong>.</div>
-                <div>• Current grade annual fee structure will be renewed for the new academic session.</div>
-                <div>• Historical report cards and exam scores remain safely preserved for institutional audits.</div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2.5 px-6 py-4 bg-gray-50 border-t border-gray-100 shrink-0">
-              <button 
-                type="button" 
-                onClick={() => setShowRetainModal(false)}
-                className="btn-outline text-xs px-4 py-2"
-              >
-                Cancel
-              </button>
-              <button 
-                type="button" 
-                onClick={handleRetainSubmit}
-                disabled={retaining || !retainClassId}
-                className="btn-primary text-xs px-4 py-2 bg-rose-700 hover:bg-rose-800 flex items-center gap-1.5"
-              >
-                <span>{retaining ? 'Retaining...' : '🔄 Confirm Class Retention'}</span>
-              </button>
             </div>
           </div>
         </div>

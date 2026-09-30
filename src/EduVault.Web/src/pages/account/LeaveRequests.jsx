@@ -231,8 +231,13 @@ const LeaveRequests = () => {
                       <td className="py-4 px-4 font-mono font-bold text-slate-900">
                         {l.totalDays} {l.totalDays === 1 ? 'day' : 'days'}
                       </td>
-                      <td className="py-4 px-4 text-xs text-slate-600 max-w-xs truncate" title={l.reason}>
-                        {l.reason || 'N/A'}
+                      <td className="py-4 px-4 text-xs text-slate-600 max-w-xs" title={l.reason}>
+                        <div>{l.reason || 'N/A'}</div>
+                        {l.forwardNote && (
+                          <div className="text-[11px] text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 mt-1 inline-flex items-center gap-1">
+                            <span>📤 <b>Rec:</b> {l.forwardNote}</span>
+                          </div>
+                        )}
                       </td>
                       <td className="py-4 px-4">
                         <span className={`px-2.5 py-1 rounded-full text-3xs font-black uppercase tracking-wider border ${
@@ -240,13 +245,15 @@ const LeaveRequests = () => {
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : l.status === 'Rejected'
                             ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : l.status === 'ForwardedToAccounts'
+                            ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                             : 'bg-amber-50 text-amber-700 border-amber-200'
                         }`}>
-                          {l.status}
+                          {l.status === 'ForwardedToAccounts' ? 'Forwarded' : l.status}
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right space-x-2">
-                        {l.status === 'Pending' ? (
+                        {l.status === 'Pending' || l.status === 'ForwardedToAccounts' ? (
                           <>
                             <button
                               onClick={() => handleUpdateStatus(l.id, 'Approved')}

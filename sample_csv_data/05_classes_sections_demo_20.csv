@@ -1,0 +1,21 @@
+ClassName,Section,Capacity,RoomNumber
+Play Group,A,25,Room 1
+Nursery,A,30,Room 1
+LKG,A,35,Room 2
+UKG,A,35,Room 2
+1,A,40,Room 3
+1,B,40,Room 3
+2,A,40,Room 4
+2,B,40,Room 4
+3,A,40,Room 5
+3,B,40,Room 5
+4,A,45,Room 6
+4,B,45,Room 6
+5,A,45,Room 7
+6,A,45,Room 7
+7,A,50,Room 8
+8,A,50,Room 8
+9,A,50,Room 9
+10,A,50,Room 9
+11,A,60,Room 10
+12,A,60,Room 10

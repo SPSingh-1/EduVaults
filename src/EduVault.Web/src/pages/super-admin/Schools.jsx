@@ -4,7 +4,7 @@ import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import Loader from '../../components/common/Loader';
-import { ArrowUpDown, ArrowUp, ArrowDown, X, Edit, Save } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, X, Edit, Save, LogIn } from 'lucide-react';
 
 const statusColor = { Active: 'badge-success', Pending: 'badge-warning', Suspended: 'badge-danger' };
 
@@ -108,6 +108,26 @@ const Schools = () => {
     themeColor: '#1a2744'
   });
   const [editError, setEditError] = useState('');
+  const [impersonatingSchoolId, setImpersonatingSchoolId] = useState(null);
+
+  const handleImpersonate = async (school) => {
+    if (!confirm(`Are you sure you want to log in as School Admin for "${school.name}"? You will be switched into their school portal.`)) {
+      return;
+    }
+    setImpersonatingSchoolId(school.id);
+    try {
+      const res = await apiClient.post(`/super/impersonate-school/${school.id}`);
+      if (res.data?.token) {
+        localStorage.setItem('eduvault_token', res.data.token);
+        localStorage.setItem('eduvault_user', JSON.stringify(res.data.user));
+        window.location.href = '/school-admin/dashboard';
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to impersonate school admin');
+    } finally {
+      setImpersonatingSchoolId(null);
+    }
+  };
   const [editLoading, setEditLoading] = useState(false);
 
   const fetchSchools = async () => {
@@ -488,11 +508,20 @@ const Schools = () => {
                     <td className="table-td">
                       <div className="flex items-center gap-2">
                         <button 
+                          onClick={() => handleImpersonate(s)}
+                          disabled={impersonatingSchoolId === s.id}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-primary hover:text-white text-slate-700 text-xs font-bold rounded-lg border border-slate-200 flex items-center gap-1 transition-all shadow-sm"
+                          title="Impersonate & log in as this school's admin"
+                        >
+                          <LogIn className="w-3 h-3" />
+                          <span>{impersonatingSchoolId === s.id ? 'Switching...' : 'Login'}</span>
+                        </button>
+                        <button 
                           onClick={() => navigate(`/super-admin/schools/${s.id}/hrm`)} 
                           className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 flex items-center gap-1 transition-all"
                           title="Manage School-Specific HRM & Payroll Rules"
                         >
-                          ⚙️ HRM Config
+                          ⚙️ HRM
                         </button>
                         <button onClick={() => toggleStatus(s)} className="text-slate-500 hover:text-slate-800 hover:underline text-xs font-medium">
                           {s.status === 'Active' ? 'Suspend' : 'Activate'}
