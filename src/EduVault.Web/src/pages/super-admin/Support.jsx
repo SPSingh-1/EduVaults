@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
+import { useToast } from '../../contexts/ToastContext';
 import Loader from '../../components/common/Loader';
+import DateFilterInput from '../../components/common/DateFilterInput';
+import { getTodayStr } from '../../utils/dateUtils';
 
 const statusColor = {
   OPEN: 'badge-warning',
@@ -15,37 +18,8 @@ const priorityColor = {
   LOW: 'text-gray-600 bg-gray-100'
 };
 
-const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
-  const [focused, setFocused] = useState(false);
-  const formatDisplay = (val) => {
-    if (!val) return '';
-    const parts = val.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return val;
-  };
-  return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
-      <input
-        type={focused ? 'date' : 'text'}
-        value={focused ? value : formatDisplay(value)}
-        onChange={e => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder="dd/mm/yyyy"
-        className={className || "text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary"}
-        style={style || { width: '130px' }}
-      />
-    </div>
-  );
-};
-
-const getTodayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
 const Support = () => {
+  const { toast } = useToast();
   const [tickets, setTickets] = useState([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -110,7 +84,7 @@ const Support = () => {
       );
     } catch (err) {
       console.error('Error updating status:', err);
-      alert('Failed to update ticket status.');
+      toast.error('Failed to update ticket status.');
     }
   };
 
@@ -138,7 +112,7 @@ const Support = () => {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(tempPassword);
-    alert('Copied temporary password to clipboard!');
+    toast.success('Copied temporary password to clipboard!');
   };
 
   const uniqueSchools = [...new Set(tickets.map((t) => t.schoolName).filter(Boolean))].sort();

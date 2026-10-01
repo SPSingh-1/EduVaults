@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 export default function StudentDossier() {
+  const { toast } = useToast();
   // Navigation / Drill-down state
   const [activeStep, setActiveStep] = useState('years'); // 'years' | 'classes' | 'students' | 'dossier'
   const [selectedYear, setSelectedYear] = useState(null);
@@ -545,7 +546,7 @@ export default function StudentDossier() {
                 <span>Print Official Cumulative Transcript</span>
               </button>
               <button
-                onClick={() => alert(`Official Bonafide Character Certificate generated for ${dossier.fullName}.\nConduct: ${dossier.tcConductRemark}`)}
+                onClick={() => toast.info(`Official Bonafide Character Certificate generated for ${dossier.fullName}. Conduct: ${dossier.tcConductRemark}`)}
                 className="px-4 py-2 bg-accent hover:brightness-110 text-slate-900 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
               >
                 <Award className="w-3.5 h-3.5" />

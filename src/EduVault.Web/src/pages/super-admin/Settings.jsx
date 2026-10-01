@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../../contexts/ToastContext';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import Loader from '../../components/common/Loader';
 
 const Settings = () => {
+  const { toast } = useToast();
   const { user, setUser } = useAuth();
   const [schools, setSchools] = useState([]);
   const [selectedScope, setSelectedScope] = useState('global'); // 'global' or schoolId
@@ -333,7 +335,7 @@ const Settings = () => {
         };
         const res = await apiClient.post('/super/settings', payload);
         setGlobalSettings(res.data);
-        alert('Platform global payment credentials updated successfully!');
+        toast.success('Platform global payment credentials updated successfully!');
       } else {
         await apiClient.post(`/super/schools/${selectedScope}/credentials/payment`, {
           paymentProvider,
@@ -348,11 +350,11 @@ const Settings = () => {
           phonePeSaltIndex,
           cashlessInstructions
         });
-        alert('Payment credentials updated successfully for this school!');
+        toast.success('Payment credentials updated successfully for this school!');
       }
       setShowPaymentModal(false);
     } catch (err) {
-      alert('Failed to update payment credentials: ' + (err.response?.data?.error || err.message));
+      toast.error('Failed to update payment credentials: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -381,10 +383,10 @@ const Settings = () => {
           alertMsg += `\n\n⚠️ Credentials saved, but the test message failed to send to ${testPhoneNumber}. Please double check credentials or phone format.`;
         }
       }
-      alert(alertMsg);
+      toast.success(alertMsg);
       setShowWhatsAppModal(false);
     } catch (err) {
-      alert('Failed to update WhatsApp credentials: ' + (err.response?.data?.error || err.message));
+      toast.error('Failed to update WhatsApp credentials: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -519,7 +521,7 @@ const Settings = () => {
         actionType: 'SYSTEM',
         description: 'Manual backup triggered by Super Admin.'
       });
-      alert('Manual backup successfully initiated!');
+      toast.success('Manual backup successfully initiated!');
       const logsRes = await expressClient.get('/logs');
       setLogs(logsRes.data || []);
     } catch (err) {

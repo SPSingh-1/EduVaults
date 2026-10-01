@@ -2,31 +2,8 @@ import { useState, useEffect } from 'react';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
 import { formatGrade, formatSection, formatClassLabel, sortClasses, sortGrades } from '../../utils/classUtils';
-
-const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
-  const [focused, setFocused] = useState(false);
-  const formatDisplay = (val) => {
-    if (!val) return '';
-    const parts = val.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return val;
-  };
-  return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
-      <input
-        type={focused ? 'date' : 'text'}
-        value={focused ? value : formatDisplay(value)}
-        onChange={e => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder="dd/mm/yyyy"
-        className={className || "input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl"}
-        style={style || { width: '130px' }}
-      />
-    </div>
-  );
-};
+import DateFilterInput from '../../components/common/DateFilterInput';
+import { getTodayStr } from '../../utils/dateUtils';
 
 const sc = {
   ACTIVE: 'badge-success',
@@ -36,11 +13,6 @@ const sc = {
   RETAINED_REPEAT: 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200',
   WITHDRAWN: 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200',
   SUSPENDED: 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200'
-};
-
-const getTodayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
 const Students = () => {
@@ -85,7 +57,8 @@ const Students = () => {
   // Student Password Reset Modal State
   const [showResetPassModal, setShowResetPassModal] = useState(false);
   const [resetStudentObj, setResetStudentObj] = useState(null);
-  const [newStudentPassword, setNewStudentPassword] = useState('Student123!');
+  const generateStudentPassword = () => `Stu#${Math.floor(100000 + Math.random() * 900000)}`;
+  const [newStudentPassword, setNewStudentPassword] = useState(generateStudentPassword());
   const [resetPassLoading, setResetPassLoading] = useState(false);
   const [resetPassSuccess, setResetPassSuccess] = useState('');
   const [resetPassError, setResetPassError] = useState('');
@@ -99,7 +72,7 @@ const Students = () => {
     lastName: '',
 
     email: '',
-    password: 'Student123!', // default
+    password: generateStudentPassword(),
     classId: '',
     bloodGroup: '',
     guardianName: '',
@@ -155,7 +128,7 @@ const Students = () => {
       firstName: '',
       lastName: '',
       email: '',
-      password: 'Student123!',
+      password: generateStudentPassword(),
       classId: classSections.find(c => c.enrolled < c.capacity)?.id || classSections[0]?.id || '',
       bloodGroup: '',
       guardianName: '',
@@ -311,7 +284,7 @@ const Students = () => {
 
   const handleOpenResetPass = (student) => {
     setResetStudentObj(student);
-    setNewStudentPassword('Student123!');
+    setNewStudentPassword(generateStudentPassword());
     setResetPassSuccess('');
     setResetPassError('');
     setShowPasswordText(false);
@@ -1621,17 +1594,10 @@ const Students = () => {
                     <span className="text-2xs text-gray-400 font-semibold uppercase tracking-wider">Quick Preset:</span>
                     <button
                       type="button"
-                      onClick={() => setNewStudentPassword('Student123!')}
+                      onClick={() => setNewStudentPassword(generateStudentPassword())}
                       className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors border border-slate-200"
                     >
-                      Student123!
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNewStudentPassword(`Pass#${Math.floor(100000 + Math.random() * 900000)}`)}
-                      className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors border border-slate-200"
-                    >
-                      Random PIN
+                      🎲 Generate New PIN
                     </button>
                   </div>
                 </>

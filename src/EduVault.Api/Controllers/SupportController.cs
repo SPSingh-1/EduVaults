@@ -208,7 +208,9 @@ namespace EduVault.Api.Controllers
                 }
             }
 
-            var newPassword = string.IsNullOrWhiteSpace(request.NewPassword) ? "Student123!" : request.NewPassword.Trim();
+            var newPassword = string.IsNullOrWhiteSpace(request.NewPassword) 
+                ? $"Stu#{RandomNumberGenerator.GetInt32(100000, 1000000)}" 
+                : request.NewPassword.Trim();
             if (newPassword.Length < 6)
             {
                 return BadRequest(new { error = "Password must be at least 6 characters long." });

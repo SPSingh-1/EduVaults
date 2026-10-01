@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
+import * as XLSX from 'xlsx';
 import Loader from '../../components/common/Loader';
+import DateFilterInput from '../../components/common/DateFilterInput';
+import { getTodayStr } from '../../utils/dateUtils';
 import { 
   TrendingUp, 
   CheckCircle2, 
@@ -10,7 +13,6 @@ import {
   DollarSign, 
   Calendar, 
   Download, 
-  Bell, 
   ChevronRight 
 } from 'lucide-react';
 
@@ -34,35 +36,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
-  const [focused, setFocused] = useState(false);
-  const formatDisplay = (val) => {
-    if (!val) return '';
-    const parts = val.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return val;
-  };
-  return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
-      <input
-        type={focused ? 'date' : 'text'}
-        value={focused ? value : formatDisplay(value)}
-        onChange={e => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder="dd/mm/yyyy"
-        className={className || "input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl"}
-        style={style || { width: '135px' }}
-      />
-    </div>
-  );
-};
 
-const getTodayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
 
 const Fees = () => {
   const [invoices, setInvoices] = useState([]);
@@ -265,7 +239,8 @@ const Fees = () => {
   const totalRevenue = filteredInvoices.reduce((sum, i) => sum + i.amount, 0);
   const collectedFees = filteredInvoices.filter(i => i.status === 'Paid').reduce((sum, i) => sum + i.amount, 0);
   const pendingDues = filteredInvoices.filter(i => i.status !== 'Paid').reduce((sum, i) => sum + i.amount, 0);
-  const lateFees = Math.round(collectedFees * 0.02); // Simulated late fees at 2% of collected
+  const overdueInvoices = filteredInvoices.filter(i => i.status === 'Overdue' || (i.status !== 'Paid' && i.dueDate && new Date(i.dueDate) < new Date()));
+  const overdueAmount = overdueInvoices.reduce((sum, i) => sum + i.amount, 0);
 
   // Dynamic grouping of invoices by month for the chart
   const getChartData = () => {
@@ -310,17 +285,26 @@ const Fees = () => {
     return <Loader message="Accessing school financial logs & structures" />;
   }
 
+  const handleExportReport = () => {
+    const data = (activeTab === 'invoices' ? filteredInvoices : activeTab === 'ledger' ? filteredLedger : filteredTransactions).map(row => {
+      if (activeTab === 'invoices') return { Student: row.studentName, 'Fee Type': row.type, Amount: row.amount, Date: row.date, Status: row.status };
+      if (activeTab === 'ledger') return { Student: row.studentName, Class: row.className, 'Total Billed': row.totalBilled, 'Total Paid': row.totalPaid, 'Remaining Due': row.remainingDue, Status: row.status };
+      return { Reference: row.referenceNumber, Student: row.studentName, Fee: row.feeName, Date: row.date, Method: row.paymentMethod, Amount: row.amount, Status: row.status };
+    });
+    if (data.length === 0) { setError('No data to export.'); return; }
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, activeTab);
+    XLSX.writeFile(wb, `Fee_Report_${activeTab}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   return (
     <div className="space-y-6">
       <Topbar
         title="Fees & Payments Overview"
         actions={
           <div className="flex gap-2">
-            <button className="btn-primary text-xs">
-              <Bell className="w-3.5 h-3.5" />
-              <span>Send Bulk Reminders</span>
-            </button>
-            <button className="btn-outline text-xs">
+            <button onClick={handleExportReport} className="btn-outline text-xs">
               <Download className="w-3.5 h-3.5" />
               <span>Export Report</span>
             </button>
@@ -328,12 +312,12 @@ const Fees = () => {
         }
       />
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { l: 'Total Revenue', v: `Rs. ${totalRevenue.toLocaleString()}`, s: 'All Invoiced', color: 'text-blue-500', bgColor: 'bg-blue-50/50', icon: TrendingUp },
+          { l: 'Total Revenue', v: `Rs. ${totalRevenue.toLocaleString()}`, s: 'All invoiced fees', color: 'text-blue-500', bgColor: 'bg-blue-50/50', icon: TrendingUp },
           { l: 'Collected Fees', v: `Rs. ${collectedFees.toLocaleString()}`, s: 'Cleared payments', color: 'text-emerald-500', bgColor: 'bg-emerald-50/50', icon: CheckCircle2 },
           { l: 'Pending Dues', v: `Rs. ${pendingDues.toLocaleString()}`, s: 'Outstanding invoice totals', color: 'text-rose-500', bgColor: 'bg-rose-50/50', icon: AlertCircle },
-          { l: 'Late Fees Collected', v: `Rs. ${lateFees.toLocaleString()}`, s: 'Simulated 2% MRR rate', color: 'text-amber-500', bgColor: 'bg-amber-50/50', icon: DollarSign }
+          { l: 'Overdue Amount', v: `Rs. ${overdueAmount.toLocaleString()}`, s: `${overdueInvoices.length} overdue invoices`, color: 'text-amber-500', bgColor: 'bg-amber-50/50', icon: DollarSign }
         ].map(s => (
           <div key={s.l} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
             <div className="space-y-1">
@@ -353,11 +337,8 @@ const Fees = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-display font-semibold text-primary text-sm m-0">Collected vs. Pending Fees</h3>
-              <p className="text-xs text-gray-405">Fee payments cleared vs outstanding dues</p>
+              <p className="text-xs text-gray-405">Last 6 months — fee payments cleared vs outstanding dues</p>
             </div>
-            <select className="border border-gray-200 text-xs px-2.5 py-1.5 rounded-lg text-gray-505 outline-none bg-white">
-              <option>Last 6 Months</option>
-            </select>
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -521,7 +502,9 @@ const Fees = () => {
                           </span>
                         </td>
                         <td className="table-td">
-                          <button className="text-gray-400 text-lg">⋮</button>
+                          <span className={`text-xs font-semibold ${t.status === 'Paid' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            {t.status === 'Paid' ? '✓ Paid' : '⏳ Due'}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -595,7 +578,7 @@ const Fees = () => {
 
         {activeTab === 'transactions' && (
           <div>
-            <h3 className="font-display font-semibold text-primary mb-4">Razorpay Payment Transaction Logs</h3>
+            <h3 className="font-display font-semibold text-primary mb-4">Payment Transaction Logs</h3>
             <div style={{ overflowX: 'auto', margin: '0 -12px', width: 'calc(100% + 24px)', WebkitOverflowScrolling: 'touch' }}>
               <div style={{ display: 'inline-block', minWidth: '100%', verticalAlign: 'middle', padding: '0 12px' }}>
                 <table className="w-full text-left" style={{ minWidth: '800px', borderCollapse: 'collapse' }}>

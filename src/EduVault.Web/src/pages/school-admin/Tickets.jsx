@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../../contexts/ToastContext';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
-import { formatDateDDMMYYYY } from '../../utils/dateUtils';
+import { formatDateDDMMYYYY, getTodayStr } from '../../utils/dateUtils';
 import Loader from '../../components/common/Loader';
+import DateFilterInput from '../../components/common/DateFilterInput';
 
 const statusColor = {
   OPEN: 'badge-warning',
@@ -16,37 +18,8 @@ const priorityColor = {
   LOW: 'text-gray-600 bg-gray-100'
 };
 
-const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
-  const [focused, setFocused] = useState(false);
-  const formatDisplay = (val) => {
-    if (!val) return '';
-    const parts = val.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return val;
-  };
-  return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
-      <input
-        type={focused ? 'date' : 'text'}
-        value={focused ? value : formatDisplay(value)}
-        onChange={e => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder="dd/mm/yyyy"
-        className={className || "text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:border-primary"}
-        style={style || { width: '130px' }}
-      />
-    </div>
-  );
-};
-
-const getTodayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
 const Tickets = () => {
+  const { toast } = useToast();
   const [tickets, setTickets] = useState([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -101,7 +74,7 @@ const Tickets = () => {
 
   const handleCreateTicket = async () => {
     if (!newTicket.title) {
-      alert('Please enter a ticket title.');
+      toast.warning('Please enter a ticket title.');
       return;
     }
     setSubmitting(true);
@@ -112,7 +85,7 @@ const Tickets = () => {
       fetchData();
     } catch (err) {
       console.error('Error creating ticket:', err);
-      alert('Failed to submit ticket. Please try again.');
+      toast.error('Failed to submit ticket. Please try again.');
     } finally {
       setSubmitting(false);
     }

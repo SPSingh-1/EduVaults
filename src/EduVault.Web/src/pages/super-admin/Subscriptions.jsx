@@ -3,38 +3,12 @@ import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
 import Loader from '../../components/common/Loader';
 import { DollarSign, Users, CreditCard } from 'lucide-react';
-
-const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
-  const [focused, setFocused] = useState(false);
-  const formatDisplay = (val) => {
-    if (!val) return '';
-    const parts = val.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return val;
-  };
-  return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
-      <input
-        type={focused ? 'date' : 'text'}
-        value={focused ? value : formatDisplay(value)}
-        onChange={e => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder="dd/mm/yyyy"
-        className={className || "input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl"}
-        style={style || { width: '130px' }}
-      />
-    </div>
-  );
-};
-
-const getTodayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+import DateFilterInput from '../../components/common/DateFilterInput';
+import { getTodayStr } from '../../utils/dateUtils';
+import { useToast } from '../../contexts/ToastContext';
 
 const Subscriptions = () => {
+  const { toast } = useToast();
   const [data, setData] = useState({
     totalMrr: 0,
     activeSubscribers: 0,
@@ -251,7 +225,7 @@ const Subscriptions = () => {
       setTimeout(() => setSaveSuccess(''), 5000);
     } catch (err) {
       console.error('Error saving custom plan settings:', err);
-      alert('Failed to save custom plan parameters.');
+      toast.error('Failed to save custom plan parameters.');
     } finally {
       setSavingCustom(false);
     }
@@ -301,7 +275,7 @@ const Subscriptions = () => {
       setTimeout(() => setSaveSuccess(''), 5000);
     } catch (err) {
       console.error('Error approving request:', err);
-      alert('Failed to approve upgrade request: ' + (err.response?.data?.error || err.message));
+      toast.error('Failed to approve upgrade request: ' + (err.response?.data?.error || err.message));
     } finally {
       setProcessingRequestId(null);
     }
@@ -319,7 +293,7 @@ const Subscriptions = () => {
       setTimeout(() => setSaveSuccess(''), 5000);
     } catch (err) {
       console.error('Error rejecting request:', err);
-      alert('Failed to reject upgrade request.');
+      toast.error('Failed to reject upgrade request.');
     } finally {
       setProcessingRequestId(null);
     }
@@ -347,7 +321,7 @@ const Subscriptions = () => {
       setTimeout(() => setSaveSuccess(''), 5000);
     } catch (err) {
       console.error('Error saving plan updates:', err);
-      alert('Failed to save plan updates. Please check your inputs and try again.');
+      toast.error('Failed to save plan updates. Please check your inputs and try again.');
     } finally {
       setSavingId(null);
     }
@@ -395,7 +369,7 @@ const Subscriptions = () => {
   const handleExportReport = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert('Pop-up blocker is enabled. Please allow pop-ups to export the report.');
+      toast.warning('Pop-up blocker is enabled. Please allow pop-ups to export the report.');
       return;
     }
 
@@ -807,7 +781,7 @@ const Subscriptions = () => {
                             onClick={async () => {
                               const charge = parseFloat(customPlansForm.enterprise.upgradeCharge);
                               if (!charge || charge <= 0) {
-                                alert('Please enter a valid amount to charge.');
+                                toast.warning('Please enter a valid amount to charge.');
                                 return;
                               }
                               if (!window.confirm(`Approve custom modifications with charge of Rs. ${charge}?`)) return;
@@ -829,7 +803,7 @@ const Subscriptions = () => {
                                 setTimeout(() => setSaveSuccess(''), 5000);
                               } catch (err) {
                                 console.error('Error approving custom request:', err);
-                                alert('Failed to approve custom request: ' + (err.response?.data?.error || err.message));
+                                toast.error('Failed to approve custom request: ' + (err.response?.data?.error || err.message));
                               } finally {
                                 setProcessingRequestId(null);
                               }

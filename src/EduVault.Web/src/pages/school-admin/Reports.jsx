@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useToast } from "../../contexts/ToastContext";
 import Topbar from "../../components/layout/Topbar";
 import { apiClient, expressClient } from "../../api/apiClient";
 import { formatClassLabel, formatGrade } from "../../utils/classUtils";
@@ -143,7 +144,7 @@ const Reports = () => {
         },
       }));
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to approve report.");
+      toast.error(err.response?.data?.error || "Failed to approve report.");
     } finally {
       setActionLoading((prev) => ({ ...prev, [student.id]: false }));
     }
@@ -153,7 +154,7 @@ const Reports = () => {
   const handleRevoke = async (student) => {
     const reason = window.prompt("Enter reason for revoking (will be sent to teacher):");
     if (reason === null) return;
-    if (!reason.trim()) { alert("A reason is required."); return; }
+    if (!reason.trim()) { toast.warning("A reason is required."); return; }
     setActionLoading((prev) => ({ ...prev, [student.id]: true }));
     try {
       const res = await apiClient.post("/academics/report-approvals/revoke", {
@@ -179,7 +180,7 @@ const Reports = () => {
         [student.id]: { isApproved: false, approvedAt: null },
       }));
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to revoke report.");
+      toast.error(err.response?.data?.error || "Failed to revoke report.");
     } finally {
       setActionLoading((prev) => ({ ...prev, [student.id]: false }));
     }
@@ -208,7 +209,7 @@ const Reports = () => {
       });
       setApprovals(newApprovals);
     } catch (err) {
-      alert(err.response?.data?.error || "Bulk approval failed.");
+      toast.error(err.response?.data?.error || "Bulk approval failed.");
     } finally {
       setBulkLoading(false);
     }
@@ -252,12 +253,12 @@ const Reports = () => {
             console.error("Notification error during publish:", e);
           }
         }
-        alert("Reports published successfully and approved students notified!");
+        toast.success("Reports published successfully and approved students notified!");
       } else {
-        alert("Reports unpublished successfully.");
+        toast.info("Reports unpublished successfully.");
       }
     } catch (err) {
-      alert(err.response?.data?.error || `Failed to ${actionText.toLowerCase()} reports.`);
+      toast.error(err.response?.data?.error || `Failed to ${actionText.toLowerCase()} reports.`);
     } finally {
       setPublishLoading(false);
     }

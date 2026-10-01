@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
+import { loadScript } from '../../utils/scriptLoader';
+import { useToast } from '../../contexts/ToastContext';
 import Loader from '../../components/common/Loader';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import * as Icons from 'lucide-react';
@@ -68,6 +70,7 @@ const CustomTooltip = ({ active, payload, label, mode }) => {
 };
 
 const SchoolAdminDashboard = () => {
+  const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
@@ -120,23 +123,9 @@ const SchoolAdminDashboard = () => {
       const userProfile = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
 
       if (provider === 'razorpay') {
-        const loadScript = (src) => {
-          return new Promise((resolve) => {
-            if (document.querySelector(`script[src="${src}"]`)) {
-              resolve(true);
-              return;
-            }
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = () => resolve(true);
-            script.onerror = () => resolve(false);
-            document.body.appendChild(script);
-          });
-        };
-
         const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
         if (!scriptLoaded) {
-          alert('Failed to load Razorpay SDK. Please check your internet connection.');
+          toast.error('Failed to load Razorpay SDK. Please check your internet connection.');
           setPaying(false);
           return;
         }
@@ -157,11 +146,11 @@ const SchoolAdminDashboard = () => {
                 razorpaySignature: response.razorpay_signature || 'mock_signature',
                 paymentProvider: 'razorpay'
               });
-              alert('Platform subscription payment successful! All features unlocked.');
+              toast.success('Platform subscription payment successful! All features unlocked.');
               const res = await apiClient.get('/academics/stats');
               setStats(res.data);
             } catch (err) {
-              alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
+              toast.error('Payment verification failed: ' + (err.response?.data?.error || err.message));
             } finally {
               setPaying(false);
             }
@@ -186,7 +175,7 @@ const SchoolAdminDashboard = () => {
         } else {
           const rzp = new window.Razorpay(options);
           rzp.on('payment.failed', function (response){
-            alert("Payment failed: " + response.error.description);
+            toast.error("Payment failed: " + response.error.description);
           });
           rzp.open();
         }
@@ -202,11 +191,11 @@ const SchoolAdminDashboard = () => {
               paymentProvider: 'cashless',
               transactionReference: txRef
             });
-            alert('Platform subscription payment submitted! The admin will verify it shortly.');
+            toast.success('Platform subscription payment submitted! The admin will verify it shortly.');
             const res = await apiClient.get('/academics/stats');
             setStats(res.data);
           } catch (err) {
-            alert('Failed to submit cashless transaction: ' + (err.response?.data?.error || err.message));
+            toast.error('Failed to submit cashless transaction: ' + (err.response?.data?.error || err.message));
           } finally {
             setPaying(false);
           }
@@ -227,11 +216,11 @@ const SchoolAdminDashboard = () => {
               paymentProvider: provider,
               transactionReference: txRef
             });
-            alert('Platform subscription payment successful! All features unlocked.');
+            toast.success('Platform subscription payment successful! All features unlocked.');
             const res = await apiClient.get('/academics/stats');
             setStats(res.data);
           } catch (err) {
-            alert('Payment verification failed: ' + (err.response?.data?.error || err.message));
+            toast.error('Payment verification failed: ' + (err.response?.data?.error || err.message));
           } finally {
             setPaying(false);
           }
@@ -240,7 +229,7 @@ const SchoolAdminDashboard = () => {
         }
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Order creation failed.');
+      toast.error(err.response?.data?.error || 'Order creation failed.');
     } finally {
       setPaying(false);
     }
@@ -289,7 +278,7 @@ const SchoolAdminDashboard = () => {
             <div>
               <div className="font-bold text-xs">Platform Subscription Pending</div>
               <div className="text-[10px] text-red-650 font-light mt-0.5">
-                Your school's platform subscription is currently pending payment. Pay the annual fee of <b>${stats.subscriptionAmount}</b> to activate all administrator tools.
+                Your school's platform subscription is currently pending payment. Pay the annual fee of <b>₹{stats.subscriptionAmount}</b> to activate all administrator tools.
               </div>
             </div>
           </div>

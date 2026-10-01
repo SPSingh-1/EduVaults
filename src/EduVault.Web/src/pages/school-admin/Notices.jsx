@@ -1,40 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../../contexts/ToastContext';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { io } from 'socket.io-client';
 import { useNotifications } from '../../contexts/NotificationContext';
-
-const getTodayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
-const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
-  const [focused, setFocused] = useState(false);
-  const formatDisplay = (val) => {
-    if (!val) return '';
-    const parts = val.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return val;
-  };
-  return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      {label && <span className="text-xs font-semibold whitespace-nowrap">{label}</span>}
-      <input
-        type={focused ? 'date' : 'text'}
-        value={focused ? value : formatDisplay(value)}
-        onChange={e => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder="dd/mm/yyyy"
-        className={className}
-        style={style}
-      />
-    </div>
-  );
-};
+import DateFilterInput from '../../components/common/DateFilterInput';
+import { getTodayStr } from '../../utils/dateUtils';
 
 export default function Notices() {
+  const { toast } = useToast();
   const { markAllAsRead } = useNotifications();
   const [noticesList, setNoticesList] = useState([]);
   const [showNew, setShowNew] = useState(false);
@@ -176,9 +150,9 @@ export default function Notices() {
     try {
       await expressClient.delete(`/holidays/${id}`);
       setHolidayDirectory(prev => prev.filter(h => h._id !== id));
-      alert(`Holiday "${title}" removed successfully.`);
+      toast.success(`Holiday "${title}" removed successfully.`);
     } catch (err) {
-      alert('Failed to delete holiday: ' + (err.response?.data?.error || err.message));
+      toast.error('Failed to delete holiday: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -195,14 +169,14 @@ export default function Notices() {
         description: holidayDescription,
         notifyUsers: notifyHoliday
       });
-      alert(`🎉 Holiday "${holidayTitle}" declared successfully! Real-time notification broadcasted to all students.`);
+      toast.success(`🎉 Holiday "${holidayTitle}" declared successfully! Real-time notification broadcasted to all students.`);
       setShowHolidayModal(false);
       setHolidayTitle('');
       setHolidayDescription('');
       fetchNotices();
       fetchHolidayDirectory();
     } catch (err) {
-      alert('Failed to declare holiday: ' + (err.response?.data?.error || err.message));
+      toast.error('Failed to declare holiday: ' + (err.response?.data?.error || err.message));
     } finally {
       setSavingHoliday(false);
     }

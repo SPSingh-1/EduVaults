@@ -4,8 +4,10 @@ import { apiClient, expressClient } from '../../api/apiClient';
 import { io } from 'socket.io-client';
 import { useNotifications } from '../../contexts/NotificationContext';
 import Loader from '../../components/common/Loader';
+import { useToast } from '../../contexts/ToastContext';
 
 const SuperAdminNotices = () => {
+  const { toast } = useToast();
   const { markAllAsRead } = useNotifications();
   const [noticesList, setNoticesList] = useState([]);
   const [schools, setSchools] = useState([]);
@@ -89,7 +91,7 @@ const SuperAdminNotices = () => {
       fetchNoticesAndSchools();
     } catch (err) {
       console.error('Error publishing super admin notice:', err);
-      alert('Failed to publish notice.');
+      toast.error('Failed to publish notice.');
     } finally {
       setLoading(false);
     }
@@ -318,7 +320,7 @@ const SuperAdminNotices = () => {
                       onClick={async () => {
                         try {
                           await apiClient.post(`/super/inquiries/${inq.id}/resolve`);
-                          alert('Inquiry marked as resolved.');
+                          toast.success('Inquiry marked as resolved.');
                           fetchNoticesAndSchools();
                         } catch (err) {
                           console.error('Error resolving inquiry:', err);
@@ -412,7 +414,7 @@ const SuperAdminNotices = () => {
                 <button 
                   onClick={async () => {
                     if (!actEmail || !actPassword) {
-                      alert('Please fill in both email and password.');
+                      toast.warning('Please fill in both email and password.');
                       return;
                     }
                     try {
@@ -425,10 +427,10 @@ const SuperAdminNotices = () => {
                       setActEmail('');
                       setActPassword('');
                       fetchNoticesAndSchools();
-                      alert('School credentials generated and activated successfully.');
+                      toast.success('School credentials generated and activated successfully.');
                     } catch (err) {
                       console.error('Error activating school:', err);
-                      alert(err.response?.data?.error || 'Failed to activate school.');
+                      toast.error(err.response?.data?.error || 'Failed to activate school.');
                     }
                   }} 
                   className="btn-primary text-xs px-4 py-2 rounded-xl font-sans"

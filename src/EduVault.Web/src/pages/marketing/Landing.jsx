@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EduFlowLogo from '../../components/common/Logo';
 import { apiClient } from '../../api/apiClient';
+import { loadScript } from '../../utils/scriptLoader';
+import { useToast } from '../../contexts/ToastContext';
 
 const CountUp = ({ to, duration = 1500, suffix = '', decimals = 0, prefix = '' }) => {
   const [count, setCount] = useState(0);
@@ -57,6 +59,7 @@ const FeatureCard = ({ icon, title, desc, onClick }) => (
 );
 
 const Landing = () => {
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [stats, setStats] = useState({ 
     totalSchools: 0, 
@@ -86,17 +89,17 @@ const Landing = () => {
   const handleInquirySubmit = async (e) => {
     e.preventDefault();
     if (!inquiryForm.name || !inquiryForm.email || !inquiryForm.message) {
-      alert('Please fill in all required fields.');
+      toast.warning('Please fill in all required fields.');
       return;
     }
     setSubmittingInquiry(true);
     try {
       await apiClient.post('/auth/submit-inquiry', inquiryForm);
-      alert("Thank you! Your inquiry has been sent. We'll review it and get back to you shortly.");
+      toast.success("Thank you! Your inquiry has been sent. We'll review it and get back to you shortly.");
       setInquiryForm({ name: '', email: '', phone: '', message: '', isDemoRequest: false });
     } catch (err) {
       console.error(err);
-      alert('Failed to submit inquiry. Please try again.');
+      toast.error('Failed to submit inquiry. Please try again.');
     } finally {
       setSubmittingInquiry(false);
     }
@@ -145,16 +148,6 @@ const Landing = () => {
     fetchStats();
     fetchSettings();
   }, []);
-
-  const loadScript = (src) => {
-    return new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
 
   const registerAndSubmit = async (paymentResponse) => {
     setSubmitting(true);
@@ -246,7 +239,7 @@ const Landing = () => {
         const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
         setSubmitting(false);
         if (!scriptLoaded) {
-          alert('Failed to load Razorpay SDK. Please check your connection.');
+          toast.error('Failed to load Razorpay SDK. Please check your connection.');
           return;
         }
 
@@ -408,9 +401,9 @@ const Landing = () => {
               <p className="text-blue-200 text-sm mb-6">Scale as you grow. Pay only for active students, teachers, and admins.</p>
               <ul className="space-y-2 text-sm text-blue-200 mb-7">
                 {[
-                  'Per Student: $0.85 – $1.20/mo (equiv. ₹70 – ₹100/mo, volume-based)',
-                  'Per Teacher: $1.20 – $1.80/mo (equiv. ₹100 – ₹150/mo)',
-                  'School Admin: $2.40/mo (equiv. ₹200/mo)',
+                  'Per Student: ₹70 – ₹100/mo (volume-based)',
+                  'Per Teacher: ₹100 – ₹150/mo',
+                  'School Admin: ₹200/mo',
                   'Flexible Database Hosting: Varies by data size',
                   'Attendance & Full Fee Management',
                   'Automated Report Cards & Portals',
@@ -435,7 +428,7 @@ const Landing = () => {
             {/* Custom Pricing Card */}
             <div className="bg-white/10 rounded-2xl p-7 border border-white/20">
               <div className="text-xs font-bold text-yellow-400 uppercase tracking-wider mb-2">Custom Development</div>
-              <div className="font-display text-4xl font-bold text-white mb-1">$199–$999 <span className="text-lg text-blue-300">/pages</span></div>
+              <div className="font-display text-4xl font-bold text-white mb-1">₹15,000–₹75,000 <span className="text-lg text-blue-300">/pages</span></div>
               <p className="text-blue-200 text-sm mb-6">Need extra pages or modifications to existing features? We'll quote based on your requirements.</p>
               <ul className="space-y-2 text-sm text-blue-200 mb-7">
                 {[
@@ -453,14 +446,14 @@ const Landing = () => {
             </div>
             {/* Yearly Plan Card */}
             <div className="bg-green-500/10 rounded-2xl p-7 border border-green-400/30 relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-bold px-4 py-1 rounded-full">SAVE UP TO $100</div>
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-bold px-4 py-1 rounded-full">SAVE UP TO ₹8,000</div>
               <div className="text-xs font-bold text-green-400 uppercase tracking-wider mb-2">Yearly Plan</div>
               <div className="font-display text-4xl font-bold text-white mb-1">₹39,999 <span className="text-lg text-blue-300">/year</span></div>
               <p className="text-blue-200 text-sm mb-6">Pay annually and enjoy loyalty discounts — the longer your relationship with us, the more you save.</p>
               <ul className="space-y-2 text-sm text-blue-200 mb-7">
                 {[
-                  '$50 off for new yearly subscribers',
-                  'Up to $100 off for long-term clients',
+                  '₹4,000 off for new yearly subscribers',
+                  'Up to ₹8,000 off for long-term clients',
                   'All Standard Plan features included',
                   'Priority onboarding & setup assistance',
                   'Locked-in pricing for 12 months',
@@ -469,6 +462,7 @@ const Landing = () => {
                   <li key={f} className="flex items-center gap-2"><span className="text-green-400">✓</span>{f}</li>
                 ))}
               </ul>
+
               <button onClick={() => { setSelectedPlan('Yearly'); setError(''); setPaymentSuccess(false); setModalOpen(true); }} className="w-full bg-green-500/30 hover:bg-green-500/40 border border-green-400/40 text-green-300 font-semibold py-3 rounded-xl transition-all">Get Yearly Discount</button>
             </div>
           </div>

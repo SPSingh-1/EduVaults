@@ -1,40 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../../contexts/ToastContext';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
+import DateFilterInput from '../../components/common/DateFilterInput';
+import { getTodayStr } from '../../utils/dateUtils';
 
 const sc = { Active: 'badge-success', 'On Leave': 'badge-warning' };
 
-const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
-  const [focused, setFocused] = useState(false);
-  const formatDisplay = (val) => {
-    if (!val) return '';
-    const parts = val.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return val;
-  };
-  return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
-      <input
-        type={focused ? 'date' : 'text'}
-        value={focused ? value : formatDisplay(value)}
-        onChange={e => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder="dd/mm/yyyy"
-        className={className || "input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl"}
-        style={style || { width: '130px' }}
-      />
-    </div>
-  );
-};
-
-const getTodayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
 const Teachers = () => {
+  const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem('eduvault_user') || '{}');
   const schoolName = user?.schoolName || 'Central High';
   const [teachers, setTeachers] = useState([]);
@@ -98,12 +72,13 @@ const Teachers = () => {
   // Form State
   const [editMode, setEditMode] = useState(false);
   const [editTeacherId, setEditTeacherId] = useState(null);
+  const generateTeacherPassword = () => `Teach#${Math.floor(100000 + Math.random() * 900000)}`;
   const [departments, setDepartments] = useState([]);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    password: 'Teacher123!', // default
+    password: generateTeacherPassword(),
     department: '',
     officeLocation: 'Building B, Room 402',
     qualifications: '',
@@ -424,7 +399,7 @@ const Teachers = () => {
       fetchAttendance();
     } catch (err) {
       console.error(err);
-      alert('Failed to save teacher attendance.');
+      toast.error('Failed to save teacher attendance.');
     } finally {
       setAttendanceSubmitting(false);
     }
@@ -435,7 +410,7 @@ const Teachers = () => {
       firstName: '',
       lastName: '',
       email: '',
-      password: 'Teacher123!',
+      password: generateTeacherPassword(),
       department: departments[0]?.name || 'Science & Mathematics',
       officeLocation: 'Building B, Room 402',
       qualifications: '',

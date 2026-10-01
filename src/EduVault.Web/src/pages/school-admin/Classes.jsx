@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../../contexts/ToastContext';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient } from '../../api/apiClient';
 import { Sparkles, UploadCloud, Download, FileSpreadsheet, X, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -238,7 +239,7 @@ export default function Classes() {
       const text = e.target.result;
       const lines = text.split(/\r\n|\n/).map(l => l.trim()).filter(Boolean);
       if (lines.length < 2) {
-        alert('File is empty or has no data rows.');
+        toast.warning('File is empty or has no data rows.');
         return;
       }
 

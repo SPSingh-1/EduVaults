@@ -38,16 +38,19 @@ namespace EduVault.Api.Services
                 
                 // Fetch school settings if schoolId is provided
                 EduVault.Core.Entities.School? school = null;
-                if (schoolId.HasValue)
+                if (schoolId.HasValue && _scopeFactory != null)
                 {
                     try
                     {
                         using var scope = _scopeFactory.CreateScope();
-                        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-                        school = await uow.Schools.GetByIdAsync(schoolId.Value);
-                        if (school != null && !string.IsNullOrEmpty(school.WhatsAppProvider))
+                        var uow = scope.ServiceProvider.GetService<IUnitOfWork>();
+                        if (uow?.Schools != null)
                         {
-                            provider = school.WhatsAppProvider.ToLower();
+                            school = await uow.Schools.GetByIdAsync(schoolId.Value);
+                            if (school != null && !string.IsNullOrEmpty(school.WhatsAppProvider))
+                            {
+                                provider = school.WhatsAppProvider.ToLower();
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -219,31 +222,34 @@ namespace EduVault.Api.Services
         {
             try
             {
-                if (schoolId.HasValue)
+                if (schoolId.HasValue && _scopeFactory != null)
                 {
                     try
                     {
                         using var scope = _scopeFactory.CreateScope();
-                        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-                        var school = await uow.Schools.GetByIdAsync(schoolId.Value);
-                        if (school != null)
+                        var uow = scope.ServiceProvider.GetService<IUnitOfWork>();
+                        if (uow?.Schools != null)
                         {
-                            // Check if this specific event type is enabled
-                            bool isEnabled = eventType switch
+                            var school = await uow.Schools.GetByIdAsync(schoolId.Value);
+                            if (school != null)
                             {
-                                "FEE_RECEIPT" => school.WhatsAppFeeReceiptsEnabled,
-                                "FEE_REMINDER" => school.WhatsAppFeeRemindersEnabled,
-                                "LIBRARY_ALERT" => school.WhatsAppLibraryAlertsEnabled,
-                                "GATE_PASS" => school.WhatsAppGatePassAlertsEnabled,
-                                "ADMISSION_INQUIRY" => school.WhatsAppAdmissionInquiryEnabled,
-                                "TC_NOTICE" => school.WhatsAppTcNoticeEnabled,
-                                _ => true
-                            };
+                                // Check if this specific event type is enabled
+                                bool isEnabled = eventType switch
+                                {
+                                    "FEE_RECEIPT" => school.WhatsAppFeeReceiptsEnabled,
+                                    "FEE_REMINDER" => school.WhatsAppFeeRemindersEnabled,
+                                    "LIBRARY_ALERT" => school.WhatsAppLibraryAlertsEnabled,
+                                    "GATE_PASS" => school.WhatsAppGatePassAlertsEnabled,
+                                    "ADMISSION_INQUIRY" => school.WhatsAppAdmissionInquiryEnabled,
+                                    "TC_NOTICE" => school.WhatsAppTcNoticeEnabled,
+                                    _ => true
+                                };
 
-                            if (!isEnabled)
-                            {
-                                Console.WriteLine($"[WHATSAPP NOTICE] Event '{eventType}' is toggled OFF for school: {schoolId.Value}. Notification skipped.");
-                                return true; // Skipped intentionally
+                                if (!isEnabled)
+                                {
+                                    Console.WriteLine($"[WHATSAPP NOTICE] Event '{eventType}' is toggled OFF for school: {schoolId.Value}. Notification skipped.");
+                                    return true; // Skipped intentionally
+                                }
                             }
                         }
                     }

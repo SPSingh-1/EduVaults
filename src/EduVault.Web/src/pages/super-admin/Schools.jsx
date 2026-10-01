@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import { apiClient, expressClient } from '../../api/apiClient';
-import { formatDateDDMMYYYY } from '../../utils/dateUtils';
+import { formatDateDDMMYYYY, getTodayStr } from '../../utils/dateUtils';
 import Loader from '../../components/common/Loader';
+import DateFilterInput from '../../components/common/DateFilterInput';
+import { useToast } from '../../contexts/ToastContext';
 import { ArrowUpDown, ArrowUp, ArrowDown, X, Edit, Save, LogIn } from 'lucide-react';
 
 const statusColor = { Active: 'badge-success', Pending: 'badge-warning', Suspended: 'badge-danger' };
@@ -26,39 +28,13 @@ const safeUrl = (url) => {
   return '/logo.jpeg';
 };
 
-const DateFilterInput = ({ label, value, onChange, className = '', style = {} }) => {
-  const [focused, setFocused] = useState(false);
-  const formatDisplay = (val) => {
-    if (!val) return '';
-    const parts = val.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return val;
-  };
-
-  return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      {label && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{label}</span>}
-      <input
-        type={focused ? 'date' : 'text'}
-        value={focused ? value : formatDisplay(value)}
-        onChange={e => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder="dd/mm/yyyy"
-        className={className || "input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl"}
-        style={style || { width: '135px' }}
-      />
-    </div>
-  );
-};
 
 
-const getTodayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+
+
 
 const Schools = () => {
+  const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const [schools, setSchools] = useState([]);
@@ -123,7 +99,7 @@ const Schools = () => {
         window.location.href = '/school-admin/dashboard';
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to impersonate school admin');
+      toast.error(err.response?.data?.error || 'Failed to impersonate school admin');
     } finally {
       setImpersonatingSchoolId(null);
     }
@@ -203,7 +179,7 @@ const Schools = () => {
 
   const confirmActivation = async () => {
     if (!actEmail || !actPassword) {
-      alert('Please fill in both email and password.');
+      toast.warning('Please fill in both email and password.');
       return;
     }
     try {
@@ -218,7 +194,7 @@ const Schools = () => {
       fetchSchools();
     } catch (err) {
       console.error('Error activating school:', err);
-      alert(err.response?.data?.error || 'Failed to activate school.');
+      toast.error(err.response?.data?.error || 'Failed to activate school.');
     }
   };
 

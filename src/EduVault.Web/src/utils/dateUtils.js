@@ -44,3 +44,12 @@ export const formatDateTimeDDMMYYYY = (dateInput) => {
 
   return `${day}-${month}-${year} ${timeStr}`;
 };
+
+/**
+ * Returns today's date as a YYYY-MM-DD string (for input[type=date] values).
+ * Centralized here to avoid 10+ copies across the codebase.
+ */
+export const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};

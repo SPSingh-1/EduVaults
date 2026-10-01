@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { ProtectedRoute } from './router/ProtectedRoute';
 import './index.css';
@@ -130,8 +131,9 @@ export default function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <BrowserRouter>
-          <SidebarProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <SidebarProvider>
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Landing />} />
@@ -283,7 +285,8 @@ export default function App() {
             </Routes>
           </SidebarProvider>
         </BrowserRouter>
-      </NotificationProvider>
+      </ToastProvider>
+    </NotificationProvider>
     </AuthProvider>
   );
 }

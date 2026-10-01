@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../api/apiClient';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import Loader from '../../components/common/Loader';
+import { useToast } from '../../contexts/ToastContext';
 import { 
   School, 
   CheckCircle2, 
@@ -42,6 +43,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 const SuperAdminDashboard = () => {
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [healthStats, setHealthStats] = useState(null);
@@ -109,7 +111,7 @@ const SuperAdminDashboard = () => {
         window.location.href = '/school-admin/dashboard';
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to impersonate school admin');
+      toast.error(err.response?.data?.error || 'Failed to impersonate school admin');
     } finally {
       setImpersonatingId(null);
     }
@@ -140,7 +142,7 @@ const SuperAdminDashboard = () => {
   const handleExportReport = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert('Pop-up blocker is enabled. Please allow pop-ups to export the report.');
+      toast.warning('Pop-up blocker is enabled. Please allow pop-ups to export the report.');
       return;
     }
 

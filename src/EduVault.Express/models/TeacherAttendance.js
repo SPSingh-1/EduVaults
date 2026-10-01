@@ -4,6 +4,7 @@ const TeacherAttendanceSchema = new mongoose.Schema({
   schoolId: { type: String, required: true },
   teacherId: { type: String, required: true },
   name: { type: String, required: true },
+  teacherName: { type: String },
   employeeId: { type: String },
   date: { type: String, required: true }, // Format: YYYY-MM-DD
   status: { 
