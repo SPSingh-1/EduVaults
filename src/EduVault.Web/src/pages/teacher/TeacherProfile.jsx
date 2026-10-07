@@ -169,7 +169,7 @@ export const TeacherProfile = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-8 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 text-sm">
             {/* Left column */}
             <div>
               <h3 className="font-display font-bold text-xs uppercase tracking-wider text-primary/60 mb-3.5">🏢 Administrative Assignment</h3>
@@ -178,7 +178,7 @@ export const TeacherProfile = () => {
                 <div className="flex justify-between items-center py-2 border-b border-gray-50">
                   <span className="text-xs text-gray-400 font-semibold uppercase">First Name</span>
                   {editing ? (
-                    <input value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
+                    <input value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} className="input text-sm py-1 px-2 w-28 sm:w-36 text-right" />
                   ) : (
                     <span className="font-semibold text-primary">{profile?.firstName}</span>
                   )}
@@ -186,7 +186,7 @@ export const TeacherProfile = () => {
                 <div className="flex justify-between items-center py-2 border-b border-gray-50">
                   <span className="text-xs text-gray-400 font-semibold uppercase">Last Name</span>
                   {editing ? (
-                    <input value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
+                    <input value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} className="input text-sm py-1 px-2 w-28 sm:w-36 text-right" />
                   ) : (
                     <span className="font-semibold text-primary">{profile?.lastName}</span>
                   )}
@@ -200,7 +200,7 @@ export const TeacherProfile = () => {
                 <div className="flex justify-between items-center py-2 border-b border-gray-50">
                   <span className="text-xs text-gray-400 font-semibold uppercase">Office Room</span>
                   {editing ? (
-                    <input value={form.officeLocation} onChange={e => setForm(f => ({ ...f, officeLocation: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
+                    <input value={form.officeLocation} onChange={e => setForm(f => ({ ...f, officeLocation: e.target.value }))} className="input text-sm py-1 px-2 w-28 sm:w-36 text-right" />
                   ) : (
                     <span className="font-medium text-gray-700">{profile?.officeLocation}</span>
                   )}
@@ -224,7 +224,7 @@ export const TeacherProfile = () => {
                 <div className="flex justify-between items-center py-2 border-b border-gray-50">
                   <span className="text-xs text-gray-400 font-semibold uppercase">Qualifications</span>
                   {editing ? (
-                    <input value={form.qualifications} onChange={e => setForm(f => ({ ...f, qualifications: e.target.value }))} className="input text-sm py-1 px-2 w-36 text-right" />
+                    <input value={form.qualifications} onChange={e => setForm(f => ({ ...f, qualifications: e.target.value }))} className="input text-sm py-1 px-2 w-28 sm:w-36 text-right" />
                   ) : (
                     <span className="font-medium text-gray-700">{profile?.qualifications}</span>
                   )}

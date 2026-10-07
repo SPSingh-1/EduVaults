@@ -945,7 +945,7 @@ const Teachers = () => {
               <button onClick={() => setShowViewModal(false)} className="text-white hover:text-blue-200 text-lg">✖</button>
             </div>
             <div className="p-6 space-y-5 text-sm max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Employee ID</div>
                   <div className="font-mono font-semibold text-primary">{viewTeacherData.employeeId}</div>
@@ -1011,7 +1011,7 @@ const Teachers = () => {
               {error && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{error}</div>}
               <div>
                 <h4 className="font-semibold text-sm text-primary mb-3 flex items-center gap-2">👤 Personal Information</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">First Name *</label>
                     <input required value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} placeholder="e.g. Jonathan" className="input" />
@@ -1036,7 +1036,7 @@ const Teachers = () => {
               </div>
               <div>
                 <h4 className="font-semibold text-sm text-primary mb-3 flex items-center gap-2">🏢 Administrative Assignment</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Department</label>
                     <select value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} className="input">
@@ -1050,7 +1050,7 @@ const Teachers = () => {
                     <input value={form.officeLocation} onChange={e => setForm(f => ({ ...f, officeLocation: e.target.value }))} placeholder="Building B, Room 402" className="input" />
                   </div>
                   {editMode && (
-                    <div className="col-span-2">
+                    <div className="col-span-1 sm:col-span-2">
                       <label className="block text-xs font-semibold text-gray-600 mb-1.5">Employment Status *</label>
                       <select required value={form.isActive ? 'true' : 'false'} onChange={e => setForm(f => ({ ...f, isActive: e.target.value === 'true' }))} className="input">
                         <option value="true">Active</option>
@@ -1062,7 +1062,7 @@ const Teachers = () => {
               </div>
               <div>
                 <h4 className="font-semibold text-sm text-primary mb-3 flex items-center gap-2">🎓 Academic Qualifications & Specialization</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Highest Degree / Qualifications</label>
                     <input value={form.qualifications} onChange={e => setForm(f => ({ ...f, qualifications: e.target.value }))} placeholder="e.g. PhD in Applied Mathematics" className="input" />

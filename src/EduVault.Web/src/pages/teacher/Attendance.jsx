@@ -240,8 +240,8 @@ export const Attendance = () => {
 
       {/* Filters */}
       <div className="card mb-5">
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="flex-1 min-w-[220px]">
+        <div className="flex flex-wrap items-end gap-3 sm:gap-4">
+          <div className="flex-1 min-w-0 w-full sm:min-w-[220px]">
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Class Section</label>
             <select
               value={selectedClassId}
@@ -254,7 +254,7 @@ export const Attendance = () => {
               ))}
             </select>
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Date</label>
             <input
               type="date"
@@ -269,29 +269,29 @@ export const Attendance = () => {
                   setSelectedDate(val);
                 }
               }}
-              className="input text-sm"
+              className="input text-sm w-full sm:w-auto"
             />
           </div>
           {students.length > 0 && (
-            <div className="flex gap-2 ml-auto">
+            <div className="flex gap-2 w-full sm:w-auto sm:ml-auto mt-2 sm:mt-0 flex-wrap">
               <button
                 disabled={attendanceSaved && !isEditing}
                 onClick={() => markAll('Present')}
-                className={`px-3 py-2 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-all ${attendanceSaved && !isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`flex-1 sm:flex-none px-3 py-2 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-all ${attendanceSaved && !isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 ✓ All Present
               </button>
               <button
                 disabled={attendanceSaved && !isEditing}
                 onClick={() => markAll('Absent')}
-                className={`px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-all ${attendanceSaved && !isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`flex-1 sm:flex-none px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-all ${attendanceSaved && !isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 ✗ All Absent
               </button>
               <button
                 disabled={attendanceSaved && !isEditing}
                 onClick={() => { setRapidIndex(0); setRapidMode(true); }}
-                className={`px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 rounded-lg shadow-xs transition-all flex items-center gap-1.5 ${attendanceSaved && !isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-full sm:w-auto px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 rounded-lg shadow-xs transition-all flex items-center justify-center gap-1.5 ${attendanceSaved && !isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <span>⚡ 15-Sec Roll Call</span>
               </button>
@@ -347,21 +347,21 @@ export const Attendance = () => {
                   } ${attendanceSaved && !isEditing ? 'opacity-80' : ''}`}
               >
                 {/* Student Info */}
-                <div className="flex items-center gap-3 flex-1 min-w-[180px]">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm ${s.status === 'Absent' ? 'bg-red-100 text-red-600'
+                <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-[150px] sm:min-w-[180px]">
+                  <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 ${s.status === 'Absent' ? 'bg-red-100 text-red-600'
                       : s.status === 'Late' ? 'bg-amber-100 text-amber-700'
                         : 'bg-green-100 text-green-700'
                     }`}>
                     {s.name ? s.name[0].toUpperCase() : '?'}
                   </div>
-                  <div>
-                    <div className="font-semibold text-sm text-primary">{s.name}</div>
-                    <div className="text-xs text-gray-400">{s.studentId || 'ID N/A'}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-xs sm:text-sm text-primary truncate">{s.name}</div>
+                    <div className="text-[11px] sm:text-xs text-gray-400 truncate">{s.studentId || 'ID N/A'}</div>
                   </div>
                 </div>
 
                 {/* Status Buttons */}
-                <div className="flex gap-2">
+                <div className="flex gap-1.5 sm:gap-2">
                   {[
                     { key: 'Present', activeClass: 'bg-green-500 text-white border-green-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-green-300 hover:text-green-600' },
                     { key: 'Late', activeClass: 'bg-amber-500 text-white border-amber-500', inactiveClass: 'bg-white text-gray-400 border-gray-200 hover:border-amber-300 hover:text-amber-600' },
@@ -372,7 +372,7 @@ export const Attendance = () => {
                       type="button"
                       disabled={attendanceSaved && !isEditing}
                       onClick={() => setStatus(s.id, key)}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold border-2 transition-all min-w-[72px] ${s.status === key ? activeClass : inactiveClass
+                      className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-bold border-2 transition-all min-w-[58px] sm:min-w-[72px] ${s.status === key ? activeClass : inactiveClass
                         } ${attendanceSaved && !isEditing ? 'cursor-not-allowed opacity-60' : ''}`}
                     >
                       {key}
@@ -398,7 +398,7 @@ export const Attendance = () => {
                 )}
 
                 {/* Remark */}
-                <div className="flex-1 min-w-[160px]">
+                <div className="w-full sm:w-auto sm:flex-1 min-w-0 sm:min-w-[160px]">
                   <input
                     disabled={attendanceSaved && !isEditing}
                     value={s.remark || ''}

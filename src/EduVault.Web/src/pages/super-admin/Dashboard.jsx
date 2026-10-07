@@ -376,7 +376,7 @@ const SuperAdminDashboard = () => {
             </div>
           </div>
           
-          <div className="h-64 w-full">
+          <div className="h-48 sm:h-64 w-full">
             {trendData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>

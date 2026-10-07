@@ -101,27 +101,27 @@ const SchoolAdminProfile = () => {
       <div className="card max-w-4xl border border-slate-100 hover:shadow-xs transition-shadow">
         
         {/* Header */}
-        <div className="flex items-center justify-between gap-5 mb-6 pb-6 border-b border-slate-100">
-          <div className="flex items-center gap-5">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center text-2xl font-black shadow-md border-4 border-white select-none">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-5 mb-6 pb-6 border-b border-slate-100">
+          <div className="flex items-center gap-3 sm:gap-5">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center text-xl sm:text-2xl font-black shadow-md border-4 border-white select-none shrink-0">
               {profile?.firstName ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase() : 'AD'}
             </div>
-            <div>
-              <h2 className="font-display text-2xl font-bold text-primary">{profile?.firstName} {profile?.lastName}</h2>
-              <div className="flex flex-wrap gap-4 mt-2 text-xs text-slate-500">
-                <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-slate-400" /> School Administrator</span>
-                <span className="flex items-center gap-1.5"><Mail className="w-4 h-4 text-slate-400" /> {profile?.email}</span>
+            <div className="min-w-0">
+              <h2 className="font-display text-xl sm:text-2xl font-bold text-primary truncate">{profile?.firstName} {profile?.lastName}</h2>
+              <div className="flex flex-wrap gap-2.5 sm:gap-4 mt-1.5 sm:mt-2 text-xs text-slate-500">
+                <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-slate-400 shrink-0" /> School Administrator</span>
+                <span className="flex items-center gap-1.5 truncate"><Mail className="w-4 h-4 text-slate-400 shrink-0" /> <span className="truncate">{profile?.email}</span></span>
               </div>
             </div>
           </div>
           {!editing ? (
-            <button onClick={() => setEditing(true)} className="btn-outline text-xs flex items-center gap-1.5 hover:bg-slate-50 transition-all select-none cursor-pointer">
+            <button onClick={() => setEditing(true)} className="btn-outline text-xs flex items-center justify-center gap-1.5 hover:bg-slate-50 transition-all select-none cursor-pointer w-full sm:w-auto shrink-0">
               <Edit3 className="w-3.5 h-3.5 text-primary" /> Edit Profile
             </button>
           ) : (
-            <div className="flex gap-2">
-              <button onClick={handleCancel} className="btn-outline text-xs cursor-pointer select-none">Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="btn-primary text-xs cursor-pointer select-none">
+            <div className="flex gap-2 w-full sm:w-auto shrink-0">
+              <button onClick={handleCancel} className="btn-outline text-xs cursor-pointer select-none flex-1 sm:flex-none justify-center">Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="btn-primary text-xs cursor-pointer select-none flex-1 sm:flex-none justify-center">
                 {saving ? 'Saving...' : '💾 Save Changes'}
               </button>
             </div>
@@ -134,7 +134,7 @@ const SchoolAdminProfile = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 text-sm">
           
           {/* Personal Account Information */}
           <div>
@@ -149,7 +149,7 @@ const SchoolAdminProfile = () => {
                     type="text" 
                     value={form.firstName} 
                     onChange={e => setForm({ ...form, firstName: e.target.value })} 
-                    className="input text-xs py-1 px-2.5 w-48 text-right font-medium"
+                    className="input text-xs py-1 px-2.5 w-32 sm:w-48 text-right font-medium"
                     required
                   />
                 ) : (
@@ -163,7 +163,7 @@ const SchoolAdminProfile = () => {
                     type="text" 
                     value={form.lastName} 
                     onChange={e => setForm({ ...form, lastName: e.target.value })} 
-                    className="input text-xs py-1 px-2.5 w-48 text-right font-medium"
+                    className="input text-xs py-1 px-2.5 w-32 sm:w-48 text-right font-medium"
                     required
                   />
                 ) : (

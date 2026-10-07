@@ -279,7 +279,7 @@ const AccountDashboard = () => {
               </div>
             </div>
 
-            <div className="h-72 w-full pt-4">
+            <div className="h-52 sm:h-72 w-full pt-4">
               {loading ? (
                 <div className="h-full flex items-center justify-center"><Loader /></div>
               ) : (
@@ -375,7 +375,7 @@ const AccountDashboard = () => {
               <p className="text-2xs text-slate-400">Category breakdown for {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'short', year: 'numeric' })}</p>
             </div>
 
-            <div className="h-72 w-full flex items-center justify-center">
+            <div className="h-52 sm:h-72 w-full flex items-center justify-center">
               {loading ? (
                 <Loader />
               ) : (stats?.expenseCategoryBreakdown || []).length === 0 ? (

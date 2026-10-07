@@ -503,7 +503,7 @@ export const Homework = () => {
               <div className="p-6 space-y-4">
                 {error && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{error}</div>}
                 <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Assignment Title *</label><input required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Read Physics Chapter 2" className="input text-sm" /></div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Select Target Class *</label>
                     <select value={classSelector} onChange={e => setClassSelector(e.target.value)} className="input text-sm">

@@ -646,7 +646,7 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
 
                     {/* Timetable Grid Table */}
                     <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-xs bg-white">
-                      <table className="w-full border-collapse">
+                      <table className="w-full min-w-[850px] border-collapse">
                         <thead>
                           <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700">
                             <th className="p-3 text-center text-xs font-bold uppercase tracking-wider w-36 border-r border-slate-200">

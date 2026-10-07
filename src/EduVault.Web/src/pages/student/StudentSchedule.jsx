@@ -180,7 +180,7 @@ export const StudentSchedule = () => {
                 : 'border-l-slate-250 bg-slate-50/30 opacity-75 border-dashed border'
                 }`}
             >
-              <div className="flex items-center gap-4 min-w-[180px]">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                 <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center font-display shrink-0 transition-all duration-200 ${hasClass
                   ? isHomeroom
                     ? 'bg-amber-100 text-amber-900 border border-amber-200/60 shadow-2xs'
@@ -196,7 +196,7 @@ export const StudentSchedule = () => {
                 </div>
               </div>
 
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 {hasClass ? (
                   <div>
                     <h4 className="font-display font-bold text-sm text-primary mb-1">
@@ -220,7 +220,7 @@ export const StudentSchedule = () => {
                 )}
               </div>
 
-              <div className="flex flex-col items-start md:items-end justify-center min-w-[120px] gap-1.5 shrink-0">
+              <div className="flex flex-col items-start md:items-end justify-center min-w-0 sm:min-w-[120px] gap-1.5 shrink-0">
                 {hasClass && (
                   <>
                     {cell.isRescheduled && (

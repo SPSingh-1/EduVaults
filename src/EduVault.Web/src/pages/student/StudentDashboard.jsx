@@ -343,11 +343,11 @@ export const StudentDashboard = () => {
       )}
 
       {/* Dashboard Sub-Tabs */}
-      <div className="flex no-print">
-        <div className="inline-flex bg-slate-100 p-1.5 rounded-2xl gap-1 border border-slate-200/50 shadow-inner">
+      <div className="flex no-print overflow-x-auto scrollbar-none pb-0.5">
+        <div className="inline-flex bg-slate-100 p-1 sm:p-1.5 rounded-2xl gap-0.5 sm:gap-1 border border-slate-200/50 shadow-inner min-w-max">
           <button
             onClick={() => setDashboardTab('overview')}
-            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${dashboardTab === 'overview'
+            className={`flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap ${dashboardTab === 'overview'
               ? 'bg-white text-primary shadow-sm border border-slate-200/30'
               : 'text-gray-500 hover:text-gray-800 hover:bg-white/40'
               }`}
@@ -357,7 +357,7 @@ export const StudentDashboard = () => {
           </button>
           <button
             onClick={() => setDashboardTab('history')}
-            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${dashboardTab === 'history'
+            className={`flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap ${dashboardTab === 'history'
               ? 'bg-white text-primary shadow-sm border border-slate-200/30'
               : 'text-gray-500 hover:text-gray-800 hover:bg-white/40'
               }`}
@@ -367,7 +367,7 @@ export const StudentDashboard = () => {
           </button>
           <button
             onClick={() => setDashboardTab('holidays')}
-            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${dashboardTab === 'holidays'
+            className={`flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap ${dashboardTab === 'holidays'
               ? 'bg-white text-primary shadow-sm border border-slate-200/30'
               : 'text-gray-500 hover:text-gray-800 hover:bg-white/40'
               }`}
@@ -438,14 +438,14 @@ export const StudentDashboard = () => {
                 timeRange: rankCardWidget.timeRange
               },
             ].filter(s => s.isVisible).map(s => (
-              <div key={s.key} className="stat-card flex flex-col justify-between min-h-[110px] hover:shadow-md transition-all">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="text-xs font-semibold text-gray-400">{s.label}</div>
-                    <div className={`font-display text-2xl font-bold ${s.warn ? 'text-rose-600' : 'text-primary'}`}>{s.value}</div>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-[10px] font-medium ${s.subColor || (s.warn ? 'text-rose-500' : 'text-gray-400')}`}>{s.sub}</span>
-                      <span className="text-[9px] font-bold bg-slate-100 px-1.5 py-0.2 rounded text-slate-500">{s.timeRange}</span>
+              <div key={s.key} className="stat-card flex flex-col justify-between p-3.5 sm:p-5 min-h-[110px] hover:shadow-md transition-all">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="space-y-1 min-w-0 flex-1 overflow-hidden">
+                    <div className="text-xs font-semibold text-gray-400 truncate">{s.label}</div>
+                    <div className={`font-display text-xl sm:text-2xl font-bold truncate ${s.warn ? 'text-rose-600' : 'text-primary'}`}>{s.value}</div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-[10px] font-medium truncate ${s.subColor || (s.warn ? 'text-rose-500' : 'text-gray-400')}`}>{s.sub}</span>
+                      <span className="text-[9px] font-bold bg-slate-100 px-1.5 py-0.2 rounded text-slate-500 shrink-0">{s.timeRange}</span>
                     </div>
                   </div>
                   <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${s.bgColor} shrink-0`}>
@@ -492,7 +492,7 @@ export const StudentDashboard = () => {
                 <h3 className="font-display font-semibold text-primary text-sm m-0">Academic Subject Performance</h3>
                 <p className="text-2xs text-gray-400">Total marks obtained per course segment</p>
               </div>
-              <div className="h-64 w-full">
+              <div className="h-48 sm:h-64 w-full">
                 {performance?.areMarksPublished !== false && perfData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={perfData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
@@ -533,7 +533,7 @@ export const StudentDashboard = () => {
                 <h3 className="font-display font-semibold text-primary text-sm m-0">Class Performance Benchmarking</h3>
                 <p className="text-2xs text-gray-400">Compare your score against class statistics</p>
               </div>
-              <div className="h-64 w-full">
+              <div className="h-48 sm:h-64 w-full">
                 {performance?.areMarksPublished !== false ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={rankData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
@@ -583,7 +583,7 @@ export const StudentDashboard = () => {
                 <h3 className="font-display font-semibold text-primary text-sm m-0">Daily Attendance Distribution</h3>
                 <p className="text-2xs text-gray-400">Overview of present, late and absent log counters</p>
               </div>
-              <div className="h-64 flex items-center justify-center">
+              <div className="h-48 sm:h-64 flex items-center justify-center">
                 {totalDays > 0 ? (
                   <div className="flex w-full items-center justify-around h-full">
                     <div className="w-1/2 h-full">
@@ -626,7 +626,7 @@ export const StudentDashboard = () => {
                 <p className="text-2xs text-gray-400">Total fees settled vs pending balances</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="h-64 w-full">
+                <div className="h-48 sm:h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={feeData} layout="vertical" margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                       <defs>
@@ -695,7 +695,7 @@ export const StudentDashboard = () => {
                       {r.teacherName ? r.teacherName[0] : 'T'}
                     </div>
                     <div className="flex-1">
-                      <div className="flex justify-between items-center mb-1">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-1 gap-0.5">
                         <div>
                           <span className="font-semibold text-sm text-primary">{r.teacherName}</span>
                           <span className="text-xs text-gray-400 ml-2">Teacher</span>

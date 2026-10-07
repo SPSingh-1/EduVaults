@@ -152,7 +152,8 @@ export const TeacherDashboard = () => {
             onClick={() => setShowAiPaperModal(true)}
             className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5"
           >
-            <span>✨ AI Question Paper</span>
+            <span className="hidden sm:inline">✨ AI Question Paper</span>
+            <span className="sm:hidden">✨ AI Paper</span>
           </button>
         }
       />
@@ -164,17 +165,17 @@ export const TeacherDashboard = () => {
           { key: 'reviews', isVisible: reviewsWidget.isVisible, label: reviewsWidget.title, value: stats?.pendingReviews ?? '0', sub: 'Requires submission', icon: ClipboardList, color: 'text-amber-500', bgColor: 'bg-amber-50/50', timeRange: reviewsWidget.timeRange },
           { key: 'salary', isVisible: salaryWidget.isVisible, label: salaryWidget.title, value: stats?.salary ? `Rs. ${stats.salary.toLocaleString()}` : 'Rs. 55,000', sub: 'Direct deposit', icon: DollarSign, color: 'text-violet-500', bgColor: 'bg-violet-50/50', timeRange: salaryWidget.timeRange },
         ].filter(s => s.isVisible).map(s => (
-          <div key={s.key} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
-            <div className="space-y-1">
-              <div className="font-display text-xl font-bold text-primary">{s.value}</div>
-              <div className="text-xs font-semibold text-gray-450">{s.label}</div>
-              <div className="text-2xs font-semibold text-blue-500 flex items-center gap-1.5">
-                <span>{s.sub}</span>
-                <span className="text-[9px] font-bold bg-slate-100 px-1.5 py-0.2 rounded text-slate-500">{s.timeRange}</span>
+          <div key={s.key} className="stat-card flex items-center justify-between p-3.5 sm:p-5 hover:shadow-md transition-all">
+            <div className="space-y-1 min-w-0 flex-1 overflow-hidden">
+              <div className="font-display text-lg sm:text-xl font-bold text-primary truncate">{s.value}</div>
+              <div className="text-xs font-semibold text-gray-450 truncate">{s.label}</div>
+              <div className="text-2xs font-semibold text-blue-500 flex items-center gap-1.5 flex-wrap">
+                <span className="truncate">{s.sub}</span>
+                <span className="text-[9px] font-bold bg-slate-100 px-1.5 py-0.2 rounded text-slate-500 shrink-0">{s.timeRange}</span>
               </div>
             </div>
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${s.bgColor}`}>
-              <s.icon className={`w-6 h-6 ${s.color} stroke-[1.75]`} />
+            <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 ml-3 ${s.bgColor}`}>
+              <s.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${s.color} stroke-[1.75]`} />
             </div>
           </div>
         ))}
@@ -201,7 +202,7 @@ export const TeacherDashboard = () => {
               <option value="enrollment">📊 Class Roster Sizes</option>
             </select>
           </div>
-          <div className="h-64 w-full">
+          <div className="h-48 sm:h-64 w-full">
             {teacherChartMode === 'attendance' ? (
               stats?.weeklyClassAttendanceTrend && stats.weeklyClassAttendanceTrend.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -264,7 +265,7 @@ export const TeacherDashboard = () => {
             <h3 className="font-display font-semibold text-primary text-sm m-0">Monthly Salary History</h3>
             <p className="text-2xs text-gray-400">Salary trends and historical payouts</p>
           </div>
-          <div className="h-64 w-full">
+          <div className="h-48 sm:h-64 w-full">
             {stats?.salaryHistory ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={stats.salaryHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>

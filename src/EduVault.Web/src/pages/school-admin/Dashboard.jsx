@@ -319,7 +319,7 @@ const SchoolAdminDashboard = () => {
         </div>
 
         {briefingExpanded && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 pt-2">
             {/* 1. Staff On Leave */}
             <div className="bg-white/90 backdrop-blur-xs p-3.5 rounded-xl border border-amber-200/40 shadow-2xs space-y-1">
               <div className="flex items-center justify-between text-2xs font-bold text-slate-500">
@@ -416,14 +416,14 @@ const SchoolAdminDashboard = () => {
           const IconComp = resolveWidgetIcon(s.iconName);
           const theme = colorMap[s.colorTheme] || colorMap.blue;
           return (
-            <div key={s.widgetKey || s.title || idx} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
-              <div className="space-y-1">
-                <div className="text-xs font-semibold text-gray-500">{s.title}</div>
-                <div className="font-display text-xl font-bold text-primary font-mono">{s.value}</div>
-                <div className={`text-xs mt-0.5 ${theme.sub}`}>{s.subText || s.sub}</div>
+            <div key={s.widgetKey || s.title || idx} className="stat-card flex items-center justify-between p-3.5 sm:p-5 hover:shadow-md transition-all">
+              <div className="space-y-1 min-w-0 overflow-hidden flex-1">
+                <div className="text-xs font-semibold text-gray-500 truncate">{s.title}</div>
+                <div className="font-display text-lg sm:text-xl font-bold text-primary font-mono truncate">{s.value}</div>
+                <div className={`text-xs mt-0.5 truncate ${theme.sub}`}>{s.subText || s.sub}</div>
               </div>
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${theme.bg}`}>
-                <IconComp className={`w-6 h-6 ${theme.text} stroke-[1.75]`} />
+              <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 ml-3 ${theme.bg}`}>
+                <IconComp className={`w-5 h-5 sm:w-6 sm:h-6 ${theme.text} stroke-[1.75]`} />
               </div>
             </div>
           );
@@ -432,7 +432,7 @@ const SchoolAdminDashboard = () => {
 
       {/* Main Grid: Real Data Graph and Action Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="card lg:col-span-2 flex flex-col justify-between">
+        <div className="card lg:col-span-2 flex flex-col justify-between overflow-visible">
           <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
             <div>
               <h3 className="font-display font-semibold text-primary text-sm m-0">
@@ -445,7 +445,7 @@ const SchoolAdminDashboard = () => {
             <select 
               value={chartMode} 
               onChange={e => setChartMode(e.target.value)} 
-              className="border border-gray-200 text-xs px-3 py-1.5 rounded-lg text-gray-700 outline-none bg-white font-semibold cursor-pointer shadow-xs hover:border-blue-300 transition-all"
+              className="border border-gray-200 text-xs px-3 py-1.5 rounded-lg text-gray-700 outline-none bg-white font-semibold cursor-pointer shadow-xs hover:border-blue-300 transition-all w-full sm:w-auto"
             >
               <option value="attendance">🗓️ Last 7 Days Attendance (Daily)</option>
               <option value="enrollment">🎒 Monthly Admissions Trend</option>
@@ -453,7 +453,7 @@ const SchoolAdminDashboard = () => {
             </select>
           </div>
 
-          <div className="h-64 w-full">
+          <div className="h-48 sm:h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               {chartMode === 'attendance' ? (
                 <AreaChart data={stats?.dailyAttendanceTrend || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
@@ -641,11 +641,11 @@ const SchoolAdminDashboard = () => {
       )}
 
       {/* 🚀 Quick Action Floating Bar */}
-      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-slate-900/95 backdrop-blur-md p-2 rounded-2xl shadow-2xl border border-slate-700/60 no-print">
+      <div className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-40 flex items-center gap-1.5 sm:gap-2 bg-slate-900/95 backdrop-blur-md p-1.5 sm:p-2 rounded-xl sm:rounded-2xl shadow-2xl border border-slate-700/60 no-print">
         <button
           onClick={() => navigate('/school-admin/notices')}
           title="Broadcast Notice to School"
-          className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 hover:scale-105"
+          className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg sm:rounded-xl text-xs font-bold transition flex items-center gap-1.5 hover:scale-105"
         >
           <Megaphone className="w-3.5 h-3.5 text-amber-400" />
           <span className="hidden sm:inline">Broadcast</span>
@@ -654,7 +654,7 @@ const SchoolAdminDashboard = () => {
         <button
           onClick={() => navigate('/school-admin/format-studio')}
           title="Open Print Format Studio"
-          className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 hover:scale-105"
+          className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 hover:scale-105"
         >
           <Printer className="w-3.5 h-3.5 text-indigo-400" />
           <span className="hidden sm:inline">Format Studio</span>
@@ -663,10 +663,10 @@ const SchoolAdminDashboard = () => {
         <button
           onClick={() => navigate('/school-admin/reports')}
           title="Generate Today's School Summary Report"
-          className="px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs hover:scale-105"
+          className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg sm:rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs hover:scale-105"
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Quick Report</span>
+          <span className="hidden xs:inline">Quick Report</span>
         </button>
       </div>
     </div>

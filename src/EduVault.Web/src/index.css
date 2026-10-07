@@ -86,14 +86,16 @@
     @apply ml-0 lg:ml-64 min-h-screen p-4 lg:p-6 transition-all duration-300 min-w-0;
   }
 
+  /* stat-card: responsive padding — smaller on mobile */
   .stat-card {
-    @apply bg-white rounded-xl p-5 shadow-sm border border-gray-100;
+    @apply bg-white rounded-xl p-3 sm:p-5 shadow-sm border border-gray-100;
   }
 
+  /* btn-primary: compact on mobile, full size on sm+ */
   .btn-primary {
     background-color: rgb(var(--color-primary)) !important;
     color: var(--color-primary-contrast) !important;
-    @apply px-5 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2;
+    @apply px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition-all flex items-center gap-1.5 sm:gap-2 min-h-[36px];
   }
 
   .btn-primary:hover {
@@ -101,11 +103,12 @@
   }
 
   .btn-accent {
-    @apply bg-accent text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-accent-light transition-all flex items-center gap-2;
+    @apply bg-accent text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm hover:bg-accent-light transition-all flex items-center gap-1.5 sm:gap-2 min-h-[36px];
   }
 
+  /* btn-outline: compact on mobile, full size on sm+ */
   .btn-outline {
-    @apply border border-primary/20 text-primary px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-primary/5 transition-all flex items-center gap-2;
+    @apply border border-primary/20 text-primary px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm hover:bg-primary/5 transition-all flex items-center gap-1.5 sm:gap-2 min-h-[36px];
   }
 
   .badge {
@@ -219,7 +222,7 @@
   animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Responsive Table & Form Scroll Rules for Mobile Viewports */
+/* ─── Mobile Responsive Rules for Tables ─── */
 @media (max-width: 1023px) {
 
   /* Ensure tables render in their native table layout and can scroll horizontally without clipping */
@@ -277,35 +280,9 @@
     width: inherit !important;
   }
 
-  /* Stacking utility for form rows on mobile */
-  .grid-cols-2,
-  .grid-cols-3,
-  .grid-cols-4 {
-    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
-  }
-
-  .sm\:grid-cols-2 {
-    @media (min-width: 640px) {
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-  }
-
-  .sm\:grid-cols-3 {
-    @media (min-width: 640px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    }
-  }
-
   /* Prevent squishing of wide calendar and timetable grids on mobile by enabling horizontal scrolling */
   .grid-cols-5,
   .grid-cols-6 {
     min-width: 650px !important;
-  }
-
-
-
-  /* Force scroll instead of hidden on mobile viewports globally to prevent data clipping */
-  .overflow-hidden {
-    overflow: auto !important;
   }
 }

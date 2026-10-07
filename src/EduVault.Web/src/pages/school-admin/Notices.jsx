@@ -186,22 +186,22 @@ export default function Notices() {
   return (
     <div>
       <Topbar title="Notices & Announcements" actions={
-        <div className="flex items-center gap-2">
-          <button onClick={handleOpenManageHolidays} className="btn-outline text-xs py-2 px-3 flex items-center gap-1.5 border-amber-300 text-amber-800 hover:bg-amber-50 font-bold">
-            📅 School Holidays Directory
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button onClick={handleOpenManageHolidays} className="btn-outline text-xs border-amber-300 text-amber-800 hover:bg-amber-50 font-bold">
+            📅 <span className="hidden sm:inline">School Holidays Directory</span><span className="sm:hidden">Holidays</span>
           </button>
-          <button onClick={() => setShowHolidayModal(true)} className="btn-outline text-xs py-2 px-3 flex items-center gap-1.5 border-purple-300 text-purple-700 hover:bg-purple-50">
-            🎉 Declare School Holiday
+          <button onClick={() => setShowHolidayModal(true)} className="btn-outline text-xs border-purple-300 text-purple-700 hover:bg-purple-50">
+            🎉 <span className="hidden sm:inline">Declare School Holiday</span><span className="sm:hidden">Holiday</span>
           </button>
-          <button onClick={() => setShowNew(true)} className="btn-primary text-xs py-2 px-4">+ New Notice</button>
+          <button onClick={() => setShowNew(true)} className="btn-primary text-xs">+ <span className="hidden sm:inline">New </span>Notice</button>
         </div>
-
       } />
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="col-span-1 lg:col-span-2 space-y-4">
           {/* Filtering Tabs */}
-          <div className="flex border-b border-gray-100 mb-4 gap-4">
+          <div className="overflow-x-auto scrollbar-none -mx-3 sm:mx-0 px-3 sm:px-0">
+          <div className="flex border-b border-gray-100 mb-4 gap-2 sm:gap-4 min-w-max sm:min-w-0">
             {[
               { id: 'all', label: 'All Announcements', icon: '📢' },
               { id: 'school', label: 'School Notices', icon: '🏫' },
@@ -211,7 +211,7 @@ export default function Notices() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveFilterTab(tab.id)}
-                className={`pb-2.5 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all ${activeFilterTab === tab.id
+                className={`pb-2.5 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 ${activeFilterTab === tab.id
                     ? 'border-primary text-primary font-black'
                     : 'border-transparent text-gray-400 hover:text-gray-600'
                   }`}
@@ -221,16 +221,16 @@ export default function Notices() {
               </button>
             ))}
           </div>
+          </div>
 
-          <div className="flex items-center justify-between gap-2 mb-4 flex-wrap bg-gray-50 p-2 border border-gray-100 rounded-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 flex-wrap bg-gray-50 p-2 border border-gray-100 rounded-xl">
             <div className="flex items-center gap-2 flex-wrap">
               <input
                 type="text"
                 placeholder="Search notice..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl"
-                style={{ width: '150px' }}
+                className="input text-xs py-1 px-2.5 bg-white border border-gray-200 focus:border-primary rounded-xl w-full sm:w-[150px]"
               />
               <select
                 value={targetFilter}
@@ -244,8 +244,8 @@ export default function Notices() {
               </select>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '130px' }} />
-              <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary" style={{ width: '130px' }} />
+              <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary w-28 sm:w-[130px]" />
+              <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1 px-2 bg-white border border-gray-200 focus:border-primary rounded-xl text-primary w-28 sm:w-[130px]" />
               {(dateFrom || dateTo || search || targetFilter) && (
                 <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setTargetFilter(''); }} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear</button>
               )}
@@ -254,16 +254,16 @@ export default function Notices() {
 
           {filteredNotices.map((n, i) => (
             <div key={n._id || i} className={`card ${n.type === 'URGENT' ? 'border-l-4 border-red-500 shadow-md' : ''}`}>
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span className={n.type === 'URGENT' ? 'badge-danger' : n.type === 'EVENT' ? 'badge-info' : 'badge-gray'}>{n.type}</span>
                   <span className="badge badge-info">Audience: {n.recipientId === 'SCHOOLADMINS' ? 'Admins' : n.recipientId}</span>
-                  <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString()}</span>
+                  <span className="text-[10px] text-gray-400 font-medium">{new Date(n.createdAt).toLocaleString()}</span>
                 </div>
                 {n.senderRole === 'superadmin' ? (
-                  <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2.5 py-0.5 rounded border border-red-200/50">🛡️ Platform Admin</span>
+                  <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2.5 py-0.5 rounded border border-red-200/50 self-start shrink-0">🛡️ Platform Admin</span>
                 ) : (
-                  <span className="text-[10px] font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded">👤 {n.senderName || 'School System'} ({n.senderRole === 'schooladmin' ? 'Admin' : n.senderRole === 'teacher' ? 'Teacher' : n.senderRole})</span>
+                  <span className="text-[10px] font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded self-start shrink-0">👤 {n.senderName || 'School System'} ({n.senderRole === 'schooladmin' ? 'Admin' : n.senderRole === 'teacher' ? 'Teacher' : n.senderRole})</span>
                 )}
               </div>
               <h3 className="font-display font-bold text-primary mb-1">{n.title}</h3>
@@ -384,7 +384,7 @@ export default function Notices() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Start Date *</label>
                   <input

@@ -558,16 +558,16 @@ const ReportStudentDetail = ({ data }) => {
             </p>
             {studentInfo.guardianPhone !== "N/A" && <p className="text-xs text-gray-400 mt-0.5">Phone: {studentInfo.guardianPhone}</p>}
           </div>
-          <div className="flex gap-3 flex-wrap">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
             {[
               { l: "Total Billed", v: fmtAmt(summary?.totalBilled), b: "bg-gray-50 border-gray-200",      t: "text-gray-700" },
               { l: "Total Paid",   v: fmtAmt(summary?.totalPaid),   b: "bg-emerald-50 border-emerald-200", t: "text-emerald-700" },
               ...(summary?.advancePaid > 0 ? [{ l: "Advance / Excess", v: fmtAmt(summary.advancePaid), b: "bg-blue-50 border-blue-200", t: "text-blue-700" }] : []),
               { l: "Total Due",    v: fmtAmt(summary?.totalDue),     b: "bg-rose-50 border-rose-200",       t: "text-rose-600" },
             ].map(s => (
-              <div key={s.l} className={`flex flex-col px-4 py-3 rounded-xl border ${s.b} min-w-[115px]`}>
-                <span className="text-[10px] text-gray-400 font-bold uppercase">{s.l}</span>
-                <span className={`font-display font-black text-lg ${s.t}`}>{s.v}</span>
+              <div key={s.l} className={`flex flex-col px-3 sm:px-4 py-2 sm:py-3 rounded-xl border ${s.b} min-w-0 sm:min-w-[115px]`}>
+                <span className="text-[10px] text-gray-400 font-bold uppercase truncate">{s.l}</span>
+                <span className={`font-display font-black text-base sm:text-lg truncate ${s.t}`}>{s.v}</span>
               </div>
             ))}
           </div>

@@ -564,21 +564,21 @@ const Students = () => {
     <div>
       <Topbar title="Student Directory" subtitle="Admin Portal" actions={
         <div className="flex gap-2">
-          <button onClick={() => { setImportError(''); setImportResult(null); setImportClassId(''); setShowImportModal(true); }} className="btn-outline text-xs">↑ Bulk Import</button>
-          <button onClick={() => { setError(''); resetForm(); setShowModal(true); }} className="btn-primary text-xs">+ Add New Student</button>
+          <button onClick={() => { setImportError(''); setImportResult(null); setImportClassId(''); setShowImportModal(true); }} className="btn-outline text-xs">↑ <span className="hidden sm:inline">Bulk </span>Import</button>
+          <button onClick={() => { setError(''); resetForm(); setShowModal(true); }} className="btn-primary text-xs">+ <span className="hidden sm:inline">Add </span>Student</button>
         </div>
       } />
       <div className="card">
         <p className="text-xs text-gray-400 mb-4">Manage and organize all student records across all classes.</p>
-        <div className="flex flex-col xl:flex-row xl:items-center gap-3 mb-5">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-5">
           <div className="flex-1 relative">
             <input placeholder="Search students by name..." value={search} onChange={e => setSearch(e.target.value)} className="input pl-9 text-sm" />
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '130px' }} />
-            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl" style={{ width: '130px' }} />
+            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl w-28 sm:w-[130px]" />
+            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary/40 focus:ring-primary/20 rounded-xl w-28 sm:w-[130px]" />
             {(dateFrom || dateTo || search || selectedClass || selectedSection || selectedStatus) && (
               <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setSelectedClass(''); setSelectedSection(''); setSelectedStatus(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
             )}
@@ -748,7 +748,7 @@ const Students = () => {
               <button onClick={() => setShowViewModal(false)} className="text-white hover:text-blue-200 text-lg">✖</button>
             </div>
             <div className="p-6 space-y-5 text-sm max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Student ID</div>
                   <div className="font-mono font-semibold text-primary">{viewStudentData.studentId}</div>
@@ -761,7 +761,7 @@ const Students = () => {
                     </span>
                   </div>
                 </div>
-                <div className="col-span-2 sm:col-span-1 min-w-0">
+                <div className="col-span-1 sm:col-span-1 min-w-0">
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Email Address</div>
                   <div className="text-primary font-medium break-all" title={viewStudentData.email}>{viewStudentData.email}</div>
                 </div>
@@ -779,7 +779,7 @@ const Students = () => {
 
               <div>
                 <h4 className="font-semibold text-primary text-xs uppercase mb-3 tracking-wide">👪 Guardian Information</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <div className="text-xs text-gray-400 font-semibold mb-0.5">Guardian Name</div>
                     <div className="text-primary font-medium">{viewStudentData.guardianName}</div>
@@ -889,7 +889,7 @@ const Students = () => {
               {error && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{error}</div>}
               <div>
                 <h4 className="font-semibold text-primary text-sm flex items-center gap-2 mb-3">👤 Student Personal Details</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">First Name *</label>
                     <input required value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} placeholder="John" className="input" />
@@ -936,7 +936,7 @@ const Students = () => {
                   )}
 
                   {capacityWarning && (
-                    <div className="col-span-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold rounded-lg p-3.5 mb-2">
+                    <div className="col-span-1 sm:col-span-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold rounded-lg p-3.5 mb-2">
                       ⚠️ <strong>Room Capacity Warning</strong>: {formatClassLabel(capacityWarning.grade, capacityWarning.section, capacityWarning.room)} has reached its capacity limit of {capacityWarning.capacity} students.
                       <span className="text-gray-600 font-normal mt-1 block">Suggestion: Consider enrolling in other rooms/sections with remaining capacity:</span>
                       <ul className="list-disc list-inside mt-1.5 pl-1 text-gray-700">
@@ -951,7 +951,7 @@ const Students = () => {
               </div>
               <div>
                 <h4 className="font-semibold text-primary text-sm flex items-center gap-2 mb-3">👪 Guardian Information</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Guardian Name</label>
                     <input value={form.guardianName} onChange={e => setForm(f => ({ ...f, guardianName: e.target.value }))} placeholder="Father/Mother name" className="input" />

@@ -357,7 +357,7 @@ export const TeacherLeaves = () => {
                   <span>{error}</span>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-2xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Leave Type</label>
                   <select
@@ -406,7 +406,7 @@ export const TeacherLeaves = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-2xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">From Date *</label>
                   <input

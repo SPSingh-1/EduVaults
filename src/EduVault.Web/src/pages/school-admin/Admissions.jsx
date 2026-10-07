@@ -367,20 +367,20 @@ const Admissions = () => {
         title="Application Overview"
         subtitle="Admission Management, QR Self-Registration & Student Intake"
         actions={
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
             <button
               onClick={() => setShowQrModal(true)}
-              className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-purple-600/20 transition"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-purple-600/20 transition"
             >
-              <QrCode className="w-3.5 h-3.5" /> Get QR Code
+              <QrCode className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Get </span>QR<span className="hidden sm:inline"> Code</span>
             </button>
 
-            <button onClick={exportCSV} className="btn-outline text-xs flex items-center gap-1.5">
-              <Download className="w-3.5 h-3.5" /> Export CSV
+            <button onClick={exportCSV} className="btn-outline text-xs flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5">
+              <Download className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Export </span>CSV
             </button>
 
-            <button onClick={() => setShowCreateModal(true)} className="btn-primary text-xs flex items-center gap-1.5">
-              <Plus className="w-3.5 h-3.5" /> Manual Entry
+            <button onClick={() => setShowCreateModal(true)} className="btn-primary text-xs flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5">
+              <Plus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Manual </span>Entry
             </button>
           </div>
         }
@@ -400,30 +400,30 @@ const Admissions = () => {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div className="stat-card">
-          <div className="text-xs text-gray-500 mb-1">Total Inquiries</div>
-          <div className="font-display text-2xl font-bold text-blue-600">{totalApps}</div>
-          <div className="text-xs text-gray-400 flex items-center gap-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="stat-card p-3.5 sm:p-5">
+          <div className="text-xs text-gray-500 mb-1 truncate">Total Inquiries</div>
+          <div className="font-display text-xl sm:text-2xl font-bold text-blue-600">{totalApps}</div>
+          <div className="text-xs text-gray-400 flex items-center gap-1 truncate">
             <span className="text-purple-600 font-semibold">{qrAppsCount} via QR</span> • {totalApps - qrAppsCount} direct
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="text-xs text-gray-500 mb-1">Pending Reviews</div>
-          <div className="font-display text-2xl font-bold text-yellow-600">{pendingCount}</div>
-          <div className="text-xs text-gray-400">Needs admin verification</div>
+        <div className="stat-card p-3.5 sm:p-5">
+          <div className="text-xs text-gray-500 mb-1 truncate">Pending Reviews</div>
+          <div className="font-display text-xl sm:text-2xl font-bold text-yellow-600">{pendingCount}</div>
+          <div className="text-xs text-gray-400 truncate">Needs admin verification</div>
         </div>
 
-        <div className="stat-card">
-          <div className="text-xs text-gray-500 mb-1">Enrolled Students</div>
-          <div className="font-display text-2xl font-bold text-green-600">{enrolledCount}</div>
-          <div className="text-xs text-gray-400">Converted & assigned classes</div>
+        <div className="stat-card p-3.5 sm:p-5">
+          <div className="text-xs text-gray-500 mb-1 truncate">Enrolled Students</div>
+          <div className="font-display text-xl sm:text-2xl font-bold text-green-600">{enrolledCount}</div>
+          <div className="text-xs text-gray-400 truncate">Converted & assigned classes</div>
         </div>
 
-        <div className="stat-card">
-          <div className="text-xs text-gray-500 mb-1">Suspected Bots</div>
-          <div className="font-display text-2xl font-bold text-red-600 flex items-center justify-between">
+        <div className="stat-card p-3.5 sm:p-5">
+          <div className="text-xs text-gray-500 mb-1 truncate">Suspected Bots</div>
+          <div className="font-display text-xl sm:text-2xl font-bold text-red-600 flex items-center justify-between">
             <span>{botCount}</span>
             {botCount > 0 && (
               <button

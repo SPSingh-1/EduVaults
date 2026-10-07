@@ -204,7 +204,7 @@ const LibraryDashboard = () => {
               </div>
             </div>
 
-            <div className="h-72 w-full pt-4">
+            <div className="h-52 sm:h-72 w-full pt-4">
               {loading ? (
                 <div className="h-full flex items-center justify-center"><Loader /></div>
               ) : (
@@ -300,7 +300,7 @@ const LibraryDashboard = () => {
               <p className="text-2xs text-slate-400">Total books categorized by subject</p>
             </div>
 
-            <div className="h-72 w-full flex items-center justify-center">
+            <div className="h-52 sm:h-72 w-full flex items-center justify-center">
               {loading ? (
                 <Loader />
               ) : (stats?.categoryBreakdown || []).length === 0 ? (

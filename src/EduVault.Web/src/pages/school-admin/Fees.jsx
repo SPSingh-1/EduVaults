@@ -319,28 +319,28 @@ const Fees = () => {
           { l: 'Pending Dues', v: `Rs. ${pendingDues.toLocaleString()}`, s: 'Outstanding invoice totals', color: 'text-rose-500', bgColor: 'bg-rose-50/50', icon: AlertCircle },
           { l: 'Overdue Amount', v: `Rs. ${overdueAmount.toLocaleString()}`, s: `${overdueInvoices.length} overdue invoices`, color: 'text-amber-500', bgColor: 'bg-amber-50/50', icon: DollarSign }
         ].map(s => (
-          <div key={s.l} className="stat-card flex items-center justify-between p-5 hover:shadow-md transition-all">
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-gray-400">{s.l}</div>
-              <div className="font-display text-xl font-bold text-primary">{s.v}</div>
-              <div className="text-xs text-gray-405 font-light">{s.s}</div>
+          <div key={s.l} className="stat-card flex items-center justify-between hover:shadow-md transition-all">
+            <div className="space-y-1 min-w-0 flex-1">
+              <div className="text-xs font-medium text-gray-400 truncate">{s.l}</div>
+              <div className="font-display text-lg sm:text-xl font-bold text-primary truncate">{s.v}</div>
+              <div className="text-xs text-gray-400 font-light truncate">{s.s}</div>
             </div>
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${s.bgColor}`}>
-              <s.icon className={`w-6 h-6 ${s.color} stroke-[1.75]`} />
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 ml-2 ${s.bgColor}`}>
+              <s.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${s.color} stroke-[1.75]`} />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="card col-span-2 flex flex-col justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="card col-span-1 lg:col-span-2 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-display font-semibold text-primary text-sm m-0">Collected vs. Pending Fees</h3>
               <p className="text-xs text-gray-405">Last 6 months — fee payments cleared vs outstanding dues</p>
             </div>
           </div>
-          <div className="h-64 w-full">
+          <div className="h-48 sm:h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                 <defs>
@@ -416,7 +416,8 @@ const Fees = () => {
       </div>
 
       <div className="card">
-        <div className="flex border-b border-gray-100 mb-6 gap-6">
+        <div className="overflow-x-auto scrollbar-none -mx-3 sm:mx-0 px-3 sm:px-0">
+        <div className="flex border-b border-gray-100 mb-6 gap-3 sm:gap-6 min-w-max sm:min-w-0">
           {[
             { id: 'invoices', label: 'Recent Invoices' },
             { id: 'ledger', label: 'Student Dues Ledger' },
@@ -425,7 +426,7 @@ const Fees = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
+              className={`pb-3 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap shrink-0 ${
                 activeTab === tab.id
                   ? 'border-primary text-primary font-bold'
                   : 'border-transparent text-gray-400 hover:text-gray-600'
@@ -435,16 +436,16 @@ const Fees = () => {
             </button>
           ))}
         </div>
+        </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 p-3 bg-gray-50 border border-gray-100 rounded-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 p-3 bg-gray-50 border border-gray-100 rounded-xl">
           <div className="flex items-center gap-2 flex-wrap">
             <input
               type="text"
               placeholder="Search student / invoice..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary rounded-xl"
-              style={{ width: '170px' }}
+              className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary rounded-xl w-full sm:w-[170px]"
             />
             <select
               value={statusFilter}
@@ -458,8 +459,8 @@ const Fees = () => {
             </select>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl" style={{ width: '135px' }} />
-            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl" style={{ width: '135px' }} />
+            <DateFilterInput label="From:" value={dateFrom} onChange={setDateFrom} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl w-28 sm:w-[135px]" />
+            <DateFilterInput label="To:" value={dateTo} onChange={setDateTo} className="input text-xs py-1.5 px-3 bg-white border border-gray-200 focus:border-primary focus:ring-primary focus:ring-1 rounded-xl w-28 sm:w-[135px]" />
             {(dateFrom || dateTo || search || statusFilter) && (
               <button onClick={() => { setDateFrom(''); setDateTo(''); setSearch(''); setStatusFilter(''); }} className="text-xs text-red-500 font-semibold hover:underline">Clear</button>
             )}
