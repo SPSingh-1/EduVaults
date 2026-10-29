@@ -106,9 +106,9 @@ export const TeacherLayout = () => {
     : baseLinks;
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen w-full max-w-full min-w-0 overflow-x-clip">
       <Sidebar links={finalLinks} role="teacher" />
-      <main className="main-content flex-1"><Outlet /></main>
+      <main className="main-content flex-1 min-w-0 max-w-full"><Outlet /></main>
     </div>
   );
 };

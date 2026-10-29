@@ -421,7 +421,7 @@ const SchoolHrmSettings = () => {
           </div>
 
           {/* Quick Metrics */}
-          <div className="grid grid-cols-3 gap-4 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
             <div className="text-center">
               <span className="block text-2xl font-black text-slate-900">{overview?.metrics?.totalEmployees || 0}</span>
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Employees</span>
@@ -602,7 +602,7 @@ const SchoolHrmSettings = () => {
               </div>
 
               <form onSubmit={handleAddDesig} className="space-y-3 mb-4">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input 
                     type="text"
                     placeholder="Designation Name"

@@ -150,40 +150,40 @@ export const StudentAttendance = () => {
   }
 
   return (
-    <div className="h-[calc(100vh-100px)] lg:h-[calc(100vh-120px)] flex flex-col min-h-[500px]">
+    <div className="min-h-screen lg:h-[calc(100vh-120px)] flex flex-col">
       <Topbar title="Attendance Log" subtitle="Academic Presence Tracker" />
 
-      <div className="grid grid-cols-4 gap-4 mb-4 shrink-0">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-4 shrink-0">
         {[
           { label: 'Attendance Rate', value: attendanceRate, color: 'text-primary', icon: '📈' },
           { label: 'Present Days', value: presentCount, color: 'text-green-600', icon: '✅' },
           { label: 'Late Days', value: lateCount, color: 'text-amber-500', icon: '⏱️' },
           { label: 'Absent Days', value: absentCount, color: 'text-red-500', icon: '❌' },
         ].map(stat => (
-          <div key={stat.label} className="stat-card flex items-center gap-4 py-3 px-4 shadow-3xs">
-            <div className="w-9 h-9 rounded-lg bg-primary/5 flex items-center justify-center text-xl">{stat.icon}</div>
-            <div>
-              <div className={`font-display text-xl font-bold ${stat.color}`}>{stat.value}</div>
-              <div className="text-xxs text-gray-500">{stat.label}</div>
+          <div key={stat.label} className="stat-card flex items-center gap-2.5 sm:gap-4 py-2.5 sm:py-3 px-3 sm:px-4 shadow-3xs">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary/5 flex items-center justify-center text-lg sm:text-xl shrink-0">{stat.icon}</div>
+            <div className="min-w-0">
+              <div className={`font-display text-lg sm:text-xl font-bold truncate ${stat.color}`}>{stat.value}</div>
+              <div className="text-xxs text-gray-500 truncate">{stat.label}</div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-6 flex-1 min-h-0">
-        <div className="card col-span-2 h-full flex flex-col justify-between py-4 px-6 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 flex-1 min-h-0">
+        <div className="card col-span-1 lg:col-span-2 flex flex-col justify-between py-4 px-3 sm:px-6 overflow-hidden">
           <div className="flex items-center justify-between mb-4 shrink-0">
-            <h3 className="font-display font-bold text-primary text-base m-0">
+            <h3 className="font-display font-bold text-primary text-sm sm:text-base m-0">
               📅 {monthNames[month]} {year}
             </h3>
             <div className="flex gap-1.5">
-              <button onClick={handlePrevMonth} className="btn-outline px-2.5 py-1 text-2xs">◀ Prev</button>
-              <button onClick={handleNextMonth} className="btn-outline px-2.5 py-1 text-2xs">Next ▶</button>
+              <button onClick={handlePrevMonth} className="btn-outline px-2.5 py-1 text-2xs cursor-pointer">◀ Prev</button>
+              <button onClick={handleNextMonth} className="btn-outline px-2.5 py-1 text-2xs cursor-pointer">Next ▶</button>
             </div>
           </div>
 
           <div className="max-w-[440px] mx-auto w-full flex-1 flex flex-col justify-center">
-            <div className="grid grid-cols-7 gap-3 mb-3 text-center text-xs font-bold uppercase tracking-wider font-display shrink-0">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-3 mb-2 sm:mb-3 text-center text-2xs sm:text-xs font-bold uppercase tracking-wider font-display shrink-0">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
                 <div key={d} className={`py-1 ${d === 'Sun' ? 'text-rose-500 font-extrabold' : 'text-gray-400'}`}>{d}</div>
               ))}
@@ -192,7 +192,7 @@ export const StudentAttendance = () => {
             {loading ? (
               <div className="py-24 text-center text-gray-400 text-sm">Loading attendance logs...</div>
             ) : (
-              <div className="grid grid-cols-7 gap-3">
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-3">
                 {calendarDays.map(cd => {
                   if (cd.padding) {
                     return <div key={cd.key} className="aspect-square rounded-full bg-transparent border border-transparent"></div>;
@@ -235,7 +235,7 @@ export const StudentAttendance = () => {
           </div>
         </div>
 
-        <div className="card h-full flex flex-col overflow-hidden py-4 px-6">
+        <div className="card col-span-1 flex flex-col overflow-hidden py-4 px-3 sm:px-6">
           <h3 className="font-display font-bold text-primary text-sm mb-4 shrink-0">📝 Attendance Details</h3>
           <div className="flex-1 overflow-y-auto pr-1">
             {selectedRecord ? (

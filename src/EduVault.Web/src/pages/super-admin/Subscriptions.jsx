@@ -1164,19 +1164,19 @@ const Subscriptions = () => {
 
       {/* Create New Plan Overlay Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in duration-200">
-            <div className="bg-primary px-6 py-4">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in duration-200">
+            <div className="bg-primary px-4 sm:px-6 py-4 shrink-0">
               <h3 className="font-display font-bold text-white text-base">Create New Subscription Plan</h3>
               <p className="text-blue-200 text-xs">Configure a new pricing tier for onboarding schools.</p>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               {createError && (
                 <div className="bg-red-50 border border-red-200 text-red-600 text-[11px] p-2.5 rounded-lg">
                   {createError}
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tier Label *</label>
                   <input
@@ -1196,7 +1196,7 @@ const Subscriptions = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Implementation Cost ($)</label>
                   <input
@@ -1217,7 +1217,7 @@ const Subscriptions = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Storage Limit</label>
                   <input
@@ -1248,17 +1248,17 @@ const Subscriptions = () => {
                 <label htmlFor="isTopRevenue" className="text-xs font-semibold text-gray-600">Mark as Top Revenue (Featured Accent)</label>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-3 shrink-0">
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="btn-outline text-xs py-1.5 px-3"
+                className="btn-outline text-xs py-2 px-3 w-full sm:w-auto text-center"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreatePlan}
                 disabled={creatingPlan}
-                className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                className="btn-primary text-xs py-2 px-3 flex items-center justify-center gap-1.5 w-full sm:w-auto"
               >
                 {creatingPlan ? 'Creating...' : '✓ Create Plan'}
               </button>
@@ -1269,21 +1269,21 @@ const Subscriptions = () => {
 
       {/* Upgrade Request Approval & Pricing Modal */}
       {showApprovalModal && approvingRequest && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <form onSubmit={handleConfirmApproval} className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-primary px-6 py-5 text-white">
-              <h3 className="font-display font-bold text-base">Approve Upgrade: {approvingRequest.schoolName}</h3>
-              <p className="text-blue-200 text-xxs mt-1">Review requirements and customize pricing parameters for this client.</p>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 sm:p-4 animate-in fade-in duration-200">
+          <form onSubmit={handleConfirmApproval} className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-primary px-4 sm:px-6 py-4 sm:py-5 text-white shrink-0">
+              <h3 className="font-display font-bold text-sm sm:text-base">Approve Upgrade: {approvingRequest.schoolName}</h3>
+              <p className="text-blue-200 text-2xs mt-1">Review requirements and customize pricing parameters for this client.</p>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               {/* Requirements review */}
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs">
                 <span className="font-bold text-amber-900 block mb-1">Submitted Requirements:</span>
                 <p className="text-gray-700 whitespace-pre-wrap leading-relaxed italic">{approvingRequest.requirements || 'No specific requirements listed.'}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Implementation Cost ($) *</label>
                   <input
@@ -1306,7 +1306,7 @@ const Subscriptions = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Storage Limit *</label>
                   <input
@@ -1329,7 +1329,7 @@ const Subscriptions = () => {
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-4">
+              <div className="border-t border-gray-100 pt-3">
                 <label className="block text-xs font-bold text-indigo-900 mb-1.5">One-time Upgrade Charge / Payment Amount ($) *</label>
                 <input
                   type="number"
@@ -1342,18 +1342,18 @@ const Subscriptions = () => {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-3 shrink-0">
               <button
                 type="button"
                 onClick={() => { setShowApprovalModal(false); setApprovingRequest(null); }}
-                className="btn-outline text-xs py-1.5 px-3"
+                className="btn-outline text-xs py-2 px-3 w-full sm:w-auto text-center"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={processingRequestId !== null}
-                className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                className="btn-primary text-xs py-2 px-3 flex items-center justify-center gap-1.5 w-full sm:w-auto"
               >
                 {processingRequestId !== null ? 'Approving...' : '✓ Approve & Set Pricing'}
               </button>
@@ -1364,39 +1364,39 @@ const Subscriptions = () => {
 
       {/* Details Popup Modal */}
       {showDetailsPopup && selectedRequestDetails && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-primary px-6 py-5 text-white flex justify-between items-center">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-primary px-4 sm:px-6 py-4 sm:py-5 text-white flex justify-between items-center shrink-0">
               <div>
-                <h3 className="font-display font-bold text-base">Request Details: {selectedRequestDetails.schoolName}</h3>
-                <p className="text-blue-200 text-xxs mt-1">Review the client's submitted requirements and manage status.</p>
+                <h3 className="font-display font-bold text-sm sm:text-base">Request Details: {selectedRequestDetails.schoolName}</h3>
+                <p className="text-blue-200 text-2xs mt-1">Review the client's submitted requirements and manage status.</p>
               </div>
               <button 
                 onClick={() => { setShowDetailsPopup(false); setSelectedRequestDetails(null); }}
-                className="text-white hover:text-gray-200 text-lg font-bold transition-all focus:outline-none"
+                className="text-white hover:text-gray-200 text-lg font-bold transition-all focus:outline-none shrink-0"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4 text-xs">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 font-semibold">School Code</span>
+                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">School Code</span>
                   <span className="font-semibold text-primary font-mono">{selectedRequestDetails.schoolCode}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 font-semibold">Submitted At</span>
+                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Submitted At</span>
                   <span className="font-semibold text-primary">{selectedRequestDetails.createdAt}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 font-semibold">Requested Option</span>
+                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Requested Option</span>
                   <span className="font-bold text-indigo-600">
                     {selectedRequestDetails.requestedPlanType === 'Custom' ? '🛠️ Custom Modifications' : `🚀 ${selectedRequestDetails.requestedPlanType} Plan`}
                   </span>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 font-semibold">Current Status</span>
+                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Current Status</span>
                   <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                     selectedRequestDetails.status === 'Approved' ? 'bg-green-50 text-green-700 border border-green-200' :
                     selectedRequestDetails.status === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
@@ -1407,25 +1407,25 @@ const Subscriptions = () => {
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-4">
-                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 font-semibold">Submitted Requirements</span>
-                <div className="bg-gray-50 border border-gray-150 rounded-xl p-4 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
+              <div className="border-t border-gray-100 pt-3">
+                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Submitted Requirements</span>
+                <div className="bg-gray-50 border border-gray-150 rounded-xl p-3.5 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
                   {selectedRequestDetails.requirements || 'No specific requirements listed.'}
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-between items-center px-6 pb-6 border-t border-gray-100 pt-4">
+            <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-2.5 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-3 shrink-0">
               <button
                 type="button"
                 onClick={() => { setShowDetailsPopup(false); setSelectedRequestDetails(null); }}
-                className="btn-outline text-xs py-2 px-4 rounded-xl font-semibold"
+                className="btn-outline text-xs py-2 px-4 rounded-xl font-semibold w-full sm:w-auto text-center"
               >
                 Close
               </button>
               
               {selectedRequestDetails.status === 'Pending' && (
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -1434,7 +1434,7 @@ const Subscriptions = () => {
                       setSelectedRequestDetails(null);
                       handleApproveRequest(id);
                     }}
-                    className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all"
+                    className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all w-full sm:w-auto text-center"
                   >
                     {selectedRequestDetails.requestedPlanType === 'Custom' ? 'Approve & Charge' : 'Approve'}
                   </button>
@@ -1446,7 +1446,7 @@ const Subscriptions = () => {
                       setSelectedRequestDetails(null);
                       handleRejectRequest(id);
                     }}
-                    className="bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-600 text-xs font-bold px-4 py-2 rounded-xl transition-all"
+                    className="bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-600 text-xs font-bold px-4 py-2 rounded-xl transition-all w-full sm:w-auto text-center"
                   >
                     Reject
                   </button>

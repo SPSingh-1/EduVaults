@@ -606,7 +606,7 @@ const Admissions = () => {
       {/* ── QR CODE BANNER / MODAL ── */}
       {showQrModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 text-center">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-4 sm:p-6 animate-in fade-in zoom-in-95 text-center max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
@@ -628,7 +628,7 @@ const Admissions = () => {
               <img
                 src={qrCodeImageUrl}
                 alt="Admission QR Code"
-                className="w-52 h-52 object-contain mx-auto rounded-lg shadow-sm"
+                className="w-44 h-44 sm:w-52 sm:h-52 object-contain mx-auto rounded-lg shadow-sm"
                 onError={e => {
                   e.target.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(publicApplyUrl)}`;
                 }}
@@ -648,13 +648,13 @@ const Admissions = () => {
               />
               <button
                 onClick={copyQrLink}
-                className="px-2.5 py-1 rounded-lg bg-primary text-white font-semibold text-[11px] flex items-center gap-1 hover:bg-primary/90 transition"
+                className="px-2.5 py-1 rounded-lg bg-primary text-white font-semibold text-[11px] flex items-center gap-1 hover:bg-primary/90 transition shrink-0"
               >
                 <Copy className="w-3 h-3" /> {copiedLink ? 'Copied!' : 'Copy'}
               </button>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <a
                 href={qrCodeImageUrl}
                 download={`admission-qr-${schoolCode}.png`}
@@ -678,7 +678,7 @@ const Admissions = () => {
       {/* ── CREATE MANUAL LEAD MODAL ── */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <h3 className="font-display font-bold text-primary text-lg">New Admission Lead / Walk-in</h3>
               <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -699,7 +699,7 @@ const Admissions = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Target Class *</label>
                   <input
@@ -747,15 +747,15 @@ const Admissions = () => {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="btn-outline text-xs py-2 px-4"
+                  className="btn-outline text-xs py-2 px-4 text-center"
                 >
                   Cancel
                 </button>
-                <button type="submit" disabled={submitting} className="btn-primary text-xs py-2 px-5">
+                <button type="submit" disabled={submitting} className="btn-primary text-xs py-2 px-5 text-center">
                   {submitting ? 'Saving...' : 'Register Entry'}
                 </button>
               </div>
@@ -767,11 +767,11 @@ const Admissions = () => {
       {/* ── ENHANCED REVIEW & QUICK ENROLL MODAL ── */}
       {showReviewModal && selectedApp && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 animate-in fade-in zoom-in-95 my-8 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-4 sm:p-6 animate-in fade-in zoom-in-95 my-8 max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-gray-100 shrink-0">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-display font-bold text-gray-900 text-lg">{selectedApp.childName}</h3>
                   {selectedApp.applicationId && (
                     <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200">
@@ -795,7 +795,7 @@ const Admissions = () => {
             </div>
 
             {/* Mode Switcher */}
-            <div className="flex gap-2 my-4 border-b border-gray-100 pb-2 shrink-0">
+            <div className="flex flex-wrap gap-2 my-4 border-b border-gray-100 pb-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setReviewTab('overview')}
@@ -860,7 +860,7 @@ const Admissions = () => {
                   {/* Category 2: Parents */}
                   <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                     <div className="font-bold text-slate-800">👨‍👩‍👧 Parents & Family Info</div>
-                    <div className="grid grid-cols-2 gap-2 text-gray-600">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-gray-600">
                       <div>
                         <span className="text-gray-400">Father:</span>{' '}
                         <strong className="text-gray-800">{selectedApp.fatherName || selectedApp.parentName}</strong>
@@ -982,7 +982,7 @@ const Admissions = () => {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">1. Class Confirm *</label>
                       <input
@@ -1009,7 +1009,7 @@ const Admissions = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">3. Roll Number</label>
                       <input
@@ -1033,7 +1033,7 @@ const Admissions = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">5. Fee Category</label>
                       <select
@@ -1112,18 +1112,18 @@ const Admissions = () => {
                     </label>
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-2">
+                  <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                     <button
                       type="button"
                       onClick={() => setReviewTab('overview')}
-                      className="btn-outline text-xs py-2 px-4"
+                      className="btn-outline text-xs py-2 px-4 text-center"
                     >
                       Back to Overview
                     </button>
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="py-2.5 px-6 rounded-xl font-black text-xs text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/30 transition flex items-center gap-1.5"
+                      className="py-2.5 px-6 rounded-xl font-black text-xs text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/30 transition flex items-center justify-center gap-1.5"
                     >
                       {submitting ? 'Enrolling...' : 'Confirm Enrollment & Send WhatsApp'}
                     </button>

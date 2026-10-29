@@ -928,7 +928,7 @@ const PromotionSetupTab = () => {
                     <DateFilterInput label="To:" value={promoDateTo} onChange={setPromoDateTo} />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 shrink-0 w-full xl:w-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0 w-full xl:w-auto">
                     <select className="input w-full text-xs sm:text-sm" value={promoSelectedClass} onChange={e => setPromoSelectedClass(e.target.value)}>
                       <option value="">Class All</option>
                       {promoUniqueGrades.map(grade => (
@@ -1019,16 +1019,16 @@ const PromotionSetupTab = () => {
       {/* Promotion setup: View Details Modal */}
       {showPromoViewModal && promoViewStudentData && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in duration-200">
-            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in duration-200">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white shrink-0">
               <div>
-                <h3 className="font-display font-bold text-lg">Student Profile Details</h3>
+                <h3 className="font-display font-bold text-base sm:text-lg">Student Profile Details</h3>
                 <p className="text-blue-200 text-xs">Profile overview for {promoViewStudentData.firstName} {promoViewStudentData.lastName}</p>
               </div>
               <button onClick={() => setShowPromoViewModal(false)} className="text-white hover:text-blue-200 text-lg">✖</button>
             </div>
-            <div className="p-6 space-y-5 text-sm max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 text-sm overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-0.5">Student ID</div>
                   <div className="font-mono font-semibold text-primary">{promoViewStudentData.studentId}</div>
@@ -1055,7 +1055,7 @@ const PromotionSetupTab = () => {
 
               <div>
                 <h4 className="font-semibold text-primary text-xs uppercase mb-3 tracking-wide">👪 Guardian Information</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <div className="text-xs text-gray-400 font-semibold mb-0.5">Guardian Name</div>
                     <div className="text-primary font-medium">{promoViewStudentData.guardianName}</div>
@@ -1064,7 +1064,7 @@ const PromotionSetupTab = () => {
                     <div className="text-xs text-gray-400 font-semibold mb-0.5">Relationship</div>
                     <div className="text-primary font-medium">{promoViewStudentData.guardianRelationship}</div>
                   </div>
-                  <div className="col-span-2">
+                  <div className="sm:col-span-2">
                     <div className="text-xs text-gray-400 font-semibold mb-0.5">Contact Number</div>
                     <div className="text-primary font-medium">{promoViewStudentData.guardianPhone}</div>
                   </div>
@@ -1078,8 +1078,8 @@ const PromotionSetupTab = () => {
                 <div className="text-primary font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">{promoViewStudentData.address || 'No address registered.'}</div>
               </div>
             </div>
-            <div className="flex justify-end p-6 border-t border-gray-100 bg-gray-50">
-              <button onClick={() => setShowPromoViewModal(false)} className="btn-primary text-xs py-2">Close Profile</button>
+            <div className="flex justify-end p-4 sm:p-6 border-t border-gray-100 bg-gray-50 shrink-0">
+              <button onClick={() => setShowPromoViewModal(false)} className="btn-primary text-xs py-2 w-full sm:w-auto">Close Profile</button>
             </div>
           </div>
         </div>
@@ -1088,15 +1088,15 @@ const PromotionSetupTab = () => {
       {/* Promotion setup: Promote Student Modal */}
       {showPromoPromoteModal && promoPromotingStudent && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 shadow-2xl animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white shrink-0">
               <div>
-                <h3 className="font-display font-bold text-lg">Promote Student</h3>
+                <h3 className="font-display font-bold text-base sm:text-lg">Promote Student</h3>
                 <p className="text-blue-200 text-xs">Advance student to the next academic grade level</p>
               </div>
               <button onClick={() => setShowPromoPromoteModal(false)} className="text-white hover:text-blue-200 text-lg">✖</button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               {promoPromoteError && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{promoPromoteError}</div>}
               <div>
                 <div className="text-xs text-gray-400 font-bold uppercase mb-1">Student Details</div>
@@ -1104,7 +1104,7 @@ const PromotionSetupTab = () => {
                   <div className="font-semibold text-primary">{promoPromotingStudent.name}</div>
                   <div className="text-xs text-gray-500 font-mono mt-0.5">ID: {promoPromotingStudent.studentId}</div>
                   <div className="text-xs text-gray-500 mt-1">Current Class: <span className="font-semibold text-primary">{promoPromotingStudent.class} - {promoPromotingStudent.section}</span></div>
-                  <div className="text-xs mt-2 flex items-center gap-1.5">
+                  <div className="text-xs mt-2 flex items-center gap-1.5 flex-wrap">
                     <span>Exam Status:</span>
                     {promoPromotingStudent.finalResult === "Pass" ? (
                       <span className="badge badge-success text-[10px] py-0.5 px-2 font-bold">✅ Pass (GPA: {promoPromotingStudent.gpa})</span>
@@ -1134,12 +1134,12 @@ const PromotionSetupTab = () => {
                 </select>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
-              <button onClick={() => setShowPromoPromoteModal(false)} className="btn-outline text-xs">Cancel</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 p-4 sm:p-6 pt-2 border-t border-gray-100 bg-gray-50 shrink-0">
+              <button onClick={() => setShowPromoPromoteModal(false)} className="btn-outline text-xs w-full sm:w-auto">Cancel</button>
               <button
                 onClick={handlePromoPromoteSubmit}
                 disabled={promoPromoting || !promoPromoteNextClassId}
-                className="btn-primary text-xs"
+                className="btn-primary text-xs w-full sm:w-auto"
               >
                 {promoPromoting ? 'Promoting...' : 'Promote Student'}
               </button>

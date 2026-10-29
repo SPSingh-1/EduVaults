@@ -655,28 +655,28 @@ const ReportCollectionSummary = ({ data }) => {
   const tabs = [{ id: "classwise", label: "Class-wise" }, { id: "feewise", label: "Fee-wise" }, { id: "monthwise", label: "Month-wise" }];
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="stat-card flex items-center justify-between p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="stat-card flex items-center justify-between p-4 sm:p-5">
           <div>
             <div className="text-xs text-gray-400 font-medium mb-1">Total Collected</div>
-            <div className="font-display text-2xl font-black text-emerald-600">{fmtAmt(data.grandTotal?.totalCollected)}</div>
+            <div className="font-display text-xl sm:text-2xl font-black text-emerald-600 truncate">{fmtAmt(data.grandTotal?.totalCollected)}</div>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center">
-            <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />
           </div>
         </div>
-        <div className="stat-card flex items-center justify-between p-5">
+        <div className="stat-card flex items-center justify-between p-4 sm:p-5">
           <div>
             <div className="text-xs text-gray-400 font-medium mb-1">Total Pending</div>
-            <div className="font-display text-2xl font-black text-rose-600">{fmtAmt(data.grandTotal?.totalPending)}</div>
+            <div className="font-display text-xl sm:text-2xl font-black text-rose-600 truncate">{fmtAmt(data.grandTotal?.totalPending)}</div>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center">
-            <AlertCircle className="w-6 h-6 text-rose-400" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-rose-50 flex items-center justify-center shrink-0">
+            <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-rose-400" />
           </div>
         </div>
       </div>
       <div className="card">
-        <div className="flex gap-4 border-b border-gray-100 mb-4">
+        <div className="flex overflow-x-auto whitespace-nowrap gap-4 border-b border-gray-100 mb-4 no-scrollbar">
           {tabs.map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id)}
               className={`pb-3 text-sm font-semibold border-b-2 transition-all ${activeTab === t.id ? "border-primary text-primary" : "border-transparent text-gray-400 hover:text-gray-600"}`}>

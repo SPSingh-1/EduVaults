@@ -136,7 +136,7 @@ export const StudentNotices = () => {
       <Topbar title="Notices & Announcements" />
 
       {/* Filtering Tabs */}
-      <div className="flex gap-1.5 bg-slate-100/60 p-1.5 rounded-2xl w-fit border border-slate-200/30 mb-6 overflow-x-auto scrollbar-none">
+      <div className="flex gap-1.5 bg-slate-100/60 p-1.5 rounded-2xl w-fit max-w-full border border-slate-200/30 mb-6 overflow-x-auto scrollbar-none">
         {[
           { id: 'all', label: 'All Announcements', Icon: Megaphone },
           { id: 'schooladmin', label: 'School Admin Notices', Icon: Building },

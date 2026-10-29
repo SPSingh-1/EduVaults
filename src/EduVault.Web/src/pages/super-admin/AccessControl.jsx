@@ -580,7 +580,7 @@ const AccessControl = () => {
       />
 
       {/* TOP INSTITUTION CARD WITH DIRECT MODULE TOGGLE SWITCHES */}
-      <div className="card p-5 border border-gray-200/80 space-y-4">
+      <div className="card p-4 sm:p-5 border border-gray-200/80 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-xl bg-blue-50 text-primary flex items-center justify-center shrink-0">
@@ -596,7 +596,7 @@ const AccessControl = () => {
             </div>
           </div>
 
-          <div className="min-w-[280px]">
+          <div className="w-full md:w-auto md:min-w-[280px]">
             <select
               value={selectedSchoolId}
               onChange={e => setSelectedSchoolId(e.target.value)}
@@ -1150,7 +1150,7 @@ const AccessControl = () => {
                         </div>
 
                         {/* Graph Role Buttons */}
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <button
                             type="button"
                             onClick={() => handleWidgetChartType(w.widgetKey, 'None')}
@@ -1493,15 +1493,15 @@ const AccessControl = () => {
       {/* ========================================================================= */}
       {showAddMenuModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-2xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 text-left">
-            <div className="bg-primary px-6 py-4 text-white flex items-center justify-between">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 text-left max-h-[90vh] flex flex-col">
+            <div className="bg-primary px-5 sm:px-6 py-4 text-white flex items-center justify-between shrink-0">
               <h3 className="font-display font-semibold text-sm flex items-center gap-2">
                 <Plus className="w-4 h-4 text-white" />
                 Register New Menu / Screen
               </h3>
-              <button onClick={() => setShowAddMenuModal(false)} className="text-white/80 hover:text-white">✕</button>
+              <button onClick={() => setShowAddMenuModal(false)} className="text-white/80 hover:text-white cursor-pointer text-lg">✕</button>
             </div>
-            <form onSubmit={handleAddMenu} className="p-6 space-y-4">
+            <form onSubmit={handleAddMenu} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-2xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Target Module / Role *</label>
                 <select
@@ -1529,7 +1529,7 @@ const AccessControl = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-2xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Route Path *</label>
                   <input
@@ -1563,9 +1563,9 @@ const AccessControl = () => {
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
-                <button type="button" onClick={() => setShowAddMenuModal(false)} className="btn-secondary text-xs py-2 px-4 font-semibold">Cancel</button>
-                <button type="submit" disabled={saving} className="btn-primary text-xs py-2 px-5 font-semibold">Register Screen</button>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-gray-100 shrink-0">
+                <button type="button" onClick={() => setShowAddMenuModal(false)} className="btn-secondary text-xs py-2 px-4 font-semibold w-full sm:w-auto text-center cursor-pointer">Cancel</button>
+                <button type="submit" disabled={saving} className="btn-primary text-xs py-2 px-5 font-semibold w-full sm:w-auto text-center cursor-pointer">Register Screen</button>
               </div>
             </form>
           </div>
@@ -1577,15 +1577,15 @@ const AccessControl = () => {
       {/* ========================================================================= */}
       {showAddWidgetModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-2xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 text-left">
-            <div className="bg-primary px-6 py-4 text-white flex items-center justify-between">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 text-left max-h-[90vh] flex flex-col">
+            <div className="bg-primary px-5 sm:px-6 py-4 text-white flex items-center justify-between shrink-0">
               <h3 className="font-display font-semibold text-sm flex items-center gap-2">
                 <Plus className="w-4 h-4 text-white" />
                 Register New Dashboard Card / Widget
               </h3>
-              <button onClick={() => setShowAddWidgetModal(false)} className="text-white/80 hover:text-white">✕</button>
+              <button onClick={() => setShowAddWidgetModal(false)} className="text-white/80 hover:text-white cursor-pointer text-lg">✕</button>
             </div>
-            <form onSubmit={handleAddWidget} className="p-6 space-y-4">
+            <form onSubmit={handleAddWidget} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-2xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Target Module / Role *</label>
                 <select
@@ -1613,7 +1613,7 @@ const AccessControl = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-2xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Metric Source *</label>
                   <select
@@ -1646,7 +1646,7 @@ const AccessControl = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-2xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Visualization Role</label>
                   <select
@@ -1677,9 +1677,9 @@ const AccessControl = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
-                <button type="button" onClick={() => setShowAddWidgetModal(false)} className="btn-secondary text-xs py-2 px-4 font-semibold">Cancel</button>
-                <button type="submit" disabled={saving} className="btn-primary text-xs py-2 px-5 font-semibold">Create Card</button>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-gray-100 shrink-0">
+                <button type="button" onClick={() => setShowAddWidgetModal(false)} className="btn-secondary text-xs py-2 px-4 font-semibold w-full sm:w-auto text-center cursor-pointer">Cancel</button>
+                <button type="submit" disabled={saving} className="btn-primary text-xs py-2 px-5 font-semibold w-full sm:w-auto text-center cursor-pointer">Create Card</button>
               </div>
             </form>
           </div>

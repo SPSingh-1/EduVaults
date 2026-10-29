@@ -436,7 +436,7 @@ export const Attendance = () => {
       {/* ⚡ 15-Sec Rapid Mobile Roll Call Modal */}
       {rapidMode && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-6 animate-in zoom-in-95">
+          <div className="bg-white rounded-3xl max-w-md w-full p-4 sm:p-6 shadow-2xl border border-slate-200 space-y-5 sm:space-y-6 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -473,12 +473,12 @@ export const Attendance = () => {
             {/* Active Student Card */}
             {rapidIndex < students.length ? (
               <div className="space-y-4">
-                <div className="p-6 bg-gradient-to-b from-slate-50 to-slate-100/60 rounded-2xl border border-slate-200/80 text-center space-y-2">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 text-primary text-2xl font-black flex items-center justify-center mx-auto border-2 border-primary/20">
+                <div className="p-4 sm:p-6 bg-gradient-to-b from-slate-50 to-slate-100/60 rounded-2xl border border-slate-200/80 text-center space-y-2">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary/10 text-primary text-xl sm:text-2xl font-black flex items-center justify-center mx-auto border-2 border-primary/20">
                     {students[rapidIndex].name.charAt(0)}
                   </div>
                   <div>
-                    <h4 className="font-display font-extrabold text-xl text-slate-900">
+                    <h4 className="font-display font-extrabold text-lg sm:text-xl text-slate-900">
                       {students[rapidIndex].name}
                     </h4>
                     <p className="text-xs text-slate-500 font-mono font-semibold">
@@ -499,30 +499,30 @@ export const Attendance = () => {
                 </div>
 
                 {/* 3 Touch-Friendly Rapid Buttons */}
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
                   <button
                     onClick={() => handleRapidMark('Absent')}
-                    className="py-4 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border-2 border-rose-200 rounded-2xl flex flex-col items-center justify-center gap-1 transition"
+                    className="py-3 sm:py-4 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border-2 border-rose-200 rounded-2xl flex flex-col items-center justify-center gap-1 transition"
                   >
-                    <span className="text-xl">✗</span>
+                    <span className="text-lg sm:text-xl">✗</span>
                     <span className="text-xs font-black">ABSENT</span>
                     <span className="text-3xs text-rose-500 font-semibold">[← Key]</span>
                   </button>
 
                   <button
                     onClick={() => handleRapidMark('Late')}
-                    className="py-4 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-700 border-2 border-amber-200 rounded-2xl flex flex-col items-center justify-center gap-1 transition"
+                    className="py-3 sm:py-4 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-700 border-2 border-amber-200 rounded-2xl flex flex-col items-center justify-center gap-1 transition"
                   >
-                    <span className="text-xl">⏰</span>
+                    <span className="text-lg sm:text-xl">⏰</span>
                     <span className="text-xs font-black">LATE</span>
                     <span className="text-3xs text-amber-500 font-semibold">[↓ Key]</span>
                   </button>
 
                   <button
                     onClick={() => handleRapidMark('Present')}
-                    className="py-4 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-700 border-2 border-emerald-200 rounded-2xl flex flex-col items-center justify-center gap-1 transition"
+                    className="py-3 sm:py-4 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-700 border-2 border-emerald-200 rounded-2xl flex flex-col items-center justify-center gap-1 transition"
                   >
-                    <span className="text-xl">✓</span>
+                    <span className="text-lg sm:text-xl">✓</span>
                     <span className="text-xs font-black">PRESENT</span>
                     <span className="text-3xs text-emerald-500 font-semibold">[→ Key]</span>
                   </button>
@@ -539,7 +539,7 @@ export const Attendance = () => {
                   </button>
 
                   {rapidIndex + 1 < students.length && (
-                    <span className="truncate max-w-[180px]">
+                    <span className="truncate max-w-[140px] sm:max-w-[180px]">
                       Next: {students[rapidIndex + 1].name}
                     </span>
                   )}
@@ -571,10 +571,10 @@ export const Attendance = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
                   <button
                     onClick={() => setRapidIndex(0)}
-                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl"
+                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl text-center"
                   >
                     Restart
                   </button>
@@ -583,7 +583,7 @@ export const Attendance = () => {
                       setRapidMode(false);
                       await handleSubmit();
                     }}
-                    className="flex-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs"
+                    className="flex-1 sm:flex-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs text-center"
                   >
                     Save & Submit Now
                   </button>

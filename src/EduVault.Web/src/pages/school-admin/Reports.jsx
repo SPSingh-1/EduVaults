@@ -380,13 +380,13 @@ const Reports = () => {
       <div className="space-y-4">
         {/* Filters row */}
         <div className="card no-print">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex-1 min-w-48">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 sm:gap-4">
+            <div className="flex-1 min-w-0 sm:min-w-48">
               <label className="block text-2xs font-bold text-gray-400 uppercase mb-1">Class Section</label>
               <select
                 value={selectedClassId}
                 onChange={(e) => setSelectedClassId(e.target.value)}
-                className="input text-sm"
+                className="input text-sm w-full"
               >
                 <option value="">— Select Class —</option>
                 {classesList.map((c) => (
@@ -396,24 +396,24 @@ const Reports = () => {
                 ))}
               </select>
             </div>
-            <div className="flex-1 min-w-48">
+            <div className="flex-1 min-w-0 sm:min-w-48">
               <label className="block text-2xs font-bold text-gray-400 uppercase mb-1">Examination Type</label>
               <select
                 value={selectedReportExamType}
                 onChange={(e) => setSelectedReportExamType(e.target.value)}
-                className="input text-sm"
+                className="input text-sm w-full"
               >
                 {examTypes.map((et) => (
                   <option key={et} value={et}>{et}</option>
                 ))}
               </select>
             </div>
-            <div className="flex items-end gap-2 pt-4">
+            <div className="flex flex-wrap items-center gap-2 pt-1 md:pt-4">
               {anyNotApproved && (
                 <button
                   onClick={handleBulkApprove}
                   disabled={bulkLoading}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-sm disabled:opacity-60 flex items-center gap-1.5"
+                  className="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-sm disabled:opacity-60 flex items-center gap-1.5"
                 >
                   ✓ Bulk Approve All ({classStudents.filter(s => !approvals[s.id]?.isApproved).length} pending)
                 </button>
@@ -457,9 +457,9 @@ const Reports = () => {
 
         {/* Student Roster Table */}
         <div className="card no-print">
-          <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-4 border-b border-gray-50 pb-4">
             <div>
-              <h3 className="font-display font-semibold text-primary m-0">
+              <h3 className="font-display font-semibold text-primary text-base sm:text-lg m-0">
                 Student Roster:{" "}
                 {selectedClass
                   ? formatClassLabel(selectedClass.grade, selectedClass.section)
@@ -469,7 +469,7 @@ const Reports = () => {
                 {selectedReportExamType} · {classStudents.length} Students
               </p>
             </div>
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-extrabold border ${getBadgeStyle(selectedReportExamType)}`}>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-extrabold border self-start sm:self-auto whitespace-nowrap shrink-0 ${getBadgeStyle(selectedReportExamType)}`}>
               {selectedReportExamType}
             </span>
           </div>
@@ -481,7 +481,7 @@ const Reports = () => {
             </div>
           ) : classStudents.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[620px]">
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="table-th text-left">Student Name</th>
@@ -609,21 +609,21 @@ const Reports = () => {
 
       {/* Individual Report Card Modal */}
       {selectedStudent && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print-modal-backdrop overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden printable-card-modal my-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4 print-modal-backdrop overflow-hidden">
+          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden printable-card-modal max-h-[92vh] flex flex-col my-auto">
             {/* Modal Header */}
-            <div className="bg-primary p-4 px-6 text-white flex justify-between items-center no-print">
+            <div className="bg-primary p-3.5 sm:p-4 px-4 sm:px-6 text-white flex justify-between items-center no-print shrink-0">
               <div>
-                <h4 className="font-bold text-base">Student Performance Record</h4>
+                <h4 className="font-bold text-sm sm:text-base">Student Performance Record</h4>
                 <p className="text-blue-200 text-2xs">
                   {selectedReportExamType} · {approvals[selectedStudent?.id]?.isApproved ? "Approved" : "Pending Approval"}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   onClick={handlePrintModal}
                   disabled={printingModal}
-                  className="px-3.5 py-1.5 text-xs font-bold bg-white text-primary hover:bg-white/90 rounded-lg flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+                  className="px-2.5 sm:px-3.5 py-1.5 text-xs font-bold bg-white text-primary hover:bg-white/90 rounded-lg flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50 shrink-0"
                   title="Print using School's Linked Marksheet Format"
                 >
                   {printingModal ? (
@@ -631,11 +631,12 @@ const Reports = () => {
                   ) : (
                     <Printer className="w-4 h-4" />
                   )}
-                  Print Official Marksheet
+                  <span className="hidden sm:inline">Print Official Marksheet</span>
+                  <span className="sm:hidden">Print</span>
                 </button>
                 <button
                   onClick={() => setSelectedStudent(null)}
-                  className="text-white hover:text-blue-100 text-lg ml-2 flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-all"
+                  className="text-white hover:text-blue-100 text-lg ml-1 sm:ml-2 flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-all shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -644,7 +645,7 @@ const Reports = () => {
 
             {/* Modal Subheader Tabs */}
             {renderedTemplateHtml && (
-              <div className="flex border-b border-gray-100 bg-gray-50/90 px-6 py-2 gap-2 no-print">
+              <div className="flex overflow-x-auto whitespace-nowrap border-b border-gray-100 bg-gray-50/90 px-4 sm:px-6 py-2 gap-2 no-print shrink-0 no-scrollbar">
                 <button
                   onClick={() => setActiveModalTab("template")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
@@ -675,7 +676,7 @@ const Reports = () => {
                 Loading student report & official template...
               </div>
             ) : activeModalTab === "template" && renderedTemplateHtml ? (
-              <div className="p-4 bg-slate-100 flex justify-center overflow-auto max-h-[72vh]">
+              <div className="p-4 bg-slate-100 flex justify-center overflow-auto flex-1">
                 <iframe
                   srcDoc={renderedTemplateHtml}
                   title="Official Marksheet Preview"
@@ -684,7 +685,7 @@ const Reports = () => {
                 />
               </div>
             ) : reportDetails ? (
-              <div className="p-6 overflow-auto max-h-[72vh]">
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1">
                 <div className="border-b-2 border-primary pb-4 mb-6">
                   <div className="flex justify-between items-start">
                     <div>
@@ -746,16 +747,16 @@ const Reports = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-row justify-between border border-gray-100 rounded-xl p-4 mb-6 bg-gray-50/50 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 border border-gray-100 rounded-xl p-3 sm:p-4 mb-6 bg-gray-50/50 gap-3 sm:gap-4">
                   {[
                     { l: "Semester GPA", v: reportDetails.semesterGpa || "N/A", c: "text-primary" },
                     { l: "Cumulative GPA", v: reportDetails.cumulativeGpa || "N/A", c: "text-blue-600" },
                     { l: "Class Rank", v: reportDetails.classRank || "N/A", c: "text-green-600" },
                     { l: "Attendance", v: reportDetails.attendance || "100.0%", c: "text-amber-600" },
                   ].map((s, idx) => (
-                    <div key={s.l} className={`flex-1 ${idx > 0 ? 'border-l border-gray-200 pl-4' : ''}`}>
+                    <div key={s.l} className={`flex-1 ${idx > 0 ? 'sm:border-l sm:border-gray-200 sm:pl-4' : ''}`}>
                       <div className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">{s.l}</div>
-                      <div className={`font-display text-lg font-black ${s.c}`}>{s.v}</div>
+                      <div className={`font-display text-base sm:text-lg font-black ${s.c}`}>{s.v}</div>
                     </div>
                   ))}
                 </div>
@@ -763,43 +764,45 @@ const Reports = () => {
                 <h4 className="font-display font-semibold text-xs text-primary uppercase tracking-wider mb-3">
                   Detailed Subject Breakdown
                 </h4>
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="table-th text-left py-2">Subject</th>
-                      <th className="table-th py-2">Theory (70)</th>
-                      <th className="table-th py-2">Practical (30)</th>
-                      <th className="table-th py-2">Total (100)</th>
-                      <th className="table-th py-2">Grade</th>
-                      <th className="table-th py-2">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportDetails.subjectsBreakdown?.map((s, i) => (
-                      <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="table-td font-semibold text-xs text-primary py-2">{s.subject}</td>
-                        <td className="table-td text-xs text-center py-2">{s.exam}</td>
-                        <td className="table-td text-xs text-center py-2">{s.internal}</td>
-                        <td className="table-td text-xs font-bold text-center py-2">{s.total}</td>
-                        <td className="table-td text-center py-2">
-                          <span className="font-extrabold text-xs text-green-600">{s.grade}</span>
-                        </td>
-                        <td className="table-td text-center py-2">
-                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold ${s.status === "Pass" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>
-                            {s.status}
-                          </span>
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[500px]">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="table-th text-left py-2">Subject</th>
+                        <th className="table-th py-2">Theory (70)</th>
+                        <th className="table-th py-2">Practical (30)</th>
+                        <th className="table-th py-2">Total (100)</th>
+                        <th className="table-th py-2">Grade</th>
+                        <th className="table-th py-2">Status</th>
                       </tr>
-                    ))}
-                    {(!reportDetails.subjectsBreakdown || reportDetails.subjectsBreakdown.length === 0) && (
-                      <tr>
-                        <td colSpan="6" className="text-center py-6 text-gray-400 text-xs">
-                          No grades submitted yet.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {reportDetails.subjectsBreakdown?.map((s, i) => (
+                        <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                          <td className="table-td font-semibold text-xs text-primary py-2">{s.subject}</td>
+                          <td className="table-td text-xs text-center py-2">{s.exam}</td>
+                          <td className="table-td text-xs text-center py-2">{s.internal}</td>
+                          <td className="table-td text-xs font-bold text-center py-2">{s.total}</td>
+                          <td className="table-td text-center py-2">
+                            <span className="font-extrabold text-xs text-green-600">{s.grade}</span>
+                          </td>
+                          <td className="table-td text-center py-2">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold ${s.status === "Pass" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>
+                              {s.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                      {(!reportDetails.subjectsBreakdown || reportDetails.subjectsBreakdown.length === 0) && (
+                        <tr>
+                          <td colSpan="6" className="text-center py-6 text-gray-400 text-xs">
+                            No grades submitted yet.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
                 <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-100 text-center">
                   <div className="w-40">
@@ -818,7 +821,7 @@ const Reports = () => {
               </div>
             )}
 
-            <div className="flex justify-between items-center p-5 bg-gray-50 border-t border-gray-100 no-print">
+            <div className="flex justify-between items-center p-3.5 sm:p-5 bg-gray-50 border-t border-gray-100 no-print shrink-0">
               <div className="flex gap-2">
                 {selectedStudent && !approvals[selectedStudent?.id]?.isApproved && (
                   <button

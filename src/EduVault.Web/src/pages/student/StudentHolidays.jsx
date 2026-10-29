@@ -176,19 +176,19 @@ export const StudentHolidays = () => {
 
       {/* Next Upcoming Holiday Banner */}
       {nextUpcomingHoliday && (
-        <div className="card bg-gradient-to-r from-slate-900 via-primary-dark to-slate-900 text-white p-6 shadow-xl rounded-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center text-3xl font-bold shadow-lg">
+        <div className="card bg-gradient-to-r from-slate-900 via-primary-dark to-slate-900 text-white p-4 sm:p-6 shadow-xl rounded-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 relative z-10">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center text-2xl sm:text-3xl font-bold shadow-lg shrink-0 mt-0.5 sm:mt-0">
               🎉
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30 whitespace-nowrap">
                   Next School Holiday
                 </span>
-                <span className="text-xs text-slate-300 font-semibold">{formatDateDDMMYYYY(nextUpcomingHoliday.date)}</span>
+                <span className="text-xs text-slate-300 font-semibold whitespace-nowrap">📅 {formatDateDDMMYYYY(nextUpcomingHoliday.date)}</span>
               </div>
-              <h3 className="text-xl font-extrabold text-white mt-1">{nextUpcomingHoliday.title}</h3>
+              <h3 className="text-lg sm:text-xl font-extrabold text-white mt-1">{nextUpcomingHoliday.title}</h3>
               <p className="text-xs text-slate-300/80 mt-0.5">{nextUpcomingHoliday.description || 'School will remain closed on this date.'}</p>
             </div>
           </div>

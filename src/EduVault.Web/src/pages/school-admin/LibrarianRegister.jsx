@@ -95,9 +95,10 @@ const LibrarianRegister = () => {
         actions={
           <button 
             onClick={() => { setError(''); setShowModal(true); }} 
-            className="btn-primary text-xs"
+            className="btn-primary text-xs px-2.5 sm:px-3 py-1.5 shrink-0"
           >
-            + Register School Librarian
+            <span className="hidden sm:inline">+ Register School Librarian</span>
+            <span className="sm:hidden">+ Register</span>
           </button>
         } 
       />
@@ -118,36 +119,36 @@ const LibrarianRegister = () => {
         )}
 
         {/* Overview Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="stat-card flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center font-bold text-xl shrink-0">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="stat-card p-3.5 sm:p-5 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center font-bold text-lg sm:text-xl shrink-0">
               📚
             </div>
             <div>
               <div className="text-xs text-gray-500 font-medium">Total Registered Librarians</div>
-              <div className="text-2xl font-bold font-display text-primary mt-0.5">{librarians.length}</div>
+              <div className="text-xl sm:text-2xl font-bold font-display text-primary mt-0.5">{librarians.length}</div>
             </div>
           </div>
 
-          <div className="stat-card flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xl shrink-0">
+          <div className="stat-card p-3.5 sm:p-5 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg sm:text-xl shrink-0">
               🛡️
             </div>
             <div>
               <div className="text-xs text-gray-500 font-medium">Active Library Access</div>
-              <div className="text-2xl font-bold font-display text-emerald-600 mt-0.5">
+              <div className="text-xl sm:text-2xl font-bold font-display text-emerald-600 mt-0.5">
                 {librarians.filter(l => l.isActive !== false).length}
               </div>
             </div>
           </div>
 
-          <div className="stat-card flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xl shrink-0">
+          <div className="stat-card p-3.5 sm:p-5 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg sm:text-xl shrink-0">
               📖
             </div>
             <div>
               <div className="text-xs text-gray-500 font-medium">Book Catalog & Loan Desk</div>
-              <div className="text-2xl font-bold font-display text-primary mt-0.5">Ready</div>
+              <div className="text-xl sm:text-2xl font-bold font-display text-primary mt-0.5">Ready</div>
             </div>
           </div>
         </div>
@@ -177,7 +178,7 @@ const LibrarianRegister = () => {
             <div className="py-12 flex justify-center"><Loader small /></div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left min-w-[580px]">
                 <thead>
                   <tr className="bg-gray-50/70">
                     <th className="table-th">Librarian</th>
@@ -232,32 +233,32 @@ const LibrarianRegister = () => {
 
       {/* Registration Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-scale-up">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-scale-up">
             {/* Modal Header */}
-            <div className="bg-primary px-6 py-5 rounded-t-2xl flex justify-between items-center text-white">
+            <div className="bg-primary px-4 sm:px-6 py-4 sm:py-5 rounded-t-2xl flex justify-between items-center text-white shrink-0">
               <div>
-                <h3 className="font-display font-bold text-lg">Register School Librarian</h3>
+                <h3 className="font-display font-bold text-base sm:text-lg">Register School Librarian</h3>
                 <p className="text-blue-200 text-xs">Creates credentials with access to the /library portal</p>
               </div>
               <button 
                 type="button" 
                 onClick={() => setShowModal(false)} 
-                className="text-white hover:text-blue-200 text-lg"
+                className="text-white hover:text-blue-200 text-lg ml-2"
               >
-                ✖
+                ✕
               </button>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1">
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">
                   {error}
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">First Name *</label>
                   <input
@@ -326,18 +327,18 @@ const LibrarianRegister = () => {
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="btn-outline text-xs px-4 py-2"
+                  className="btn-outline w-full sm:w-auto text-xs px-4 py-2"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="btn-primary text-xs px-5 py-2"
+                  className="btn-primary w-full sm:w-auto text-xs px-5 py-2"
                 >
                   {submitting ? 'Registering...' : 'Register Librarian'}
                 </button>

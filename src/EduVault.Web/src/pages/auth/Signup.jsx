@@ -95,7 +95,7 @@ const Signup = () => {
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">School Name *</label>
                   <input value={form.schoolName} onChange={e => update('schoolName', e.target.value)} placeholder="e.g. Greenwood Academy" className="input" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Address Line 1 *</label>
                     <input value={form.address} onChange={e => update('address', e.target.value)} placeholder="Street address, P.O. box" className="input" />
@@ -114,7 +114,7 @@ const Signup = () => {
             {step === 2 && (
               <div className="space-y-4">
                 <h3 className="font-semibold text-primary flex items-center gap-2">👤 Primary Administrator</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Full Name *</label>
                     <input value={form.adminName} onChange={e => update('adminName', e.target.value)} placeholder="e.g. Dr. Sarah Jenkins" className="input" />
@@ -124,7 +124,7 @@ const Signup = () => {
                     <input type="email" value={form.adminEmail} onChange={e => update('adminEmail', e.target.value)} placeholder="admin@schoolname.edu" className="input" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Password *</label>
                     <input type="password" value={form.adminPassword} onChange={e => update('adminPassword', e.target.value)} placeholder="••••••••" className="input" />
@@ -155,7 +155,7 @@ const Signup = () => {
             {step === 3 && (
               <div className="space-y-4">
                 <h3 className="font-semibold text-primary flex items-center gap-2">💳 Choose Subscription Plan</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[['Standard','Per-User Base','$0.85-1.20/Student/mo, $1.20-1.80/Teacher/mo, $2.40/Admin/mo + DB Cost'],['Enterprise','Custom','Unlimited students, Premium features + API']].map(([p,price,desc])=>(
                     <div key={p} className="border-2 border-primary/20 rounded-xl p-4 cursor-pointer hover:border-primary bg-primary/5 transition-all">
                       <div className="font-display font-bold text-primary text-lg">{p}</div>
@@ -167,11 +167,11 @@ const Signup = () => {
               </div>
             )}
 
-            <div className="flex justify-between mt-8 pt-6 border-t border-gray-100">
-              <button onClick={() => step > 1 ? setStep(s => s-1) : navigate('/login')} className="btn-outline">← {step > 1 ? 'Previous' : 'Back to Login'}</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 mt-8 pt-6 border-t border-gray-100">
+              <button onClick={() => step > 1 ? setStep(s => s-1) : navigate('/login')} className="btn-outline w-full sm:w-auto text-center">← {step > 1 ? 'Previous' : 'Back to Login'}</button>
               {step < 3
-                ? <button onClick={() => setStep(s => s+1)} className="btn-primary">Next Step →</button>
-                : <button onClick={submit} disabled={loading} className="btn-primary bg-green-600 hover:bg-green-700 flex items-center gap-2">
+                ? <button onClick={() => setStep(s => s+1)} className="btn-primary w-full sm:w-auto text-center">Next Step →</button>
+                : <button onClick={submit} disabled={loading} className="btn-primary bg-green-600 hover:bg-green-700 flex items-center justify-center gap-2 w-full sm:w-auto">
                     {loading ? <span className="animate-spin">⟳</span> : null}
                     {loading ? 'Registering...' : '✓ Register School'}
                   </button>

@@ -182,24 +182,26 @@ const EmployeeDirectory = () => {
             />
           </form>
 
-          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
-            {['ALL', 'Teaching', 'NonTeaching', 'Administrative', 'Support', 'Transport'].map(t => (
-              <button
-                key={t}
-                onClick={() => setStaffTypeFilter(t)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  staffTypeFilter === t
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                {t}
-              </button>
-            ))}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+              {['ALL', 'Teaching', 'NonTeaching', 'Administrative', 'Support', 'Transport'].map(t => (
+                <button
+                  key={t}
+                  onClick={() => setStaffTypeFilter(t)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    staffTypeFilter === t
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
 
             <button 
               onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl flex items-center gap-1.5 shadow-md shadow-emerald-100 shrink-0 ml-2"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-1.5 shadow-md shadow-emerald-100 shrink-0"
             >
               <UserPlus className="w-4 h-4" /> Add Employee
             </button>
@@ -287,8 +289,8 @@ const EmployeeDirectory = () => {
         {/* 360 Employee Profile Drawer / Modal */}
         {selectedEmp && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-            <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden border border-slate-200">
-              <div className="bg-gradient-to-r from-indigo-900 to-indigo-700 px-6 py-5 text-white flex items-center justify-between">
+            <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+              <div className="bg-gradient-to-r from-indigo-900 to-indigo-700 px-6 py-5 text-white flex items-center justify-between shrink-0">
                 <div>
                   <h3 className="font-bold text-lg">{selectedEmp.fullName}</h3>
                   <p className="text-xs text-indigo-200 font-mono">{selectedEmp.employeeCode} • {selectedEmp.staffType}</p>
@@ -298,7 +300,7 @@ const EmployeeDirectory = () => {
                 </button>
               </div>
 
-              <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto text-xs">
+              <div className="p-6 space-y-6 overflow-y-auto flex-1 text-xs">
                 {/* Organizational Overview */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                   <div>
@@ -330,7 +332,7 @@ const EmployeeDirectory = () => {
                 {/* Bank & Tax Details */}
                 <div>
                   <h4 className="font-bold text-slate-900 text-xs mb-2">Banking & Masked KYC Data</h4>
-                  <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
                       <span className="text-slate-400 block text-[10px]">Bank Name</span>
                       <span className="font-semibold text-slate-800">{selectedEmp.bankName || 'Not Set'}</span>
@@ -354,7 +356,7 @@ const EmployeeDirectory = () => {
                 {selectedEmp.teacherProfile && (
                   <div>
                     <h4 className="font-bold text-slate-900 text-xs mb-2">Academic & Teaching Profile</h4>
-                    <div className="grid grid-cols-2 gap-3 p-3 bg-blue-50/50 rounded-2xl border border-blue-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-blue-50/50 rounded-2xl border border-blue-100">
                       <div>
                         <span className="text-slate-400 block text-[10px]">Qualification</span>
                         <span className="font-semibold text-slate-800">{selectedEmp.teacherProfile.qualification}</span>
@@ -368,8 +370,8 @@ const EmployeeDirectory = () => {
                 )}
               </div>
 
-              <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-                <button onClick={() => setSelectedEmp(null)} className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl">
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end shrink-0">
+                <button onClick={() => setSelectedEmp(null)} className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl w-full sm:w-auto">
                   Close
                 </button>
               </div>
@@ -380,8 +382,8 @@ const EmployeeDirectory = () => {
         {/* Add Employee Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-            <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden border border-slate-200">
-              <div className="bg-primary px-6 py-5 text-white flex items-center justify-between">
+            <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+              <div className="bg-primary px-6 py-5 text-white flex items-center justify-between shrink-0">
                 <div>
                   <h3 className="font-bold text-base">Register New School Employee</h3>
                   <p className="text-xs text-blue-200">Create unified profile with salary and statutory eligibility</p>
@@ -391,8 +393,8 @@ const EmployeeDirectory = () => {
                 </button>
               </div>
 
-              <form onSubmit={handleCreateEmployee} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
-                <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={handleCreateEmployee} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">First Name *</label>
                     <input 
@@ -415,7 +417,7 @@ const EmployeeDirectory = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Staff Category *</label>
                     <select
@@ -451,7 +453,7 @@ const EmployeeDirectory = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Base Monthly Gross Salary (₹) *</label>
                     <input 
@@ -479,7 +481,7 @@ const EmployeeDirectory = () => {
                 {/* Statutory Checkboxes */}
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
                   <span className="block font-bold text-slate-800 mb-2">Statutory Applicability for this Employee</span>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <label className="flex items-center gap-2">
                       <input 
                         type="checkbox"
@@ -510,11 +512,11 @@ const EmployeeDirectory = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-2">
-                  <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 font-bold">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
+                  <button type="button" onClick={() => setShowAddModal(false)} className="w-full sm:w-auto px-4 py-2 border border-slate-200 rounded-xl text-slate-600 font-bold">
                     Cancel
                   </button>
-                  <button type="submit" disabled={saving} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold">
+                  <button type="submit" disabled={saving} className="w-full sm:w-auto px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold">
                     {saving ? 'Registering...' : 'Complete Registration'}
                   </button>
                 </div>

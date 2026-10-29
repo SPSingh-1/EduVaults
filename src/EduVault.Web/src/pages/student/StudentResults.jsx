@@ -248,7 +248,7 @@ export const StudentResults = () => {
         }
       `}} />
 
-      <div className="grid grid-cols-3 gap-4 mb-6 no-print">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 no-print">
         {[
           { l: 'Semester GPA', v: perf?.semesterGpa || '3.85', c: 'text-primary' },
           { l: 'Cumulative GPA', v: perf?.cumulativeGpa || '3.72', c: 'text-blue-600' },
@@ -256,7 +256,7 @@ export const StudentResults = () => {
         ].map(s => (
           <div key={s.l} className="stat-card">
             <div className="text-xs text-gray-500 mb-1">{s.l}</div>
-            <div className={`font-display text-2xl font-bold ${s.c}`}>{s.v}</div>
+            <div className={`font-display text-xl sm:text-2xl font-bold ${s.c}`}>{s.v}</div>
           </div>
         ))}
       </div>
@@ -313,16 +313,16 @@ export const StudentResults = () => {
 
         <h3 className="font-display font-semibold text-primary mb-4 print:text-base">Detailed Subject Breakdown</h3>
 
-        <div className="overflow-hidden border border-slate-100/80 rounded-xl bg-white shadow-3xs">
+        <div className="overflow-x-auto border border-slate-100/80 rounded-xl bg-white shadow-3xs">
           <table className="w-full border-collapse">
             <thead className="bg-slate-50/50">
               <tr className="border-b border-slate-150">
-                <th className="table-th text-left print:text-xs print:py-2">Subject</th>
-                <th className="table-th text-center print:text-xs print:py-2">Internal (30)</th>
-                <th className="table-th text-center print:text-xs print:py-2">Exam (70)</th>
-                <th className="table-th text-center print:text-xs print:py-2">Total (100)</th>
-                <th className="table-th text-center print:text-xs print:py-2">Grade</th>
-                <th className="table-th text-center print:text-xs print:py-2">Status</th>
+                <th className="table-th text-left min-w-[130px] print:text-xs print:py-2">Subject</th>
+                <th className="table-th text-center min-w-[90px] print:text-xs print:py-2">Internal (30)</th>
+                <th className="table-th text-center min-w-[90px] print:text-xs print:py-2">Exam (70)</th>
+                <th className="table-th text-center min-w-[90px] print:text-xs print:py-2">Total (100)</th>
+                <th className="table-th text-center min-w-[70px] print:text-xs print:py-2">Grade</th>
+                <th className="table-th text-center min-w-[80px] print:text-xs print:py-2">Status</th>
               </tr>
             </thead>
             <tbody>

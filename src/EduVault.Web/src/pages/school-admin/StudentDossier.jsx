@@ -273,7 +273,7 @@ export default function StudentDossier() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 mt-4">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-4">
                     <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-2.5 text-center">
                       <div className="text-[10px] font-bold text-emerald-700 uppercase flex items-center justify-center gap-1">
                         <UserPlus className="w-3 h-3" />
@@ -359,7 +359,7 @@ export default function StudentDossier() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 mt-4">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-4">
                     <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
                       <span className="text-[10px] font-bold text-emerald-700 uppercase flex items-center justify-center gap-1">
                         <UserPlus className="w-3 h-3" />

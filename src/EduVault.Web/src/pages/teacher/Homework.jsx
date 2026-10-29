@@ -319,7 +319,7 @@ export const Homework = () => {
       />
 
       {/* Sub-Tabs Bar */}
-      <div className="flex border-b border-gray-200 mb-6 gap-6">
+      <div className="flex overflow-x-auto whitespace-nowrap border-b border-gray-200 mb-6 gap-4 sm:gap-6 no-scrollbar">
         <button
           onClick={() => setActiveTab('homework')}
           className={`pb-3 text-xs font-bold border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
@@ -347,7 +347,7 @@ export const Homework = () => {
       {/* Homework View */}
       {activeTab === 'homework' && (
         <>
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             {[
               { l: 'Active Assignments', v: activeCount.toString(), sub: 'Current term', icon: '📋' },
               { l: 'Pending Review', v: pendingCount.toString(), sub: 'Needs attention', icon: '⚠️', warn: pendingCount > 0 },
@@ -495,12 +495,12 @@ export const Homework = () => {
 
         {showNew && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <form onSubmit={handleCreate} className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
-              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+            <form onSubmit={handleCreate} className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+              <div className="p-5 sm:p-6 border-b border-gray-100 flex justify-between items-center shrink-0">
                 <h3 className="font-display font-bold text-primary text-xl">Create New Homework</h3>
-                <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-primary">✖</button>
+                <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-primary cursor-pointer text-lg">✖</button>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 text-left">
                 {error && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{error}</div>}
                 <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Assignment Title *</label><input required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Read Physics Chapter 2" className="input text-sm" /></div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -515,7 +515,7 @@ export const Homework = () => {
                   </div>
                   <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Due Date *</label><input required type="date" value={dueDate} min={new Date().toISOString().split('T')[0]} onChange={e => setDueDate(e.target.value)} className="input text-sm" /></div>
                 </div>
-                                <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Instructions *</label><textarea required value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Provide detailed steps, links, or instructions..." className="input h-20 resize-none text-sm" /></div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Instructions *</label><textarea required value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Provide detailed steps, links, or instructions..." className="input h-20 resize-none text-sm" /></div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Attach Reference PDF / Image (Optional)</label>
                   <input
@@ -539,9 +539,9 @@ export const Homework = () => {
                   {hwAttachment && <span className="text-2xs text-green-600 font-bold block mt-1">✓ Reference Document Attached</span>}
                 </div>
               </div>
-              <div className="flex justify-end gap-3 px-6 pb-6 pt-2 border-t border-gray-100">
-                <button type="button" onClick={() => setShowNew(false)} className="btn-outline text-xs">Cancel</button>
-                <button type="submit" disabled={loading} className="btn-primary text-xs">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 px-5 sm:px-6 pb-5 sm:pb-6 pt-3 border-t border-gray-100 shrink-0">
+                <button type="button" onClick={() => setShowNew(false)} className="btn-outline text-xs w-full sm:w-auto text-center cursor-pointer">Cancel</button>
+                <button type="submit" disabled={loading} className="btn-primary text-xs w-full sm:w-auto text-center cursor-pointer">
                   {loading ? 'Creating assignment...' : 'Create Assignment'}
                 </button>
               </div>
@@ -560,7 +560,7 @@ export const Homework = () => {
               </div>
               <button
                 onClick={() => setShowSyllabusModal(true)}
-                className="btn-primary bg-white text-purple-950 font-bold text-xs hover:bg-purple-50 py-2.5 px-4 rounded-xl shadow-lg"
+                className="btn-primary bg-white text-purple-950 font-bold text-xs hover:bg-purple-50 py-2.5 px-4 rounded-xl shadow-lg cursor-pointer"
               >
                 + Upload Syllabus PDF
               </button>
@@ -595,7 +595,7 @@ export const Homework = () => {
                       </a>
                       <button
                         onClick={() => handleDeleteSyllabus(s._id)}
-                        className="text-xs text-red-500 hover:text-red-700 font-bold"
+                        className="text-xs text-red-500 hover:text-red-700 font-bold cursor-pointer"
                       >
                         🗑️
                       </button>
@@ -616,13 +616,13 @@ export const Homework = () => {
         {/* Upload Syllabus Modal */}
         {showSyllabusModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-            <form onSubmit={handleCreateSyllabus} className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-purple-100">
-              <div className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white p-5 flex justify-between items-center">
+            <form onSubmit={handleCreateSyllabus} className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-purple-100 max-h-[90vh] flex flex-col">
+              <div className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white p-5 flex justify-between items-center shrink-0">
                 <h3 className="font-display font-bold text-lg">📚 Upload Class Syllabus</h3>
-                <button type="button" onClick={() => setShowSyllabusModal(false)} className="text-white hover:text-purple-200 text-lg">✖</button>
+                <button type="button" onClick={() => setShowSyllabusModal(false)} className="text-white hover:text-purple-200 text-lg cursor-pointer">✖</button>
               </div>
 
-              <div className="p-6 space-y-4 text-left">
+              <div className="p-5 sm:p-6 space-y-4 text-left overflow-y-auto flex-1">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Target Class *</label>
                   <select value={sClass} onChange={e => setSClass(e.target.value)} className="input text-xs font-semibold">
@@ -693,9 +693,9 @@ export const Homework = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-6 pb-6 pt-2 border-t border-gray-100">
-                <button type="button" onClick={() => setShowSyllabusModal(false)} className="btn-outline text-xs">Cancel</button>
-                <button type="submit" disabled={savingSyllabus} className="btn-primary text-xs bg-purple-700 hover:bg-purple-800">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 px-5 sm:px-6 pb-5 sm:pb-6 pt-3 border-t border-gray-100 shrink-0">
+                <button type="button" onClick={() => setShowSyllabusModal(false)} className="btn-outline text-xs w-full sm:w-auto text-center cursor-pointer">Cancel</button>
+                <button type="submit" disabled={savingSyllabus} className="btn-primary text-xs bg-purple-700 hover:bg-purple-800 w-full sm:w-auto text-center cursor-pointer">
                   {savingSyllabus ? 'Uploading...' : '📤 Publish Syllabus'}
                 </button>
               </div>

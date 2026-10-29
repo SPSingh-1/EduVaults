@@ -224,12 +224,12 @@ const Support = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="table-th text-left">Ticket</th>
-                  <th className="table-th text-left">School</th>
-                  <th className="table-th text-left">Contact Info</th>
-                  <th className="table-th text-left">Details</th>
-                  <th className="table-th text-left">Status</th>
-                  <th className="table-th text-left">Priority</th>
+                  <th className="table-th text-left min-w-[120px]">Ticket</th>
+                  <th className="table-th text-left min-w-[120px]">School</th>
+                  <th className="table-th text-left min-w-[110px]">Contact Info</th>
+                  <th className="table-th text-left min-w-[150px]">Details</th>
+                  <th className="table-th text-left min-w-[110px]">Status</th>
+                  <th className="table-th text-left min-w-[80px]">Priority</th>
                 </tr>
               </thead>
               <tbody>

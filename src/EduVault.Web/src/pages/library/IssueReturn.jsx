@@ -194,43 +194,43 @@ const IssueReturn = () => {
 
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
         {/* Tab Switcher Bar */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-2 bg-slate-100/80 p-1.5 rounded-2xl">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-100/80 p-1.5 rounded-2xl overflow-x-auto">
             <button
               onClick={() => setActiveTab('issue')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black transition flex items-center gap-2 ${
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-black transition flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'issue'
                   ? 'bg-cyan-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <BookMarked className="w-4 h-4" />
+              <BookMarked className="w-4 h-4 shrink-0" />
               Issue Book to Member
             </button>
             <button
               onClick={() => setActiveTab('return')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black transition flex items-center gap-2 ${
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-black transition flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'return'
                   ? 'bg-cyan-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <RotateCcw className="w-4 h-4" />
-              Return & Check-in ({activeLoans.length} Active Loans)
+              <RotateCcw className="w-4 h-4 shrink-0" />
+              Return ({activeLoans.length})
             </button>
           </div>
 
           {/* Barcode Continuous Scan Mode Toggle */}
           <button
             onClick={() => setBarcodeMode(!barcodeMode)}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
               barcodeMode
                 ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400/40 animate-pulse'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
             }`}
           >
-            <Scan className="w-4 h-4" />
-            <span>{barcodeMode ? '⚡ Continuous Scan Mode: ACTIVE' : 'Enable Barcode Scan Mode'}</span>
+            <Scan className="w-4 h-4 shrink-0" />
+            <span>{barcodeMode ? '⚡ Scan Mode: ACTIVE' : 'Enable Barcode Scan Mode'}</span>
           </button>
         </div>
 
@@ -311,7 +311,7 @@ const IssueReturn = () => {
 
         {/* TAB 1: ISSUE BOOK */}
         {activeTab === 'issue' && (
-          <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm max-w-2xl mx-auto space-y-6 text-left">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-slate-200/80 shadow-sm max-w-2xl mx-auto space-y-6 text-left">
             <div className="border-b border-slate-100 pb-4">
               <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
                 <BookMarked className="w-5 h-5 text-cyan-600" />
@@ -409,7 +409,7 @@ const IssueReturn = () => {
                 <p className="text-xs text-slate-400 mt-0.5">Process book return and collect overdue fines</p>
               </div>
 
-              <div className="relative min-w-[280px]">
+              <div className="relative w-full sm:w-auto sm:min-w-[280px]">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"

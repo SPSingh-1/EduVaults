@@ -36,9 +36,9 @@ const ReceptionistLayout = () => {
     : receptionistLinks;
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen w-full max-w-full min-w-0 overflow-x-clip">
       <Sidebar links={finalLinks} role="receptionist" />
-      <main className="main-content flex-1">
+      <main className="main-content flex-1 min-w-0 max-w-full">
         <Outlet />
       </main>
     </div>

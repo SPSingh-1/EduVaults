@@ -1319,7 +1319,7 @@ export default function AdmissionForm() {
             </div>
 
             {/* Category, Blood Group & Religion */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">{t.category}</label>
                 <select
@@ -1541,7 +1541,7 @@ export default function AdmissionForm() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">{t.city}</label>
                 <input
@@ -1575,7 +1575,7 @@ export default function AdmissionForm() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">{t.state}</label>
                 <input
@@ -1638,7 +1638,7 @@ export default function AdmissionForm() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">{t.prevBoard}</label>
                 <select
@@ -1666,7 +1666,7 @@ export default function AdmissionForm() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">{t.tcNumber}</label>
                 <input
@@ -1690,7 +1690,7 @@ export default function AdmissionForm() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">{t.motherTongue}</label>
                 <input
@@ -1719,7 +1719,7 @@ export default function AdmissionForm() {
         {/* ── STEP 5: MEDICAL & EMERGENCY ── */}
         {currentStep === 5 && (
           <div className="space-y-4 animate-in fade-in">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">{t.heightCm}</label>
                 <input
@@ -1830,7 +1830,7 @@ export default function AdmissionForm() {
               </div>
               <p className="text-[11px] text-slate-400">{t.reviewSubtitle}</p>
 
-              <div className="grid grid-cols-2 gap-2 text-slate-300">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300">
                 <div>
                   <span className="text-slate-500">{t.studentLabel}</span>{' '}
                   <strong className="text-white">
@@ -1856,7 +1856,7 @@ export default function AdmissionForm() {
                   <span className="text-slate-500">{t.phoneLabel}</span>{' '}
                   <strong className="text-emerald-400">{formData.fatherPhone}</strong>
                 </div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <span className="text-slate-500">{t.addressLabel}</span>{' '}
                   <strong className="text-white">
                     {formData.houseNo ? `${formData.houseNo}, ` : ''}
@@ -1865,7 +1865,7 @@ export default function AdmissionForm() {
                   </strong>
                 </div>
                 {formData.previousSchoolName && (
-                  <div className="col-span-2">
+                  <div className="sm:col-span-2">
                     <span className="text-slate-500">{t.prevSchoolLabel}</span>{' '}
                     <strong className="text-white">
                       {formData.previousSchoolName} ({formData.previousClassStudied || 'N/A'})

@@ -331,23 +331,25 @@ export default function DataImport() {
         title="Data Import Hub"
         subtitle="Intelligent Multi-Entity Data Onboarding, UDISE+ / Fedena Migration & Automated CSV Ingestion"
         actions={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => {
                 setActiveSchemaTab(selectedType || 'students');
                 setShowSchemaGuideModal(true);
               }}
-              className="px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 transition"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 transition shrink-0"
             >
-              <FileText className="w-3.5 h-3.5 text-blue-600" />
-              📋 View CSV Format Guide
+              <FileText className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="hidden sm:inline">📋 View CSV Format Guide</span>
+              <span className="sm:hidden">Format Guide</span>
             </button>
             <button
               onClick={() => handleDownloadTemplate(selectedType)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition shrink-0"
             >
-              <Download className="w-3.5 h-3.5 text-blue-600" />
-              Download {importTypes.find(t => t.id === selectedType)?.label} Template
+              <Download className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="hidden sm:inline">Download {importTypes.find(t => t.id === selectedType)?.label} Template</span>
+              <span className="sm:hidden">Template</span>
             </button>
           </div>
         }
@@ -412,25 +414,25 @@ export default function DataImport() {
                     Pre-filled CSV templates with 20-25 records are ready for testing and demo purposes. View the format guide or download below:
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                   <button
                     type="button"
                     onClick={() => {
                       setActiveSchemaTab(selectedType || 'students');
                       setShowSchemaGuideModal(true);
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition shrink-0"
+                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition"
                   >
-                    <FileText className="w-3.5 h-3.5 text-amber-300" />
-                    CSV Format Specification
+                    <FileText className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                    <span>CSV Format Specification</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDownloadDemoCsv(selectedType)}
-                    className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition shrink-0 shadow-sm"
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-sm"
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    Download Current ({selectedType.toUpperCase()})
+                    <Download className="w-3.5 h-3.5 shrink-0" />
+                    <span>Download Current ({selectedType.toUpperCase()})</span>
                   </button>
                 </div>
               </div>
@@ -751,7 +753,7 @@ export default function DataImport() {
             Records have been validated and inserted into the active school system with multi-tenant isolation.
           </p>
 
-          <div className="grid grid-cols-3 gap-3 my-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
             <div>
               <div className="text-xs text-slate-400">Total Processed</div>
               <div className="text-xl font-bold text-slate-800">{importResult.totalProcessed}</div>
@@ -855,29 +857,29 @@ export default function DataImport() {
 
       {/* ── CSV FORMAT & SCHEMA SPECIFICATION MODAL ── */}
       {showSchemaGuideModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-in fade-in zoom-in-95">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white">
+            <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white">
               <div>
-                <h3 className="font-bold text-base text-amber-300 flex items-center gap-2">
-                  <FileSpreadsheet className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold text-sm sm:text-base text-amber-300 flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
                   CSV Format & Field Specification Guide
                 </h3>
-                <p className="text-xs text-slate-300 mt-0.5">
+                <p className="text-[11px] sm:text-xs text-slate-300 mt-0.5 line-clamp-1 sm:line-clamp-none">
                   School ERP me data import ke liye required column headers, accepted data formats aur rules.
                 </p>
               </div>
               <button
                 onClick={() => setShowSchemaGuideModal(false)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition shrink-0 ml-2"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Entity Tabs */}
-            <div className="px-6 pt-3 pb-2 bg-slate-50 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto">
+            <div className="px-4 sm:px-6 pt-2.5 pb-2 bg-slate-50 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
               {Object.keys(CSV_SCHEMAS).map(key => {
                 const schema = CSV_SCHEMAS[key];
                 const Icon = schema.icon;
@@ -905,11 +907,11 @@ export default function DataImport() {
 
             {/* Body */}
             {CSV_SCHEMAS[activeSchemaTab] && (
-              <div className="p-6 overflow-y-auto space-y-5">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5">
                 {/* Schema Header Summary */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-blue-50/70 border border-blue-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-xl bg-blue-50/70 border border-blue-100">
                   <div>
-                    <h4 className="font-bold text-sm text-blue-900 flex items-center gap-2">
+                    <h4 className="font-bold text-sm text-blue-900 flex flex-wrap items-center gap-1.5 sm:gap-2">
                       <span>{CSV_SCHEMAS[activeSchemaTab].title}</span>
                       <span className="px-2 py-0.5 rounded-full text-xxs font-bold bg-blue-200 text-blue-800">
                         {CSV_SCHEMAS[activeSchemaTab].fields.filter(f => f.required).length} Required Fields
@@ -925,7 +927,7 @@ export default function DataImport() {
                   <button
                     type="button"
                     onClick={() => handleDownloadDemoCsv(activeSchemaTab)}
-                    className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 transition shrink-0 shadow-sm"
+                    className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm"
                   >
                     <Download className="w-3.5 h-3.5" /> Download Demo CSV
                   </button>
@@ -970,7 +972,7 @@ export default function DataImport() {
 
                 {/* Column Specification Table */}
                 <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full text-left text-xs min-w-[560px]">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold text-[11px]">
                         <th className="p-2.5 pl-3">Header Name</th>
@@ -1022,14 +1024,14 @@ export default function DataImport() {
             )}
 
             {/* Footer */}
-            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
+            <div className="px-4 sm:px-6 py-3 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+              <span className="text-[11px] sm:text-xs text-slate-500">
                 Need more help? Our smart AI column mapper can auto-detect fuzzy column names like "First Name" or "F_NAME".
               </span>
               <button
                 type="button"
                 onClick={() => setShowSchemaGuideModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition shrink-0"
               >
                 Close Guide
               </button>

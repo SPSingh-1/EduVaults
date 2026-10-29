@@ -288,12 +288,12 @@ const Tickets = () => {
       {/* Generate Ticket Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="bg-primary px-6 py-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[85vh] overflow-y-auto">
+            <div className="bg-primary px-4 sm:px-6 py-4">
               <h3 className="font-display font-bold text-white text-base">Generate Support Ticket</h3>
               <p className="text-blue-200 text-xs">Report data issues or software bugs to Super Admin.</p>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">Ticket Subject *</label>
                 <input
@@ -337,17 +337,17 @@ const Tickets = () => {
                 </select>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-4">
               <button
                 onClick={() => setShowModal(false)}
-                className="btn-outline text-xs py-1.5 px-3"
+                className="btn-outline text-xs py-2 px-3 text-center"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateTicket}
                 disabled={submitting}
-                className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                className="btn-primary text-xs py-2 px-3 flex items-center justify-center gap-1.5 text-center"
               >
                 {submitting ? 'Submitting...' : 'Create Ticket'}
               </button>

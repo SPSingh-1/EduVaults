@@ -289,7 +289,7 @@ const LeaveRequests = () => {
       {/* Reject Modal with note */}
       {rejectingId && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-6 space-y-4 text-left">
+          <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl p-4 sm:p-6 space-y-4 text-left">
             <h3 className="font-extrabold text-base text-slate-900">Reject Leave Application</h3>
             <p className="text-xs text-slate-500">Provide an optional reason for rejecting this leave request:</p>
             <textarea
@@ -299,11 +299,11 @@ const LeaveRequests = () => {
               rows={3}
               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:bg-white"
             />
-            <div className="flex justify-end gap-3 pt-2">
-              <button onClick={() => setRejectingId(null)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">Cancel</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
+              <button onClick={() => setRejectingId(null)} className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">Cancel</button>
               <button
                 onClick={() => handleUpdateStatus(rejectingId, 'Rejected', rejectionNote)}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase rounded-xl"
+                className="w-full sm:w-auto px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase rounded-xl"
               >
                 Confirm Rejection
               </button>

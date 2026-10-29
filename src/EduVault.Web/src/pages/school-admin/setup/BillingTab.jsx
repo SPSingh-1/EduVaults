@@ -388,8 +388,8 @@ export default function BillingTab() {
       {/* Upgrade Requirements Modal */}
       {showUpgradeRequirementsModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <form onSubmit={handleSubUpgradeRequirements} className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-primary px-6 py-5 text-white">
+          <form onSubmit={handleSubUpgradeRequirements} className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="bg-primary px-4 sm:px-6 py-4 sm:py-5 text-white">
               <h3 className="font-display font-bold text-base">
                 {upgradeRequirementsPlanType === 'Custom' ? '📝 Submit Modification Requirements' : '🚀 Request Enterprise Upgrade'}
               </h3>
@@ -400,14 +400,14 @@ export default function BillingTab() {
               </p>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-2">
                   Describe all your custom features, integration requirements, or modifications *
                 </label>
                 <textarea
                   required
-                  rows={6}
+                  rows={5}
                   value={upgradeRequirementsText}
                   onChange={e => setUpgradeRequirementsText(e.target.value)}
                   placeholder="e.g., We need integrations with our legacy biometric attendance devices, 2TB storage space, and customized student report card templates..."
@@ -422,19 +422,19 @@ export default function BillingTab() {
                 </span>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setShowUpgradeRequirementsModal(false)}
                   disabled={payingSub}
-                  className="btn-outline text-xs py-2"
+                  className="btn-outline text-xs py-2 text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={payingSub || !upgradeRequirementsText.trim()}
-                  className="btn-primary text-xs py-2 px-4"
+                  className="btn-primary text-xs py-2 px-4 text-center"
                 >
                   {payingSub ? 'Submitting...' : 'Submit Request'}
                 </button>

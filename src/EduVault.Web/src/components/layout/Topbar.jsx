@@ -56,27 +56,29 @@ const Topbar = ({ title, subtitle, actions }) => {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto">
-        {actions && <div className="flex items-center gap-1.5 sm:gap-2">{actions}</div>}
-        <button
-          onClick={handleBellClick}
-          className="relative w-9 h-9 flex items-center justify-center bg-white rounded-full border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 hover:shadow-2xs active:scale-95 transition-all duration-200 cursor-pointer select-none group shrink-0"
-          title="View Notifications"
-        >
-          <Bell className={`w-4.5 h-4.5 transition-colors duration-200 ${unreadCount > 0 ? 'text-amber-500 fill-amber-500/20' : 'text-gray-500 group-hover:text-primary'}`} />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-3.5 px-1 bg-red-500 text-white text-[8px] font-extrabold rounded-full flex items-center justify-center border-2 border-white shadow-[0_2px_6px_rgba(239,68,68,0.3)]">
-              {unreadCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={handleProfileClick}
-          className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm select-none shrink-0 cursor-pointer hover:brightness-110 active:scale-95 transition-all duration-200 border border-primary-light/10 shadow-2xs"
-          title="View Profile"
-        >
-          {user?.avatar || '?'}
-        </button>
+      <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto shrink-0">
+        {actions && <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">{actions}</div>}
+        <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
+          <button
+            onClick={handleBellClick}
+            className="relative w-9 h-9 flex items-center justify-center bg-white rounded-full border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 hover:shadow-2xs active:scale-95 transition-all duration-200 cursor-pointer select-none group shrink-0"
+            title="View Notifications"
+          >
+            <Bell className={`w-4.5 h-4.5 transition-colors duration-200 ${unreadCount > 0 ? 'text-amber-500 fill-amber-500/20' : 'text-gray-500 group-hover:text-primary'}`} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-3.5 px-1 bg-red-500 text-white text-[8px] font-extrabold rounded-full flex items-center justify-center border-2 border-white shadow-[0_2px_6px_rgba(239,68,68,0.3)]">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={handleProfileClick}
+            className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm select-none shrink-0 cursor-pointer hover:brightness-110 active:scale-95 transition-all duration-200 border border-primary-light/10 shadow-2xs"
+            title="View Profile"
+          >
+            {user?.avatar || '?'}
+          </button>
+        </div>
       </div>
     </div>
   );

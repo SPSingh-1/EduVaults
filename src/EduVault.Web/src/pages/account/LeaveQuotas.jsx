@@ -258,16 +258,16 @@ const LeaveQuotas = () => {
       {/* Edit Quota Modal */}
       {editingTeacher && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 text-left">
-            <div className="bg-gradient-to-r from-purple-900 to-indigo-900 px-6 py-5 text-white flex items-center justify-between">
+          <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-100 text-left">
+            <div className="bg-gradient-to-r from-purple-900 to-indigo-900 px-6 py-5 text-white flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-extrabold text-base">Edit Annual Leave Quota</h3>
                 <p className="text-xs text-purple-200 mt-0.5">{editingTeacher.teacherName} ({selectedYear})</p>
               </div>
               <button onClick={() => setEditingTeacher(null)} className="text-white/80 hover:text-white">✕</button>
             </div>
-            <form onSubmit={handleUpdate} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleUpdate} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-2xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Casual Leave (CL)</label>
                   <input
@@ -314,9 +314,9 @@ const LeaveQuotas = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setEditingTeacher(null)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">Cancel</button>
-                <button type="submit" className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase rounded-xl">Update Allotment</button>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-slate-100">
+                <button type="button" onClick={() => setEditingTeacher(null)} className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" className="w-full sm:w-auto px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase rounded-xl">Update Allotment</button>
               </div>
             </form>
           </div>

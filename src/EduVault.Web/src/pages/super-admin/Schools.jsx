@@ -518,44 +518,44 @@ const Schools = () => {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="bg-primary px-6 py-5 rounded-t-2xl">
-              <h3 className="font-display font-bold text-white text-lg">Register New School</h3>
-              <p className="text-blue-200 text-sm">Enter the required information to onboard a new educational institution.</p>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className="bg-primary px-4 sm:px-6 py-4 sm:py-5 rounded-t-2xl shrink-0">
+              <h3 className="font-display font-bold text-white text-base sm:text-lg">Register New School</h3>
+              <p className="text-blue-200 text-xs sm:text-sm">Enter the required information to onboard a new educational institution.</p>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               {error && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{error}</div>}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">School Name *</label>
-                <input value={form.schoolName} onChange={e => setForm(p => ({ ...p, schoolName: e.target.value }))} placeholder="e.g. Greenwood Academy" className="input" />
+                <input value={form.schoolName} onChange={e => setForm(p => ({ ...p, schoolName: e.target.value }))} placeholder="e.g. Greenwood Academy" className="input text-xs sm:text-sm" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Address *</label>
-                  <input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="Street address" className="input" />
+                  <input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="Street address" className="input text-xs sm:text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">City / State *</label>
-                  <input value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} placeholder="City, State" className="input" />
+                  <input value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} placeholder="City, State" className="input text-xs sm:text-sm" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">School Email Domain *</label>
-                  <input value={form.emailDomain} onChange={e => setForm(p => ({ ...p, emailDomain: e.target.value }))} placeholder="e.g. greenwood.edu" className="input" />
+                  <input value={form.emailDomain} onChange={e => setForm(p => ({ ...p, emailDomain: e.target.value }))} placeholder="e.g. greenwood.edu" className="input text-xs sm:text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Website</label>
-                  <input value={form.website} onChange={e => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://www.school.edu" className="input" />
+                  <input value={form.website} onChange={e => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://www.school.edu" className="input text-xs sm:text-sm" />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Admin Full Name *</label>
-                  <input value={form.adminName} onChange={e => setForm(p => ({ ...p, adminName: e.target.value }))} placeholder="e.g. Dr. Jenkins" className="input" />
+                  <input value={form.adminName} onChange={e => setForm(p => ({ ...p, adminName: e.target.value }))} placeholder="e.g. Dr. Jenkins" className="input text-xs sm:text-sm" />
                 </div>
-                <div className="col-span-1">
+                <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Admin Email *</label>
                   <input 
                     type="email" 
@@ -576,18 +576,18 @@ const Schools = () => {
                       });
                     }} 
                     placeholder="admin@school.edu" 
-                    className="input" 
+                    className="input text-xs sm:text-sm" 
                   />
                 </div>
-                <div className="col-span-1">
+                <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Admin Password *</label>
-                  <input type="password" value={form.adminPassword} onChange={e => setForm(p => ({ ...p, adminPassword: e.target.value }))} placeholder="••••••••" className="input" />
+                  <input type="password" value={form.adminPassword} onChange={e => setForm(p => ({ ...p, adminPassword: e.target.value }))} placeholder="••••••••" className="input text-xs sm:text-sm" />
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
-              <button onClick={() => setShowModal(false)} className="btn-outline">Cancel</button>
-              <button onClick={handleAdd} disabled={loading} className="btn-primary flex items-center gap-1.5">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-3 shrink-0">
+              <button onClick={() => setShowModal(false)} className="btn-outline w-full sm:w-auto text-center">Cancel</button>
+              <button onClick={handleAdd} disabled={loading} className="btn-primary flex items-center justify-center gap-1.5 w-full sm:w-auto text-center">
                 {loading ? 'Registering...' : '✓ Register School'}
               </button>
             </div>
@@ -596,25 +596,28 @@ const Schools = () => {
       )}
 
       {activatingSchool && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden text-left">
-            <div className="bg-primary px-6 py-5">
-              <h3 className="font-display font-bold text-white text-lg">Generate Credentials</h3>
-              <p className="text-blue-200 text-xs mt-0.5">Activate {activatingSchool.name} and configure their admin credentials.</p>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden text-left max-h-[90vh] flex flex-col">
+            <div className="bg-primary px-4 sm:px-6 py-4 sm:py-5 shrink-0 flex justify-between items-center">
+              <div>
+                <h3 className="font-display font-bold text-white text-base sm:text-lg">Generate Credentials</h3>
+                <p className="text-blue-200 text-2xs sm:text-xs mt-0.5">Activate {activatingSchool.name} and configure admin credentials.</p>
+              </div>
+              <button onClick={() => setActivatingSchool(null)} className="text-white hover:text-blue-100 text-lg">✖</button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5 font-sans">Admin Email * (For login)</label>
-                <input type="email" value={actEmail} onChange={e => setActEmail(e.target.value)} placeholder="admin@school.com" className="input text-black font-sans" />
+                <input type="email" value={actEmail} onChange={e => setActEmail(e.target.value)} placeholder="admin@school.com" className="input text-black font-sans text-xs sm:text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5 font-sans">Admin Password *</label>
-                <input type="password" value={actPassword} onChange={e => setActPassword(e.target.value)} placeholder="Minimum 6 characters" className="input text-black font-sans" />
+                <input type="password" value={actPassword} onChange={e => setActPassword(e.target.value)} placeholder="Minimum 6 characters" className="input text-black font-sans text-xs sm:text-sm" />
               </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setActivatingSchool(null)} className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-4 py-2 rounded-xl transition-all font-sans">Cancel</button>
-                <button onClick={confirmActivation} className="btn-primary text-xs px-4 py-2 rounded-xl font-sans">Activate & Save Credentials</button>
-              </div>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-3 shrink-0">
+              <button onClick={() => setActivatingSchool(null)} className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-4 py-2.5 rounded-xl transition-all font-sans w-full sm:w-auto text-center">Cancel</button>
+              <button onClick={confirmActivation} className="btn-primary text-xs px-4 py-2.5 rounded-xl font-sans w-full sm:w-auto text-center">Activate & Save Credentials</button>
             </div>
           </div>
         </div>
@@ -674,7 +677,7 @@ const Schools = () => {
               </div>
 
               {/* Form Layout */}
-              <div className="grid grid-cols-2 gap-4 font-sans">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-sans">
                 
                 {/* School Name */}
                 <div className="col-span-2">
@@ -787,7 +790,7 @@ const Schools = () => {
                 </div>
 
                 {/* Read-Only Stats */}
-                <div className="col-span-2 grid grid-cols-3 gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 text-center mt-1">
+                <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 text-center mt-1">
                   <div>
                     <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Status</div>
                     <div className="text-xs font-bold text-primary mt-0.5">{selectedSchool.status}</div>
@@ -944,7 +947,7 @@ const Schools = () => {
                 {/* Administrator Contact Details */}
                 <div className="col-span-2 pt-2 border-t border-gray-100">
                   <h4 className="text-xs font-bold text-primary uppercase tracking-wide mb-3">Administrator Credentials</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 mb-1">Admin Full Name *</label>
                       {isEditing ? (
@@ -989,12 +992,12 @@ const Schools = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-between items-center px-6 pb-6 border-t border-gray-100 pt-4">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-3 shrink-0">
               <div>
                 {!isEditing ? (
                   <button 
                     onClick={() => setIsEditing(true)} 
-                    className="btn-outline flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 border-blue-200"
+                    className="btn-outline flex items-center justify-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 border-blue-200 w-full sm:w-auto"
                   >
                     <Edit className="w-3.5 h-3.5" />
                     <span>Edit Details</span>
@@ -1002,7 +1005,7 @@ const Schools = () => {
                 ) : (
                   <button 
                     onClick={() => setIsEditing(false)} 
-                    className="btn-outline text-xs"
+                    className="btn-outline text-xs w-full sm:w-auto text-center"
                   >
                     Cancel
                   </button>
@@ -1013,7 +1016,7 @@ const Schools = () => {
                   <button 
                     onClick={handleUpdate} 
                     disabled={editLoading}
-                    className="btn-primary flex items-center gap-1.5 text-xs"
+                    className="btn-primary flex items-center justify-center gap-1.5 text-xs w-full sm:w-auto"
                   >
                     {editLoading ? 'Saving...' : (
                       <>
@@ -1025,7 +1028,7 @@ const Schools = () => {
                 ) : (
                   <button 
                     onClick={() => setSelectedSchool(null)} 
-                    className="btn-primary text-xs"
+                    className="btn-primary text-xs w-full sm:w-auto"
                   >
                     Close
                   </button>

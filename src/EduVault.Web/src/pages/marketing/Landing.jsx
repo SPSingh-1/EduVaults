@@ -325,7 +325,7 @@ const Landing = () => {
         <div className="bg-white/10 backdrop-blur rounded-2xl p-4 sm:p-6 border border-white/20">
           <div className="bg-primary rounded-xl p-4 mb-3 border border-white/10">
             <div className="text-xs text-blue-300 mb-2">Today's Overview</div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { k: 'Total Revenue', comp: <CountUp to={stats.totalRevenue} prefix="Rs. " /> },
                 { k: 'Active Schools', comp: <CountUp to={stats.totalSchools} /> },
@@ -512,7 +512,7 @@ const Landing = () => {
             <div className="bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20">
               <h3 className="font-display font-semibold text-lg text-accent mb-4">Send a Message</h3>
               <form onSubmit={handleInquirySubmit} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input required aria-label="Your Name" placeholder="Your Name" value={inquiryForm.name} onChange={e => setInquiryForm(p => ({ ...p, name: e.target.value }))} className="w-full text-xs bg-slate-900/60 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-accent" />
                   <input aria-label="Your Phone (10 Digits)" placeholder="Your Phone (10 Digits)" maxLength={10} pattern="[0-9]{10}" value={inquiryForm.phone || ''} onChange={e => setInquiryForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} className="w-full text-xs bg-slate-900/60 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-accent font-mono" />
                 </div>
@@ -593,7 +593,7 @@ const Landing = () => {
                     <input required id="school-name" value={form.schoolName} onChange={e => setForm(p => ({ ...p, schoolName: e.target.value }))} placeholder="Greenwood High School" className="w-full text-xs bg-slate-800/80 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-accent" />
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="school-address" className="block text-xs font-semibold text-blue-200 mb-1">Address *</label>
                       <input required id="school-address" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="123 Education Lane" className="w-full text-xs bg-slate-800/80 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-accent" />

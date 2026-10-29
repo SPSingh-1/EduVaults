@@ -561,7 +561,7 @@ const Teachers = () => {
 
         {activeTab === 'directory' && (
           <>
-            <div className="grid grid-cols-3 gap-4 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
               {[{ l: 'Total Teachers', v: teachers.length.toString(), s: `${schoolName} Staff` }].map(s => (
                 <div key={s.l} className="bg-gray-50 rounded-xl p-4">
                   <div className="text-xs text-gray-500 mb-1">{s.l}</div>
@@ -676,20 +676,20 @@ const Teachers = () => {
         {activeTab === 'attendance' && (
           <div>
             {/* Teacher Selection Bar */}
-            <div className="card mb-6 bg-gradient-to-r from-slate-900 via-primary to-slate-900 p-5 text-white flex flex-wrap items-center justify-between gap-4 shadow-lg rounded-2xl">
+            <div className="card mb-6 bg-gradient-to-r from-slate-900 via-primary to-slate-900 p-4 sm:p-5 text-white flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-lg rounded-2xl">
               <div>
-                <h3 className="font-display font-bold text-lg flex items-center gap-2">
+                <h3 className="font-display font-bold text-base sm:text-lg flex items-center gap-2">
                   👨‍🏫 Teacher Attendance Inspection Portal
                 </h3>
                 <p className="text-xs text-blue-200 mt-0.5">Select a faculty member from the directory to inspect their GPS punch-ins, working hours, and monthly attendance calendar.</p>
               </div>
 
-              <div className="flex items-center gap-3 min-w-[280px]">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <label className="text-xs font-bold text-white uppercase whitespace-nowrap">Select Teacher:</label>
                 <select
                   value={selectedInspectionTeacherId}
                   onChange={e => setSelectedInspectionTeacherId(e.target.value)}
-                  className="input bg-white text-slate-900 text-xs font-bold py-2 px-3 rounded-xl shadow-md border-0 focus:ring-2 focus:ring-blue-400"
+                  className="input bg-white text-slate-900 text-xs font-bold py-2 px-3 rounded-xl shadow-md border-0 focus:ring-2 focus:ring-blue-400 w-full sm:w-auto"
                 >
                   <option value="">— Select Teacher —</option>
                   {teachers.map(t => (
@@ -793,53 +793,57 @@ const Teachers = () => {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-xs font-bold uppercase tracking-wider">
-                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                            <div key={d} className={`py-2 ${d === 'Sun' ? 'text-rose-500 font-extrabold' : 'text-gray-400'}`}>{d}</div>
-                          ))}
-                        </div>
+                        <div className="overflow-x-auto">
+                          <div className="min-w-[320px]">
+                            <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-xs font-bold uppercase tracking-wider">
+                              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                                <div key={d} className={`py-2 ${d === 'Sun' ? 'text-rose-500 font-extrabold' : 'text-gray-400'}`}>{d}</div>
+                              ))}
+                            </div>
 
-                        <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                          {calendarDays.map(item => {
-                            if (item.padding) {
-                              return <div key={item.key} className="h-16 bg-gray-50/30 rounded-xl border border-dashed border-gray-100" />;
-                            }
-                            const hasRecord = !!item.record;
+                            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                              {calendarDays.map(item => {
+                                if (item.padding) {
+                                  return <div key={item.key} className="h-16 bg-gray-50/30 rounded-xl border border-dashed border-gray-100" />;
+                                }
+                                const hasRecord = !!item.record;
 
-                            if (item.isSunday && !hasRecord) {
-                              return (
-                                <div
-                                  key={item.key}
-                                  className="h-16 rounded-xl border border-rose-200/80 bg-rose-50/40 flex flex-col justify-between p-2 text-left relative text-rose-700 shadow-3xs"
-                                >
-                                  <span className="text-xs font-bold text-rose-600">{item.day}</span>
-                                  <span className="text-[8px] sm:text-[9px] font-extrabold uppercase leading-none text-rose-500">
-                                    Sunday Off
-                                  </span>
-                                </div>
-                              );
-                            }
+                                if (item.isSunday && !hasRecord) {
+                                  return (
+                                    <div
+                                      key={item.key}
+                                      className="h-16 rounded-xl border border-rose-200/80 bg-rose-50/40 flex flex-col justify-between p-2 text-left relative text-rose-700 shadow-3xs"
+                                    >
+                                      <span className="text-xs font-bold text-rose-600">{item.day}</span>
+                                      <span className="text-[8px] sm:text-[9px] font-extrabold uppercase leading-none text-rose-500">
+                                        Sunday Off
+                                      </span>
+                                    </div>
+                                  );
+                                }
 
-                            return (
-                              <button
-                                key={item.key}
-                                type="button"
-                                onClick={() => item.record && setSelectedInspectionDayRecord(item.record)}
-                                className={`h-16 rounded-xl border flex flex-col justify-between p-2 text-left relative transition-all ${
-                                  hasRecord
-                                    ? getStatusBadgeColor(item.record.status)
-                                    : 'border-gray-100 hover:bg-gray-50 text-gray-600'
-                                }`}
-                              >
-                                <span className="text-xs font-bold">{item.day}</span>
-                                {hasRecord && (
-                                  <span className="text-[9px] font-extrabold uppercase leading-none opacity-95 truncate max-w-full">
-                                    {item.record.status}
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
+                                return (
+                                  <button
+                                    key={item.key}
+                                    type="button"
+                                    onClick={() => item.record && setSelectedInspectionDayRecord(item.record)}
+                                    className={`h-16 rounded-xl border flex flex-col justify-between p-2 text-left relative transition-all ${
+                                      hasRecord
+                                        ? getStatusBadgeColor(item.record.status)
+                                        : 'border-gray-100 hover:bg-gray-50 text-gray-600'
+                                    }`}
+                                  >
+                                    <span className="text-xs font-bold">{item.day}</span>
+                                    {hasRecord && (
+                                      <span className="text-[9px] font-extrabold uppercase leading-none opacity-95 truncate max-w-full">
+                                        {item.record.status}
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -1196,8 +1200,8 @@ const Teachers = () => {
                     <div>
                       <h4 className="font-semibold text-primary text-xs uppercase mb-2">⚠️ Skipped Records (Duplicates: {importResult.duplicates.length})</h4>
                       <p className="text-[11px] text-gray-400 mb-2">The following email addresses already exist in the database:</p>
-                      <div className="border border-amber-100 rounded-xl overflow-hidden text-xs max-h-40 overflow-y-auto">
-                        <table className="w-full text-left bg-amber-50/20">
+                      <div className="border border-amber-100 rounded-xl overflow-x-auto overflow-y-auto text-xs max-h-40">
+                        <table className="w-full text-left bg-amber-50/20 min-w-[360px]">
                           <thead>
                             <tr className="bg-amber-50 text-amber-800 border-b border-amber-100">
                               <th className="p-2 font-bold text-[10px]">Teacher</th>

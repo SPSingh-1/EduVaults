@@ -83,7 +83,8 @@
   }
 
   .main-content {
-    @apply ml-0 lg:ml-64 min-h-screen p-4 lg:p-6 transition-all duration-300 min-w-0;
+    @apply ml-0 lg:ml-64 min-h-screen p-3 sm:p-4 lg:p-6 transition-all duration-300 min-w-0 max-w-full;
+    overflow-x: clip;
   }
 
   /* stat-card: responsive padding — smaller on mobile */
@@ -197,11 +198,13 @@
   border-radius: 3px;
 }
 
-.scrollbar-none::-webkit-scrollbar {
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
-.scrollbar-none {
+.scrollbar-none,
+.no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
@@ -278,11 +281,5 @@
     padding-top: inherit !important;
     padding-left: inherit !important;
     width: inherit !important;
-  }
-
-  /* Prevent squishing of wide calendar and timetable grids on mobile by enabling horizontal scrolling */
-  .grid-cols-5,
-  .grid-cols-6 {
-    min-width: 650px !important;
   }
 }

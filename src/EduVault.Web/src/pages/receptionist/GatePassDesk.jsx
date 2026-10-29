@@ -256,8 +256,8 @@ const GatePassDesk = () => {
       {/* Issue Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-scale-up">
-            <div className="bg-primary px-6 py-5 rounded-t-2xl flex justify-between items-center text-white">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-scale-up">
+            <div className="bg-primary px-6 py-5 rounded-t-2xl flex justify-between items-center text-white shrink-0">
               <div>
                 <h3 className="font-display font-bold text-lg">Issue Early Departure Pass</h3>
                 <p className="text-blue-200 text-xs">Generates verified security slip for main gate</p>
@@ -265,7 +265,7 @@ const GatePassDesk = () => {
               <button onClick={() => setShowModal(false)} className="text-white hover:text-blue-200 text-lg">✖</button>
             </div>
 
-            <form onSubmit={handleIssueGatePass} className="p-6 space-y-4">
+            <form onSubmit={handleIssueGatePass} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1">
               {/* Student Lookup */}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">Select Student *</label>
@@ -319,7 +319,7 @@ const GatePassDesk = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Accompanying Person *</label>
                   <input
@@ -360,11 +360,11 @@ const GatePassDesk = () => {
                 </select>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-outline text-xs px-4 py-2">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-100">
+                <button type="button" onClick={() => setShowModal(false)} className="btn-outline w-full sm:w-auto text-xs px-4 py-2">
                   Cancel
                 </button>
-                <button type="submit" disabled={submitting || !selectedStudent} className="btn-primary text-xs px-5 py-2">
+                <button type="submit" disabled={submitting || !selectedStudent} className="btn-primary w-full sm:w-auto text-xs px-5 py-2">
                   {submitting ? 'Generating...' : 'Authorize & Issue Pass'}
                 </button>
               </div>
@@ -376,7 +376,7 @@ const GatePassDesk = () => {
       {/* Printable Slip */}
       {printablePass && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4 text-center">
+          <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl p-6 space-y-4 text-center">
             <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto text-xl font-bold">
               🚪
             </div>

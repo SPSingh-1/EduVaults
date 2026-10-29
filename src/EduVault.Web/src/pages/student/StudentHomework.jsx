@@ -134,15 +134,15 @@ export const StudentHomework = () => {
       <Topbar title="My Homework Assignments" subtitle="Academic Tasks › Homework" />
       <div className="card">
         <p className="text-xs text-gray-400 mb-4">Complete and submit your tasks before their due dates with attached solution files (PDF / Image).</p>
-        <div className="overflow-hidden border border-slate-100/80 rounded-xl bg-white shadow-3xs">
+        <div className="overflow-x-auto border border-slate-100/80 rounded-xl bg-white shadow-3xs">
           <table className="w-full border-collapse">
             <thead className="bg-slate-50/50">
               <tr className="border-b border-slate-150">
-                <th className="table-th text-left">Assignment Details</th>
-                <th className="table-th text-left">Instructions & Attachments</th>
-                <th className="table-th text-center">Due Date</th>
-                <th className="table-th text-center">Status</th>
-                <th className="table-th text-center">Action</th>
+                <th className="table-th text-left min-w-[140px]">Assignment Details</th>
+                <th className="table-th text-left min-w-[180px]">Instructions & Attachments</th>
+                <th className="table-th text-center min-w-[100px]">Due Date</th>
+                <th className="table-th text-center min-w-[80px]">Status</th>
+                <th className="table-th text-center min-w-[110px]">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -187,7 +187,7 @@ export const StudentHomework = () => {
                       ) : (
                         <button
                           onClick={() => setSelectedHomework(h)}
-                          className="btn-primary text-2xs py-1.5 px-3 rounded-lg hover:scale-[1.03] active:scale-[0.97] transition-all cursor-pointer"
+                          className="btn-primary text-2xs py-1.5 px-3 rounded-lg hover:scale-[1.03] active:scale-[0.97] transition-all cursor-pointer whitespace-nowrap"
                         >
                           📤 Submit Assignment PDF
                         </button>
@@ -208,25 +208,25 @@ export const StudentHomework = () => {
 
       {/* Submission Modal */}
       {selectedHomework && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transform transition-all">
-            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col transform transition-all">
+            <div className="bg-primary px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center text-white shrink-0">
               <div>
-                <h3 className="font-display font-bold text-base">📤 Submit Homework Assignment</h3>
-                <p className="text-blue-200 text-xxs">Attach your completed assignment PDF or Image solution.</p>
+                <h3 className="font-display font-bold text-sm sm:text-base">📤 Submit Homework Assignment</h3>
+                <p className="text-blue-200 text-2xs">Attach your completed assignment PDF or Image solution.</p>
               </div>
               {!submitSuccess && (
                 <button
                   type="button"
                   onClick={() => setSelectedHomework(null)}
-                  className="text-white hover:text-blue-200 text-lg transition-colors"
+                  className="text-white hover:text-blue-200 text-lg transition-colors shrink-0"
                 >
                   ✖
                 </button>
               )}
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
               {submitSuccess ? (
                 <div className="text-center py-6 space-y-3 animate-fadeIn">
                   <div className="w-16 h-16 bg-green-50 text-green-600 border border-green-200 rounded-full flex items-center justify-center text-3xl font-bold mx-auto animate-bounce">
@@ -295,12 +295,12 @@ export const StudentHomework = () => {
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                  <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 pt-3 border-t border-gray-100">
                     <button
                       type="button"
                       disabled={submittingId === selectedHomework._id}
                       onClick={() => setSelectedHomework(null)}
-                      className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-500 font-semibold text-xs hover:bg-gray-50 transition-all"
+                      className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-500 font-semibold text-xs hover:bg-gray-50 transition-all w-full sm:w-auto text-center"
                     >
                       Cancel
                     </button>
@@ -308,7 +308,7 @@ export const StudentHomework = () => {
                       type="button"
                       disabled={submittingId === selectedHomework._id}
                       onClick={() => handleSubmitHomework(selectedHomework._id)}
-                      className="btn-primary text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-1.5 shadow-md shadow-primary/10 hover:shadow-lg transition-all"
+                      className="btn-primary text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-primary/10 hover:shadow-lg transition-all w-full sm:w-auto"
                     >
                       {submittingId === selectedHomework._id ? (
                         <>

@@ -239,7 +239,7 @@ export const TeacherStudents = () => {
             )}
           </div>
 
-          <select className="input w-48 text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+          <select className="input w-full sm:w-48 text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
             <option value="">All My Classes</option>
             {classes.map(c => (
               <option key={c.id} value={c.id}>{formatClassLabel(c.grade, c.section)}</option>
@@ -369,23 +369,23 @@ export const TeacherStudents = () => {
 
       {/* Student Details Modal */}
       {showViewModal && viewStudent && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden text-sm">
-            <div className="bg-primary p-5 text-white flex justify-between items-center">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden text-sm max-h-[90vh] flex flex-col">
+            <div className="bg-primary p-4 sm:p-5 text-white flex justify-between items-center shrink-0">
               <div>
                 <h4 className="font-bold text-base">{viewStudent.name}</h4>
                 <p className="text-blue-200 text-2xs">Student ID: {viewStudent.studentId}</p>
               </div>
               <button onClick={() => setShowViewModal(false)} className="text-white hover:text-blue-100 text-lg">✖</button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
               <div className="flex justify-between py-1.5 border-b border-gray-50">
                 <span className="text-xs text-gray-400 uppercase font-semibold">Class section</span>
                 <span className="font-bold text-primary">{viewStudent.class} - {viewStudent.section}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-gray-50">
                 <span className="text-xs text-gray-400 uppercase font-semibold">Email address</span>
-                <span className="font-medium text-gray-600">{viewStudent.email}</span>
+                <span className="font-medium text-gray-600 truncate max-w-[180px]">{viewStudent.email}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-gray-50">
                 <span className="text-xs text-gray-400 uppercase font-semibold">Guardian name</span>
@@ -398,8 +398,8 @@ export const TeacherStudents = () => {
                 </div>
               )}
             </div>
-            <div className="flex justify-end p-5 bg-gray-50 border-t border-gray-100">
-              <button onClick={() => setShowViewModal(false)} className="btn-primary text-xs py-1.5 px-4">Close Roster</button>
+            <div className="flex justify-end p-4 sm:p-5 bg-gray-50 border-t border-gray-100 shrink-0">
+              <button onClick={() => setShowViewModal(false)} className="btn-primary text-xs py-2 px-4 w-full sm:w-auto">Close Roster</button>
             </div>
           </div>
         </div>
@@ -407,13 +407,13 @@ export const TeacherStudents = () => {
 
       {/* Feedback Remark Modal */}
       {showRemarkModal && viewStudent && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleSaveRemark} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="font-display font-bold text-primary text-lg">Add Feedback for {viewStudent.name}</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 sm:p-4">
+          <form onSubmit={handleSaveRemark} className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center shrink-0">
+              <h3 className="font-display font-bold text-primary text-base sm:text-lg">Add Feedback for {viewStudent.name}</h3>
               <button type="button" onClick={() => setShowRemarkModal(false)} className="text-gray-400 hover:text-primary">✖</button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-2">Feedback Tone Tag</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -447,9 +447,9 @@ export const TeacherStudents = () => {
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
-              <button type="button" onClick={() => setShowRemarkModal(false)} className="btn-outline text-xs">Cancel</button>
-              <button type="submit" disabled={savingRemark} className="btn-primary text-xs">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 px-4 sm:px-6 pb-4 sm:pb-6 pt-2 shrink-0 border-t border-gray-100">
+              <button type="button" onClick={() => setShowRemarkModal(false)} className="btn-outline text-xs w-full sm:w-auto">Cancel</button>
+              <button type="submit" disabled={savingRemark} className="btn-primary text-xs w-full sm:w-auto">
                 {savingRemark ? 'Saving feedback...' : 'Save Feedback'}
               </button>
             </div>
@@ -459,16 +459,16 @@ export const TeacherStudents = () => {
 
       {/* Teacher Student Password Reset Modal */}
       {showResetPassModal && resetStudentObj && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50/50 via-white to-white">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-gray-100 overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50/50 via-white to-white shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-lg">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-lg shrink-0">
                   🔑
                 </div>
                 <div>
-                  <h3 className="font-display font-bold text-primary text-base">Reset Student Password</h3>
-                  <p className="text-xs text-gray-500">Teacher classroom credential assist</p>
+                  <h3 className="font-display font-bold text-primary text-sm sm:text-base">Reset Student Password</h3>
+                  <p className="text-2xs sm:text-xs text-gray-500">Teacher classroom credential assist</p>
                 </div>
               </div>
               <button 
@@ -479,10 +479,10 @@ export const TeacherStudents = () => {
               </button>
             </div>
 
-            <form onSubmit={handleExecuteResetPass} className="p-6 space-y-4">
+            <form onSubmit={handleExecuteResetPass} className="p-4 sm:p-6 space-y-4 overflow-y-auto">
               <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
                 <div className="font-bold text-sm text-slate-800">{resetStudentObj.name}</div>
-                <div className="text-xs text-slate-500 flex items-center gap-3">
+                <div className="text-xs text-slate-500 flex items-center gap-3 flex-wrap">
                   <span>Class: <strong>{resetStudentObj.class} - {resetStudentObj.section}</strong></span>
                   <span>ID: <strong className="font-mono">{resetStudentObj.studentId}</strong></span>
                 </div>
@@ -537,7 +537,7 @@ export const TeacherStudents = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-2xs text-gray-400 font-semibold uppercase tracking-wider">Quick Preset:</span>
                     <button
                       type="button"
@@ -550,11 +550,11 @@ export const TeacherStudents = () => {
                 </>
               )}
 
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-3 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setShowResetPassModal(false)}
-                  className="btn-outline text-xs px-4 py-2"
+                  className="btn-outline text-xs px-4 py-2 w-full sm:w-auto text-center"
                 >
                   {resetPassSuccess ? 'Close' : 'Cancel'}
                 </button>
@@ -562,7 +562,7 @@ export const TeacherStudents = () => {
                   <button
                     type="submit"
                     disabled={resetPassLoading || !newStudentPassword}
-                    className="btn-primary text-xs px-4 py-2 bg-blue-600 hover:bg-blue-700 flex items-center gap-1.5 shadow-sm"
+                    className="btn-primary text-xs px-4 py-2 bg-blue-600 hover:bg-blue-700 flex items-center justify-center gap-1.5 shadow-sm w-full sm:w-auto"
                   >
                     <span>{resetPassLoading ? 'Updating...' : '🔑 Update Password'}</span>
                   </button>

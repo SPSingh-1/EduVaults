@@ -584,7 +584,7 @@ const Students = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2 shrink-0 w-full xl:w-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0 w-full xl:w-auto">
             {/* Class Filter Dropdown */}
             <select className="input w-full text-xs sm:text-sm" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
               <option value="">Class All</option>
@@ -809,7 +809,7 @@ const Students = () => {
                   <h4 className="font-semibold text-primary text-xs uppercase mb-3 tracking-wide flex items-center gap-1.5">
                     <span>🏫 Previous School & Inward TC Record</span>
                   </h4>
-                  <div className="grid grid-cols-2 gap-3 bg-blue-50/50 p-3.5 rounded-xl border border-blue-100 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-blue-50/50 p-3.5 rounded-xl border border-blue-100 text-xs">
                     <div>
                       <div className="text-gray-400 font-semibold mb-0.5">Previous School</div>
                       <div className="font-semibold text-primary">{viewStudentData.previousSchoolName || 'N/A'}</div>
@@ -989,7 +989,7 @@ const Students = () => {
                   <span>🏫 Previous School & Inward TC (Optional)</span>
                 </h4>
                 <p className="text-xs text-gray-400 mb-3">Fill this if the student has transferred from another institution with a Transfer Certificate.</p>
-                <div className="grid grid-cols-2 gap-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Previous School Name</label>
                     <input value={form.previousSchoolName} onChange={e => setForm(f => ({ ...f, previousSchoolName: e.target.value }))} placeholder="e.g. St. Xavier High School" className="input bg-white" />
@@ -1157,8 +1157,8 @@ const Students = () => {
                     <div>
                       <h4 className="font-semibold text-primary text-xs uppercase mb-2">⚠️ Skipped Records (Duplicates: {importResult.duplicates.length})</h4>
                       <p className="text-[11px] text-gray-400 mb-2">The following student entries already exist with identical names and guardian phone details:</p>
-                      <div className="border border-amber-100 rounded-xl overflow-hidden text-xs max-h-40 overflow-y-auto">
-                        <table className="w-full text-left bg-amber-50/20">
+                      <div className="border border-amber-100 rounded-xl overflow-x-auto overflow-y-auto text-xs max-h-40">
+                        <table className="w-full text-left bg-amber-50/20 min-w-[300px]">
                           <thead>
                             <tr className="bg-amber-50 text-amber-800 border-b border-amber-100">
                               <th className="p-2 font-bold text-[10px]">Student Name</th>
@@ -1256,7 +1256,7 @@ const Students = () => {
                       <span>Date of Issue: <strong className="text-gray-900">{tcSuccessResult.issuedDate}</strong></span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 text-xs">
                       <div>
                         <span className="text-gray-400 font-semibold block">1. Name of Pupil:</span>
                         <strong className="text-primary text-sm">{tcSuccessResult.student?.name}</strong>
@@ -1421,7 +1421,7 @@ const Students = () => {
                       <div className="pt-2 border-t border-gray-100 space-y-3">
                         <h4 className="text-xs font-bold text-primary uppercase tracking-wide">TC Certificate Details</h4>
                         
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Reason for Leaving *</label>
                             <input 
@@ -1507,8 +1507,8 @@ const Students = () => {
       {/* Student Password Reset Modal */}
       {showResetPassModal && resetStudentObj && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50/50 via-white to-white">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+            <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50/50 via-white to-white shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-lg shadow-xs">
                   🔑
@@ -1522,13 +1522,13 @@ const Students = () => {
               </div>
               <button 
                 onClick={() => setShowResetPassModal(false)}
-                className="w-8 h-8 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleExecuteResetPass} className="p-6 space-y-4">
+            <form onSubmit={handleExecuteResetPass} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
               {/* Student Summary Banner */}
               <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
                 <div className="font-bold text-sm text-slate-800">{resetStudentObj.name}</div>
@@ -1549,7 +1549,7 @@ const Students = () => {
                     <button
                       type="button"
                       onClick={() => navigator.clipboard.writeText(newStudentPassword)}
-                      className="text-emerald-700 hover:underline text-2xs font-bold"
+                      className="text-emerald-700 hover:underline text-2xs font-bold cursor-pointer"
                     >
                       Copy
                     </button>
@@ -1582,7 +1582,7 @@ const Students = () => {
                       <button 
                         type="button" 
                         onClick={() => setShowPasswordText(!showPasswordText)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm cursor-pointer"
                       >
                         {showPasswordText ? '🙈' : '👁'}
                       </button>
@@ -1590,12 +1590,12 @@ const Students = () => {
                   </div>
 
                   {/* Quick Preset Buttons */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-2xs text-gray-400 font-semibold uppercase tracking-wider">Quick Preset:</span>
                     <button
                       type="button"
                       onClick={() => setNewStudentPassword(generateStudentPassword())}
-                      className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors border border-slate-200"
+                      className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors border border-slate-200 cursor-pointer"
                     >
                       🎲 Generate New PIN
                     </button>
@@ -1603,11 +1603,11 @@ const Students = () => {
                 </>
               )}
 
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-gray-100 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowResetPassModal(false)}
-                  className="btn-outline text-xs px-4 py-2"
+                  className="btn-outline text-xs px-4 py-2 w-full sm:w-auto text-center cursor-pointer"
                 >
                   {resetPassSuccess ? 'Close' : 'Cancel'}
                 </button>
@@ -1615,7 +1615,7 @@ const Students = () => {
                   <button
                     type="submit"
                     disabled={resetPassLoading || !newStudentPassword}
-                    className="btn-primary text-xs px-4 py-2 bg-blue-600 hover:bg-blue-700 flex items-center gap-1.5 shadow-sm"
+                    className="btn-primary text-xs px-4 py-2 bg-blue-600 hover:bg-blue-700 flex items-center justify-center gap-1.5 shadow-sm w-full sm:w-auto text-center cursor-pointer"
                   >
                     <span>{resetPassLoading ? 'Updating...' : '🔑 Update Password'}</span>
                   </button>

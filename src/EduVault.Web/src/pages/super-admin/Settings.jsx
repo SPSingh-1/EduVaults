@@ -671,7 +671,7 @@ const Settings = () => {
               </div>
             </div>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">School Name</label>
                   <input value={schoolName} onChange={e => setSchoolName(e.target.value)} className="input" />
@@ -877,7 +877,7 @@ const Settings = () => {
             <button onClick={triggerManualBackup} className="btn-outline text-xs py-1">Manual Backup</button>
           </div>
           <p className="text-xs text-gray-400 mb-4">Automated system and database backups</p>
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">Frequency</label>
               <select 
@@ -986,8 +986,8 @@ const Settings = () => {
       {/* Payment Credentials Modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleSavePaymentCreds} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="p-6 text-left">
+          <form onSubmit={handleSavePaymentCreds} className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-4 sm:p-6 text-left overflow-y-auto flex-1">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="font-display font-bold text-primary text-xl">💳 Payment Integration</h3>
                 <button type="button" onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
@@ -1160,9 +1160,9 @@ const Settings = () => {
                 )}
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
-              <button type="button" onClick={() => setShowPaymentModal(false)} className="btn-outline">Cancel</button>
-              <button type="submit" className="btn-primary">Save Settings</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-3 sm:pt-4 shrink-0">
+              <button type="button" onClick={() => setShowPaymentModal(false)} className="btn-outline w-full sm:w-auto">Cancel</button>
+              <button type="submit" className="btn-primary w-full sm:w-auto">Save Settings</button>
             </div>
           </form>
         </div>
@@ -1171,8 +1171,8 @@ const Settings = () => {
       {/* WhatsApp Credentials Modal */}
       {showWhatsAppModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleSaveWhatsAppCreds} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="p-6 text-left">
+          <form onSubmit={handleSaveWhatsAppCreds} className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-4 sm:p-6 text-left overflow-y-auto flex-1">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="font-display font-bold text-primary text-xl">💬 WhatsApp Integration</h3>
                 <button type="button" onClick={() => setShowWhatsAppModal(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
@@ -1329,9 +1329,9 @@ const Settings = () => {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
-              <button type="button" onClick={() => setShowWhatsAppModal(false)} className="btn-outline">Cancel</button>
-              <button type="submit" className="btn-primary">Save Settings</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-3 sm:pt-4 shrink-0">
+              <button type="button" onClick={() => setShowWhatsAppModal(false)} className="btn-outline w-full sm:w-auto">Cancel</button>
+              <button type="submit" className="btn-primary w-full sm:w-auto">Save Settings</button>
             </div>
           </form>
         </div>

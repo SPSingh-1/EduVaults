@@ -329,7 +329,7 @@ const BookCatalog = () => {
               </h3>
               <button onClick={() => setShowAddModal(false)} className="text-white/80 hover:text-white">✕</button>
             </div>
-            <form onSubmit={handleSaveBook} className="p-6 space-y-4">
+            <form onSubmit={handleSaveBook} className="p-4 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto">
               <div>
                 <label className="block text-2xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Book Title *</label>
                 <input
@@ -342,7 +342,7 @@ const BookCatalog = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-2xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Author *</label>
                   <input
@@ -366,7 +366,7 @@ const BookCatalog = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-2xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">ISBN Number</label>
                   <input
@@ -411,9 +411,9 @@ const BookCatalog = () => {
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">Cancel</button>
-                <button type="submit" className="px-5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-black uppercase rounded-xl">Save Book</button>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-slate-100">
+                <button type="button" onClick={() => setShowAddModal(false)} className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" className="w-full sm:w-auto px-5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-black uppercase rounded-xl">Save Book</button>
               </div>
             </form>
           </div>
@@ -423,8 +423,8 @@ const BookCatalog = () => {
       {/* Bulk CSV Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 text-left">
-            <div className="bg-gradient-to-r from-cyan-900 to-teal-900 px-6 py-5 text-white flex items-center justify-between">
+          <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-100 text-left">
+            <div className="bg-gradient-to-r from-cyan-900 to-teal-900 px-6 py-5 text-white flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-extrabold text-base flex items-center gap-2">
                   <Upload className="w-5 h-5 text-cyan-300" />
@@ -435,11 +435,11 @@ const BookCatalog = () => {
               <button onClick={() => setShowImportModal(false)} className="text-white/80 hover:text-white">✕</button>
             </div>
 
-            <form onSubmit={handleImportCsv} className="p-6 space-y-5">
+            <form onSubmit={handleImportCsv} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
               {/* Template Download Prompt */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+              <div className="p-3 sm:p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <FileText className="w-5 h-5 text-cyan-600" />
+                  <FileText className="w-5 h-5 text-cyan-600 shrink-0" />
                   <div>
                     <span className="font-bold text-xs text-slate-900 block">Sample CSV Template</span>
                     <span className="text-3xs text-slate-400">Contains required headers: ISBN, Title, Author...</span>
@@ -448,7 +448,7 @@ const BookCatalog = () => {
                 <a
                   href="/book-import-template.csv"
                   download="book-import-template.csv"
-                  className="px-3 py-1.5 bg-white border border-slate-200 hover:border-cyan-500 text-cyan-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-2xs"
+                  className="px-3 py-1.5 bg-white border border-slate-200 hover:border-cyan-500 text-cyan-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-2xs shrink-0"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Download .csv
@@ -485,12 +485,12 @@ const BookCatalog = () => {
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setShowImportModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">Close</button>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-slate-100">
+                <button type="button" onClick={() => setShowImportModal(false)} className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">Close</button>
                 <button
                   type="submit"
                   disabled={importing || !importFile}
-                  className="px-5 py-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white text-xs font-black uppercase rounded-xl shadow-md transition disabled:opacity-50"
+                  className="w-full sm:w-auto px-5 py-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white text-xs font-black uppercase rounded-xl shadow-md transition disabled:opacity-50"
                 >
                   {importing ? 'Importing CSV...' : 'Upload & Import'}
                 </button>

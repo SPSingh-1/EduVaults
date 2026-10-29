@@ -242,7 +242,7 @@ export const StudentExams = () => {
               <h2 className="text-2xl font-black font-display tracking-tight mb-1">
                 {nextExam.subject} ({nextExam.subjectCode})
               </h2>
-              <p className="text-blue-200 text-xs font-medium flex items-center gap-4">
+              <p className="text-blue-200 text-xs font-medium flex flex-wrap items-center gap-x-4 gap-y-1">
                 <span>📅 {nextExam.date}</span>
                 <span>⏱️ {nextExam.time}</span>
                 <span>🚪 Room: {profile?.room || 'Assigned Classroom'}</span>
@@ -267,7 +267,7 @@ export const StudentExams = () => {
 
             <div className="space-y-4">
               {upcomingExams.map(exam => (
-                <div key={exam.id} className="p-4 bg-gray-50 hover:bg-gray-50/50 border border-gray-100 rounded-xl flex items-start justify-between gap-4 transition-all">
+                <div key={exam.id} className="p-4 bg-gray-50 hover:bg-gray-50/50 border border-gray-100 rounded-xl flex flex-col sm:flex-row sm:items-start justify-between gap-3 transition-all">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-primary bg-primary/5 px-2 py-0.5 rounded">
@@ -285,7 +285,7 @@ export const StudentExams = () => {
                       <span className="flex items-center gap-1">👨‍🏫 Proctor: {exam.proctor}</span>
                     </div>
                   </div>
-                  <div className="text-right space-y-1">
+                  <div className="text-left sm:text-right space-y-1 shrink-0">
                     <div className="text-sm font-bold text-primary">{exam.date}</div>
                     <div className="text-[10px] font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full inline-block">
                       {getDaysRemaining(exam.rawDate || exam.RawDate)}
@@ -306,14 +306,14 @@ export const StudentExams = () => {
             <h3 className="font-display font-bold text-gray-500 text-sm mb-4">
               📚 Past & Cancelled Exams
             </h3>
-            <div className="overflow-hidden border border-slate-100/80 rounded-xl bg-white shadow-3xs">
+            <div className="overflow-x-auto border border-slate-100/80 rounded-xl bg-white shadow-3xs">
               <table className="w-full border-collapse">
                 <thead className="bg-slate-50/50">
                   <tr className="border-b border-slate-150">
-                    <th className="table-th text-left py-2">Subject</th>
-                    <th className="table-th text-left py-2">Exam Cycle</th>
-                    <th className="table-th text-center py-2">Date & Time</th>
-                    <th className="table-th text-center py-2">Status</th>
+                    <th className="table-th text-left py-2 min-w-[130px]">Subject</th>
+                    <th className="table-th text-left py-2 min-w-[100px]">Exam Cycle</th>
+                    <th className="table-th text-center py-2 min-w-[110px]">Date & Time</th>
+                    <th className="table-th text-center py-2 min-w-[80px]">Status</th>
                   </tr>
                 </thead>
                 <tbody>

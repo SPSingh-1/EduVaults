@@ -165,9 +165,9 @@ export const TeacherClasses = () => {
   return (
     <div>
       <Topbar title="My Assigned Classes" subtitle="Manage schedules, remarks, and cancellations" />
-      <div className="grid grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Class List Selector */}
-          <div className="space-y-3">
+          <div className="col-span-1 space-y-3">
             <h3 className="font-display font-bold text-xs uppercase tracking-wider text-primary/60 mb-2">Class Sections Taught</h3>
             {classes.map(c => (
               <button
@@ -183,7 +183,7 @@ export const TeacherClasses = () => {
           </div>
 
           {/* Timetable Grid Schedule */}
-          <div className="col-span-3 card">
+          <div className="col-span-1 lg:col-span-3 card">
             <h3 className="font-display font-semibold text-primary text-base mb-4">
               📅 Timetable Schedule: {formatClassLabel(selectedClass?.grade, selectedClass?.section)}
             </h3>
@@ -220,7 +220,7 @@ export const TeacherClasses = () => {
                                 <div className="text-xs font-bold text-primary leading-tight">{cell.subjectName}</div>
                                 <div className="text-[10px] text-gray-400 mt-0.5">{cell.teacherName}</div>
                                 {cell.remark && (
-                                  <div
+                                   <div
                                     title={cell.remark}
                                     className={`text-[10px] leading-snug font-medium mt-1.5 p-1 px-2 rounded-md border cursor-help transition-all ${isCancelled
                                         ? 'text-red-700 bg-red-50 border-red-100'
@@ -277,7 +277,7 @@ export const TeacherClasses = () => {
       {/* Remark Modal */}
       {showRemarkModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleSaveRemark} className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
+          <form onSubmit={handleSaveRemark} className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto">
             <h3 className="font-display font-bold text-primary text-base mb-3">Add Schedule Remark</h3>
             <textarea
               required
@@ -286,9 +286,9 @@ export const TeacherClasses = () => {
               placeholder="e.g. Read Chapter 4 / Homework discussion..."
               className="input h-24 resize-none mb-4"
             />
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowRemarkModal(false)} className="btn-outline text-xs">Cancel</button>
-              <button type="submit" className="btn-primary text-xs">Save Remark</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
+              <button type="button" onClick={() => setShowRemarkModal(false)} className="btn-outline text-xs text-center">Cancel</button>
+              <button type="submit" className="btn-primary text-xs text-center">Save Remark</button>
             </div>
           </form>
         </div>
@@ -297,7 +297,7 @@ export const TeacherClasses = () => {
       {/* Cancel Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleCancelClass} className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
+          <form onSubmit={handleCancelClass} className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto">
             <h3 className="font-display font-bold text-primary text-base mb-2">Cancel Timetable Class</h3>
             <p className="text-xs text-gray-400 mb-3">State the cancellation reason which will be visible to students.</p>
             <input
@@ -307,9 +307,9 @@ export const TeacherClasses = () => {
               placeholder="e.g. Teacher Medical Leave / Holiday"
               className="input mb-4"
             />
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowCancelModal(false)} className="btn-outline text-xs">Cancel</button>
-              <button type="submit" className="btn-primary text-xs bg-red-600 hover:bg-red-700">Cancel Class</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
+              <button type="button" onClick={() => setShowCancelModal(false)} className="btn-outline text-xs text-center">Cancel</button>
+              <button type="submit" className="btn-primary text-xs bg-red-600 hover:bg-red-700 text-center">Cancel Class</button>
             </div>
           </form>
         </div>

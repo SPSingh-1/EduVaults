@@ -492,25 +492,30 @@ const Exams = () => {
         title="Exams & Assessment Center"
         subtitle="Manage exam schedules, result approvals, and grade reporting"
         actions={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setShowAiExamModal(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+              className="px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition shrink-0"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>AI Date-Sheet & Invigilator Scheduler</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+              <span className="hidden sm:inline">AI Date-Sheet & Invigilator Scheduler</span>
+              <span className="sm:hidden">AI Schedule</span>
             </button>
             <button
               onClick={() => setActiveTab('Grade Configuration')}
-              className="btn-outline text-xs flex items-center gap-1.5"
+              className="btn-outline text-xs flex items-center gap-1 px-2 sm:px-3 py-1.5 shrink-0"
             >
-              ⚙ Grade Config
+              <span>⚙</span>
+              <span className="hidden sm:inline">Grade Config</span>
+              <span className="sm:hidden">Grades</span>
             </button>
             <button
               onClick={() => setShowScheduleModal(true)}
-              className="btn-primary text-xs flex items-center gap-1.5"
+              className="btn-primary text-xs flex items-center gap-1 px-2.5 sm:px-3 py-1.5 shrink-0"
             >
-              <Plus className="w-4 h-4" /> Schedule Assessment
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Schedule Assessment</span>
+              <span className="sm:hidden">Schedule</span>
             </button>
           </div>
         }
@@ -554,12 +559,12 @@ const Exams = () => {
 
       {/* Tab Navigation */}
       <div className="card mb-6">
-        <div className="flex gap-4 border-b border-gray-100 mb-5">
+        <div className="flex gap-3 sm:gap-4 border-b border-gray-100 mb-5 overflow-x-auto scrollbar-none whitespace-nowrap">
           {['Exam Schedule', 'Result Approvals', 'Grade Configuration'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-3 text-sm font-medium flex items-center gap-1.5 transition-all relative ${
+              className={`pb-3 text-sm font-medium flex items-center gap-1.5 transition-all relative shrink-0 ${
                 activeTab === tab
                   ? 'text-primary border-b-2 border-primary font-semibold'
                   : 'text-gray-500 hover:text-primary'
@@ -884,7 +889,7 @@ const Exams = () => {
                             </div>
 
                             {/* Dual action buttons */}
-                            <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3 border-t border-gray-100">
                               <button
                                 onClick={() => {
                                   setSelectedCycle(cycle.cycleName);
@@ -940,7 +945,7 @@ const Exams = () => {
                     </div>
 
                     {/* Sub-tab switcher: Routine vs Students */}
-                    <div className="flex gap-2 border-b border-gray-200 mb-5">
+                    <div className="flex overflow-x-auto whitespace-nowrap gap-2 border-b border-gray-200 mb-5 no-scrollbar">
                       <button
                         onClick={() => setCycleTab('routine')}
                         className={`pb-3 px-3 text-xs font-bold flex items-center gap-2 border-b-2 transition-all ${
@@ -1331,9 +1336,9 @@ const Exams = () => {
       {/* Schedule Assessment Modal */}
       {showScheduleModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <h3 className="font-display font-bold text-primary text-lg">Schedule New Assessment</h3>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between p-4 sm:p-6 pb-4 border-b border-gray-100 shrink-0">
+              <h3 className="font-display font-bold text-primary text-base sm:text-lg">Schedule New Assessment</h3>
               <button
                 onClick={() => setShowScheduleModal(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -1342,8 +1347,8 @@ const Exams = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateExam} className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleCreateExam} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Target Class *</label>
                   <select
@@ -1377,7 +1382,7 @@ const Exams = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Assessment Date *</label>
                   <input
@@ -1407,7 +1412,7 @@ const Exams = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Time Window</label>
                   <input
@@ -1434,7 +1439,7 @@ const Exams = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Total Marks</label>
                   <input
@@ -1455,18 +1460,18 @@ const Exams = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setShowScheduleModal(false)}
-                  className="btn-outline text-xs py-2 px-4"
+                  className="btn-outline w-full sm:w-auto text-xs py-2 px-4"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="btn-primary text-xs py-2 px-5"
+                  className="btn-primary w-full sm:w-auto text-xs py-2 px-5"
                 >
                   {submitting ? 'Scheduling...' : 'Save Assessment'}
                 </button>
@@ -1478,29 +1483,29 @@ const Exams = () => {
 
       {/* ── AI EXAMINATION DATE-SHEET & INVIGILATOR SCHEDULER MODAL ── */}
       {showAiExamModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-in fade-in zoom-in-95">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-purple-900 via-indigo-950 to-slate-900 text-white">
+            <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-purple-900 via-indigo-950 to-slate-900 text-white">
               <div>
-                <h3 className="font-bold text-base text-amber-300 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold text-sm sm:text-base text-amber-300 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
                   AI Exam Date-Sheet & Invigilation Scheduler
                 </h3>
-                <p className="text-xs text-slate-300 mt-0.5">
+                <p className="text-[11px] sm:text-xs text-slate-300 mt-0.5 line-clamp-1 sm:line-clamp-none">
                   Automated conflict-free date-sheet generation with study gap days (Sundays excluded) and balanced faculty duty allocation.
                 </p>
               </div>
               <button
                 onClick={() => setShowAiExamModal(false)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition shrink-0 ml-2"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Scrollable Body */}
-            <div className="p-6 overflow-y-auto space-y-6">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6">
               {/* Configuration Panel */}
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-4">
                 <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wide">
@@ -1634,8 +1639,8 @@ const Exams = () => {
                     </button>
                   </div>
 
-                  <div className="border border-slate-200 rounded-xl overflow-hidden max-h-72 overflow-y-auto">
-                    <table className="w-full text-left text-xs">
+                  <div className="border border-slate-200 rounded-xl overflow-x-auto max-h-72 overflow-y-auto">
+                    <table className="w-full text-left text-xs min-w-[580px]">
                       <thead className="sticky top-0 bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
                         <tr>
                           <th className="p-2.5 pl-3">Date & Day</th>
@@ -1683,11 +1688,11 @@ const Exams = () => {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+            <div className="px-4 sm:px-6 py-3 border-t border-slate-100 bg-slate-50 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
               <button
                 type="button"
                 onClick={() => setShowAiExamModal(false)}
-                className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-white text-slate-700 text-xs font-bold transition"
+                className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-white text-slate-700 text-xs font-bold transition text-center"
               >
                 Cancel
               </button>
@@ -1696,7 +1701,7 @@ const Exams = () => {
                 type="button"
                 onClick={handleSaveAiDateSheet}
                 disabled={aiGeneratedDateSheet.length === 0 || savingAiSchedule}
-                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:bg-slate-300 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-purple-600/20 transition"
+                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:bg-slate-300 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-purple-600/20 transition"
               >
                 {savingAiSchedule ? (
                   <>

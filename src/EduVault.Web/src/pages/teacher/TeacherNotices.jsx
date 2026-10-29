@@ -180,10 +180,10 @@ export const TeacherNotices = () => {
         <button onClick={() => setShowNew(true)} className="btn-primary">+ New Notice</button>
       } />
       
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="col-span-1 lg:col-span-2 space-y-4">
           {/* Filtering Tabs */}
-          <div className="flex border-b border-gray-100 mb-4 gap-4">
+          <div className="flex border-b border-gray-100 mb-4 gap-4 overflow-x-auto scrollbar-none pb-0.5">
             {[
               { id: 'all', label: 'All Announcements', icon: '📢' },
               { id: 'schooladmin', label: 'School Admin Notices', icon: '🏫' },
@@ -193,7 +193,7 @@ export const TeacherNotices = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveFilterTab(tab.id)}
-                className={`pb-2.5 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all ${
+                className={`pb-2.5 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 ${
                   activeFilterTab === tab.id
                     ? 'border-primary text-primary font-black'
                     : 'border-transparent text-gray-400 hover:text-gray-600'
@@ -207,13 +207,13 @@ export const TeacherNotices = () => {
 
           {filteredNotices.map((n, i) => (
             <div key={n._id || i} className={`card ${n.type === 'URGENT' ? 'border-l-4 border-red-500 shadow-md' : ''}`}>
-              <div className="flex items-start justify-between mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={n.type === 'URGENT' ? 'badge-danger' : n.type === 'EVENT' ? 'badge-info' : 'badge-gray'}>{n.type}</span>
                   <span className="badge badge-info">Audience: {n.recipientId === 'SCHOOLADMINS' ? 'Admins' : n.recipientId}</span>
-                  <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString()}</span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">📅 {new Date(n.createdAt).toLocaleDateString()}</span>
                 </div>
-                <span className="text-[10px] font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded">👤 {n.senderName || 'School System'} ({n.senderRole === 'schooladmin' ? 'Admin' : n.senderRole === 'teacher' ? 'Teacher' : n.senderRole})</span>
+                <span className="text-[10px] font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded whitespace-nowrap self-start sm:self-auto">👤 {n.senderName || 'School System'} ({n.senderRole === 'schooladmin' ? 'Admin' : n.senderRole === 'teacher' ? 'Teacher' : n.senderRole})</span>
               </div>
               <h3 className="font-display font-bold text-primary mb-1">{n.title}</h3>
               <p className="text-sm text-gray-500 mb-3">{n.body}</p>
@@ -258,8 +258,8 @@ export const TeacherNotices = () => {
 
       {showNew && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handlePostNotice} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="p-6 text-left">
+          <form onSubmit={handlePostNotice} className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-4 sm:p-6 text-left overflow-y-auto flex-1">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="font-display font-bold text-primary text-xl">Create New Notice</h3>
                 <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
@@ -295,9 +295,9 @@ export const TeacherNotices = () => {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
-              <button type="button" onClick={() => setShowNew(false)} className="btn-outline">Cancel</button>
-              <button type="submit" disabled={loading} className="btn-primary">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-3 sm:pt-4 shrink-0">
+              <button type="button" onClick={() => setShowNew(false)} className="btn-outline w-full sm:w-auto">Cancel</button>
+              <button type="submit" disabled={loading} className="btn-primary w-full sm:w-auto">
                 {loading ? 'Publishing...' : 'Publish Notice'}
               </button>
             </div>

@@ -569,7 +569,7 @@ export default function AiPlanner() {
       {/* ── PROMPT & CUSTOMIZATION MODAL ── */}
       {showPromptModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-4 sm:p-6 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-center">
@@ -583,7 +583,7 @@ export default function AiPlanner() {
             </div>
 
             <div className="mt-4 space-y-3.5">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Academic Year</label>
                   <input
@@ -623,11 +623,11 @@ export default function AiPlanner() {
                 </p>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowPromptModal(false)}
-                  className="btn-outline text-xs"
+                  className="btn-outline text-xs text-center"
                 >
                   Cancel
                 </button>
@@ -635,7 +635,7 @@ export default function AiPlanner() {
                   type="button"
                   onClick={handleGeneratePlan}
                   disabled={generating}
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-md shadow-blue-600/20"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-md shadow-blue-600/20"
                 >
                   {generating ? (
                     <>
@@ -656,7 +656,7 @@ export default function AiPlanner() {
       {/* ── ADD CUSTOM EVENT MODAL ── */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-4 sm:p-6 animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-base">Add Calendar Milestone</h3>
               <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -677,7 +677,7 @@ export default function AiPlanner() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Event Category</label>
                   <select
@@ -708,7 +708,7 @@ export default function AiPlanner() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Start Date *</label>
                   <input
@@ -741,15 +741,15 @@ export default function AiPlanner() {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="btn-outline text-xs"
+                  className="btn-outline text-xs text-center"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary text-xs">
+                <button type="submit" className="btn-primary text-xs text-center">
                   Save Milestone
                 </button>
               </div>
@@ -761,7 +761,7 @@ export default function AiPlanner() {
       {/* ── EDIT EVENT MODAL ── */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-4 sm:p-6 animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
@@ -786,7 +786,7 @@ export default function AiPlanner() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Event Category</label>
                   <select
@@ -817,7 +817,7 @@ export default function AiPlanner() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Start Date *</label>
                   <input
@@ -850,15 +850,15 @@ export default function AiPlanner() {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="btn-outline text-xs"
+                  className="btn-outline text-xs text-center"
                 >
                   Cancel
                 </button>
-                <button type="submit" disabled={savingEdit} className="btn-primary text-xs flex items-center gap-1.5">
+                <button type="submit" disabled={savingEdit} className="btn-primary text-xs flex items-center justify-center gap-1.5">
                   {savingEdit ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>

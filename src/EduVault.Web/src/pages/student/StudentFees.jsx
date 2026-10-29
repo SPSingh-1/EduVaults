@@ -173,9 +173,9 @@ export const StudentFees = () => {
   return (
     <div>
       {payModalInvoice && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-xl">
-            <h3 className="font-bold text-lg">Process Payment</h3>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-4 sm:p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
+            <h3 className="font-bold text-base sm:text-lg">Process Payment</h3>
             <div className="space-y-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" checked={payCustomMode === 'full'} onChange={() => setPayCustomMode('full')} />
@@ -189,9 +189,9 @@ export const StudentFees = () => {
                 <input type="number" value={payCustomAmount} onChange={(e) => setPayCustomAmount(e.target.value)} placeholder="Amount" className="w-full border rounded-lg p-2 text-sm" />
               )}
             </div>
-            <div className="flex gap-2 justify-end pt-4">
-              <button onClick={() => setPayModalInvoice(null)} className="px-4 py-2 text-sm font-semibold text-gray-500">Cancel</button>
-              <button onClick={handleConfirmStudentPay} className="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg">Confirm Payment</button>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end pt-4 border-t border-gray-100">
+              <button onClick={() => setPayModalInvoice(null)} className="px-4 py-2 text-sm font-semibold text-gray-500 w-full sm:w-auto text-center">Cancel</button>
+              <button onClick={handleConfirmStudentPay} className="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg w-full sm:w-auto text-center">Confirm Payment</button>
             </div>
           </div>
         </div>
@@ -227,7 +227,7 @@ export const StudentFees = () => {
           )}
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {[
           { l: 'Total Billed', v: `Rs. ${Number((pendingAmount || 0) + (totalPaid || 0)).toLocaleString()}`, c: 'text-primary' },
           { l: 'Total Paid', v: `Rs. ${Number(totalPaid || 0).toLocaleString()}`, c: 'text-emerald-600' },
@@ -241,18 +241,18 @@ export const StudentFees = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="card col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="card lg:col-span-2">
           <h3 className="font-display font-semibold text-primary mb-4">Pending & Recent Invoices</h3>
-          <div className="overflow-hidden border border-slate-100/80 rounded-xl bg-white shadow-3xs">
+          <div className="overflow-x-auto border border-slate-100/80 rounded-xl bg-white shadow-3xs">
             <table className="w-full border-collapse">
               <thead className="bg-slate-50/50">
                 <tr className="border-b border-slate-150">
-                  <th className="table-th text-left">Fee Description</th>
-                  <th className="table-th text-center">Due Date</th>
-                  <th className="table-th text-center">Amount</th>
-                  <th className="table-th text-center">Status</th>
-                  <th className="table-th text-center">Action</th>
+                  <th className="table-th text-left min-w-[140px]">Fee Description</th>
+                  <th className="table-th text-center min-w-[90px]">Due Date</th>
+                  <th className="table-th text-center min-w-[90px]">Amount</th>
+                  <th className="table-th text-center min-w-[80px]">Status</th>
+                  <th className="table-th text-center min-w-[80px]">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -304,16 +304,16 @@ export const StudentFees = () => {
       {/* Transaction History Section */}
       <div className="card mt-6">
         <h3 className="font-display font-semibold text-primary mb-4">📋 Payment Transaction History</h3>
-        <div className="overflow-hidden border border-slate-100/80 rounded-xl bg-white shadow-3xs">
+        <div className="overflow-x-auto border border-slate-100/80 rounded-xl bg-white shadow-3xs">
           <table className="w-full border-collapse">
             <thead className="bg-slate-50/50">
               <tr className="border-b border-slate-150">
-                <th className="table-th text-left">Reference Number</th>
-                <th className="table-th text-left">Fee Description</th>
-                <th className="table-th text-center">Date</th>
-                <th className="table-th text-center">Payment Method</th>
-                <th className="table-th text-center">Amount</th>
-                <th className="table-th text-center">Status</th>
+                <th className="table-th text-left min-w-[130px]">Reference Number</th>
+                <th className="table-th text-left min-w-[140px]">Fee Description</th>
+                <th className="table-th text-center min-w-[90px]">Date</th>
+                <th className="table-th text-center min-w-[110px]">Payment Method</th>
+                <th className="table-th text-center min-w-[90px]">Amount</th>
+                <th className="table-th text-center min-w-[80px]">Status</th>
               </tr>
             </thead>
             <tbody>

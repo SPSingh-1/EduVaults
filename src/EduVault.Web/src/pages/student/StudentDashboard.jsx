@@ -473,7 +473,7 @@ export const StudentDashboard = () => {
               <select
                 value={selectedExamType}
                 onChange={(e) => setSelectedExamType(e.target.value)}
-                className="pl-4 pr-10 py-2.5 text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-350 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer appearance-none min-w-[200px] w-full sm:w-auto"
+                className="pl-4 pr-10 py-2.5 text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-350 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer appearance-none w-full sm:w-auto sm:min-w-[200px]"
               >
                 {examTypes.map((et, i) => (
                   <option key={i} value={et}>
@@ -763,9 +763,9 @@ export const StudentDashboard = () => {
             `}} />
           )}
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-3xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
+          <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-3xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
             <div>
-              <h3 className="font-display font-bold text-primary text-lg mb-1 flex items-center gap-2">
+              <h3 className="font-display font-bold text-primary text-base sm:text-lg mb-1 flex items-center gap-2">
                 📜 Prior Grade Level Records
               </h3>
               <p className="text-gray-400 text-xs">
@@ -773,14 +773,14 @@ export const StudentDashboard = () => {
               </p>
             </div>
             {historyList.length > 0 && uniqueHistoryExamTypes.length > 0 && (
-              <div className="relative flex items-center w-full sm:w-auto gap-2.5">
+              <div className="relative flex flex-col sm:flex-row items-start sm:items-center w-full sm:w-auto gap-1.5 sm:gap-2.5">
                 <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Exam Type:</span>
                 <div className="relative flex items-center w-full sm:w-auto">
                   <BookOpen className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
                   <select
                     value={selectedHistoryExamType}
                     onChange={(e) => setSelectedHistoryExamType(e.target.value)}
-                    className="pl-9 pr-8 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-350 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all cursor-pointer appearance-none min-w-[200px] w-full sm:w-auto shadow-3xs"
+                    className="pl-9 pr-8 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-350 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all cursor-pointer appearance-none w-full sm:w-auto sm:min-w-[200px] shadow-3xs"
                   >
                     {uniqueHistoryExamTypes.map((et, i) => (
                       <option key={i} value={et}>
@@ -897,12 +897,12 @@ export const StudentDashboard = () => {
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                        <div className="text-left sm:text-right">
                           <div className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">GPA ({selectedHistoryExamType})</div>
                           <div className="font-semibold text-xs text-primary mt-0.5">GPA: {gpa}</div>
                         </div>
-                        <div className="border-l border-slate-200 pl-4">
+                        <div className="border-l border-slate-200 pl-3 sm:pl-4">
                           <div className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">RESULT STATUS</div>
                           <div className="mt-0.5">
                             {status.includes("Pass") || hist.finalResult?.includes("Pass") ? (

@@ -331,7 +331,7 @@ export const MarksEntry = () => {
       <Topbar title="Examination Management & Marks" subtitle="Curriculum assessment records and teacher question paper submissions" />
 
       {/* Subtabs Switcher */}
-      <div className="flex gap-2 border-b border-gray-200 pb-2">
+      <div className="flex overflow-x-auto whitespace-nowrap gap-2 border-b border-gray-200 pb-2 no-scrollbar">
         <button
           onClick={() => setMarksSubTab('marks')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
@@ -636,8 +636,8 @@ export const MarksEntry = () => {
       {/* Upload Question Paper Modal (Enforcing 3-Day Submission Policy) */}
       {uploadExamModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100">
-            <div className="bg-gradient-to-r from-primary to-primary/90 px-6 py-5 flex justify-between items-center text-white">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 max-h-[90vh] flex flex-col">
+            <div className="bg-gradient-to-r from-primary to-primary/90 px-5 sm:px-6 py-5 flex justify-between items-center text-white shrink-0">
               <div>
                 <h3 className="font-display font-extrabold text-base flex items-center gap-2">
                   <span>📄 Upload Exam Question Paper</span>
@@ -652,13 +652,13 @@ export const MarksEntry = () => {
                   setUploadExamModal(null);
                   setPaperUploadMsg({ error: '', success: '' });
                 }}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-bold transition text-sm"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-bold transition text-sm cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleUploadPaper} className="p-6 space-y-4">
+            <form onSubmit={handleUploadPaper} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
               {/* Deadline reminder banner */}
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 text-xs text-blue-900 space-y-1">
                 <div className="font-bold flex items-center justify-between">
@@ -732,21 +732,21 @@ export const MarksEntry = () => {
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-4 border-t border-slate-100 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     setUploadExamModal(null);
                     setPaperUploadMsg({ error: '', success: '' });
                   }}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition"
+                  className="px-4 py-2.5 sm:py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition w-full sm:w-auto text-center cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={uploadingPaper || (!paperUploadForm.fileUrl.trim() && !paperUploadForm.paperContent.trim())}
-                  className="px-5 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary/90 disabled:opacity-50 transition flex items-center gap-1.5 shadow-sm"
+                  className="px-5 py-2.5 sm:py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary/90 disabled:opacity-50 transition flex items-center justify-center gap-1.5 shadow-sm w-full sm:w-auto text-center cursor-pointer"
                 >
                   {uploadingPaper ? (
                     <>
@@ -766,8 +766,8 @@ export const MarksEntry = () => {
       {/* Enter Subject Mark Popup Modal */}
       {showMarksPopup && selectedStudentId && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-primary px-5 sm:px-6 py-5 flex justify-between items-center text-white shrink-0">
               <div>
                 <h3 className="font-display font-bold text-base">✏️ Enter Subject Mark</h3>
                 <p className="text-blue-200 text-xxs">
@@ -780,13 +780,13 @@ export const MarksEntry = () => {
                   setShowMarksPopup(false);
                   setPopupForm({ subjectId: '', theoryMarks: '', practicalMarks: '', remarks: '' });
                 }}
-                className="text-white hover:text-blue-200 text-lg"
+                className="text-white hover:text-blue-200 text-lg cursor-pointer"
               >
                 ✖
               </button>
             </div>
 
-            <form onSubmit={handleSavePopupMarks} className="p-6 space-y-4">
+            <form onSubmit={handleSavePopupMarks} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">Select Subject *</label>
                 <select
@@ -841,21 +841,21 @@ export const MarksEntry = () => {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-gray-100 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     setShowMarksPopup(false);
                     setPopupForm({ subjectId: '', theoryMarks: '', practicalMarks: '', remarks: '' });
                   }}
-                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-500 font-semibold text-xs hover:bg-gray-50 transition-all"
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-500 font-semibold text-xs hover:bg-gray-50 transition-all w-full sm:w-auto text-center cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingProgress || !popupForm.subjectId}
-                  className="btn-primary text-xs font-bold py-2.5 px-4 rounded-xl"
+                  className="btn-primary text-xs font-bold py-2.5 px-4 rounded-xl w-full sm:w-auto text-center cursor-pointer"
                 >
                   {savingProgress ? 'Saving...' : '💾 Save Marks'}
                 </button>

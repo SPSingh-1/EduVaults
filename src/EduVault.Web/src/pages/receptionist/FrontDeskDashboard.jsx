@@ -381,44 +381,44 @@ const FrontDeskDashboard = () => {
       )}
 
       {/* KPI Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="stat-card flex items-center gap-3.5 p-4">
-          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="stat-card flex items-center gap-3.5 p-3.5 sm:p-4">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
             <User className="w-5 h-5" />
           </div>
-          <div>
-            <div className="text-xl font-bold text-gray-900">{stats.todayPresent} / {stats.totalStudents}</div>
-            <div className="text-[11px] text-gray-500 font-medium">Students Present Today</div>
+          <div className="min-w-0">
+            <div className="text-lg sm:text-xl font-bold text-gray-900 truncate">{stats.todayPresent} / {stats.totalStudents}</div>
+            <div className="text-[11px] text-gray-500 font-medium truncate">Students Present Today</div>
           </div>
         </div>
 
-        <div className="stat-card flex items-center gap-3.5 p-4">
-          <div className="w-11 h-11 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center font-bold">
+        <div className="stat-card flex items-center gap-3.5 p-3.5 sm:p-4">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center font-bold shrink-0">
             <UserCheck className="w-5 h-5" />
           </div>
-          <div>
-            <div className="text-xl font-bold text-gray-900">{stats.todayVisitors} ({stats.activeVisitors} Active)</div>
-            <div className="text-[11px] text-gray-500 font-medium">Walk-in Visitors</div>
+          <div className="min-w-0">
+            <div className="text-lg sm:text-xl font-bold text-gray-900 truncate">{stats.todayVisitors} ({stats.activeVisitors} Active)</div>
+            <div className="text-[11px] text-gray-500 font-medium truncate">Walk-in Visitors</div>
           </div>
         </div>
 
-        <div className="stat-card flex items-center gap-3.5 p-4">
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+        <div className="stat-card flex items-center gap-3.5 p-3.5 sm:p-4">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
             <FileText className="w-5 h-5" />
           </div>
-          <div>
-            <div className="text-xl font-bold text-gray-900">{stats.todayGatePasses}</div>
-            <div className="text-[11px] text-gray-500 font-medium">Early Gate Passes</div>
+          <div className="min-w-0">
+            <div className="text-lg sm:text-xl font-bold text-gray-900 truncate">{stats.todayGatePasses}</div>
+            <div className="text-[11px] text-gray-500 font-medium truncate">Early Gate Passes</div>
           </div>
         </div>
 
-        <div className="stat-card flex items-center gap-3.5 p-4">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+        <div className="stat-card flex items-center gap-3.5 p-3.5 sm:p-4">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
             <UserPlus className="w-5 h-5" />
           </div>
-          <div>
-            <div className="text-xl font-bold text-gray-900">{stats.totalInquiries}</div>
-            <div className="text-[11px] text-gray-500 font-medium">Admission Inquiries</div>
+          <div className="min-w-0">
+            <div className="text-lg sm:text-xl font-bold text-gray-900 truncate">{stats.totalInquiries}</div>
+            <div className="text-[11px] text-gray-500 font-medium truncate">Admission Inquiries</div>
           </div>
         </div>
       </div>
@@ -599,7 +599,7 @@ const FrontDeskDashboard = () => {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div>
                       <div className="text-[11px] text-gray-400 font-semibold uppercase">Subject In Progress</div>
                       <div className="font-bold text-gray-900 text-sm mt-0.5 flex items-center gap-1.5">
@@ -686,7 +686,7 @@ const FrontDeskDashboard = () => {
             ) : feeSummary ? (
               <div className="space-y-4">
                 {/* 3 Metrics Box */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 text-center">
                     <div className="text-[11px] text-gray-500 font-semibold">Total Fees</div>
                     <div className="text-base font-bold text-gray-900 mt-0.5 font-mono">₹{Number(feeSummary.totalFees || 0).toLocaleString()}</div>
@@ -932,8 +932,8 @@ const FrontDeskDashboard = () => {
       {/* Modal: Spot Fee Payment Collection */}
       {showPaymentModal && selectedInvoice && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-scale-up">
-            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-scale-up">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white shrink-0">
               <div>
                 <h3 className="font-display font-bold text-base flex items-center gap-2">
                   <DollarSign className="w-5 h-5" />
@@ -945,7 +945,7 @@ const FrontDeskDashboard = () => {
             </div>
 
             {paymentSuccessReceipt ? (
-              <div className="p-6 space-y-4 text-center">
+              <div className="p-4 sm:p-6 space-y-4 text-center overflow-y-auto flex-1">
                 <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
@@ -969,7 +969,7 @@ const FrontDeskDashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-2 justify-center pt-2">
+                <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
                   <button
                     onClick={() => {
                       const fallback = `
@@ -1001,7 +1001,7 @@ const FrontDeskDashboard = () => {
                       `;
                       printRenderedDocument('FeeReceipt', paymentSuccessReceipt?.transactionId || paymentSuccessReceipt?.referenceNumber || '', fallback);
                     }}
-                    className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5"
+                    className="btn-primary text-xs px-4 py-2 flex items-center justify-center gap-1.5"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     <span>Print Thermal Slip</span>
@@ -1013,7 +1013,7 @@ const FrontDeskDashboard = () => {
                       paymentSuccessReceipt.amount,
                       paymentSuccessReceipt.referenceNumber
                     )}
-                    className="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center gap-1.5 transition-colors"
+                    className="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center justify-center gap-1.5 transition-colors"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span>Send WhatsApp</span>
@@ -1021,7 +1021,7 @@ const FrontDeskDashboard = () => {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleCollectFee} className="p-6 space-y-4">
+              <form onSubmit={handleCollectFee} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
                 <div className="bg-blue-50/50 p-3.5 rounded-xl border border-blue-100 text-xs space-y-1.5">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Fee Title:</span>
@@ -1035,7 +1035,7 @@ const FrontDeskDashboard = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Payment Mode</label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {['Cash', 'UPI', 'Card', 'Cheque'].map((mode) => (
                       <button
                         key={mode}
@@ -1053,18 +1053,18 @@ const FrontDeskDashboard = () => {
                   </div>
                 </div>
 
-                <div className="pt-3 flex gap-2 justify-end border-t border-gray-100">
+                <div className="pt-3 flex flex-col-reverse sm:flex-row gap-2 justify-end border-t border-gray-100">
                   <button
                     type="button"
                     onClick={() => setShowPaymentModal(false)}
-                    className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg"
+                    className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg text-center"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={collectingPayment}
-                    className="btn-primary text-xs px-5 py-2 flex items-center gap-2"
+                    className="btn-primary text-xs px-5 py-2 flex items-center justify-center gap-2"
                   >
                     {collectingPayment ? <Loader small /> : <Check className="w-4 h-4" />}
                     <span>Confirm & Generate Receipt</span>
@@ -1079,15 +1079,15 @@ const FrontDeskDashboard = () => {
       {/* Modal: New Visitor */}
       {showVisitorModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white shrink-0">
               <div>
                 <h3 className="font-display font-bold text-base">New Visitor Check-in</h3>
                 <p className="text-blue-100 text-xs">Record walk-in parent / visitor entry details</p>
               </div>
               <button onClick={() => setShowVisitorModal(false)} className="text-white/80 hover:text-white">✕</button>
             </div>
-            <form onSubmit={handleAddVisitor} className="p-6 space-y-3.5">
+            <form onSubmit={handleAddVisitor} className="p-4 sm:p-6 space-y-3.5 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Visitor Name *</label>
                 <input
@@ -1136,9 +1136,9 @@ const FrontDeskDashboard = () => {
                   className="input text-xs w-full"
                 />
               </div>
-              <div className="pt-3 flex gap-2 justify-end border-t border-gray-100">
-                <button type="button" onClick={() => setShowVisitorModal(false)} className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                <button type="submit" className="btn-primary text-xs px-5 py-2">Check-in Visitor</button>
+              <div className="pt-3 flex flex-col-reverse sm:flex-row gap-2 justify-end border-t border-gray-100">
+                <button type="button" onClick={() => setShowVisitorModal(false)} className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg text-center w-full sm:w-auto">Cancel</button>
+                <button type="submit" className="btn-primary text-xs px-5 py-2 w-full sm:w-auto">Check-in Visitor</button>
               </div>
             </form>
           </div>
@@ -1148,8 +1148,8 @@ const FrontDeskDashboard = () => {
       {/* Modal: Issue Early Gate Pass */}
       {showGatePassModal && selectedStudent && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white shrink-0">
               <div>
                 <h3 className="font-display font-bold text-base">Early Student Gate Pass</h3>
                 <p className="text-blue-100 text-xs">Emergency checkout for {selectedStudent.name}</p>
@@ -1158,7 +1158,7 @@ const FrontDeskDashboard = () => {
             </div>
 
             {issuedGatePassResult ? (
-              <div className="p-6 space-y-4 text-center">
+              <div className="p-4 sm:p-6 space-y-4 text-center overflow-y-auto flex-1">
                 <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
                   <CheckCircle2 className="w-7 h-7" />
                 </div>
@@ -1181,7 +1181,7 @@ const FrontDeskDashboard = () => {
                     <strong className="text-gray-700">{issuedGatePassResult.reason}</strong>
                   </div>
                 </div>
-                <div className="flex gap-2 justify-center pt-2">
+                <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
                   <button 
                     onClick={() => {
                       const fallback = `
@@ -1201,7 +1201,7 @@ const FrontDeskDashboard = () => {
                       `;
                       printRenderedDocument('GatePass', issuedGatePassResult?.id || issuedGatePassResult?.passNumber || '', fallback);
                     }} 
-                    className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5"
+                    className="btn-primary text-xs px-4 py-2 flex items-center justify-center gap-1.5"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     <span>Print Exit Pass</span>
@@ -1210,7 +1210,7 @@ const FrontDeskDashboard = () => {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleIssueGatePass} className="p-6 space-y-3.5">
+              <form onSubmit={handleIssueGatePass} className="p-4 sm:p-6 space-y-3.5 overflow-y-auto flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Parent / Guardian Name *</label>
                   <input
@@ -1244,9 +1244,9 @@ const FrontDeskDashboard = () => {
                     className="input text-xs w-full py-2"
                   />
                 </div>
-                <div className="pt-3 flex gap-2 justify-end border-t border-gray-100">
-                  <button type="button" onClick={() => setShowGatePassModal(false)} className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                  <button type="submit" className="btn-primary text-xs px-5 py-2">Generate Pass</button>
+                <div className="pt-3 flex flex-col-reverse sm:flex-row gap-2 justify-end border-t border-gray-100">
+                  <button type="button" onClick={() => setShowGatePassModal(false)} className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg text-center w-full sm:w-auto">Cancel</button>
+                  <button type="submit" className="btn-primary text-xs px-5 py-2 w-full sm:w-auto">Generate Pass</button>
                 </div>
               </form>
             )}
@@ -1257,15 +1257,15 @@ const FrontDeskDashboard = () => {
       {/* Modal: New Admission Inquiry */}
       {showInquiryModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white shrink-0">
               <div>
                 <h3 className="font-display font-bold text-base">New Admission Inquiry</h3>
                 <p className="text-blue-100 text-xs">Record walk-in parent inquiry</p>
               </div>
               <button onClick={() => setShowInquiryModal(false)} className="text-white/80 hover:text-white">✕</button>
             </div>
-            <form onSubmit={handleAddInquiry} className="p-6 space-y-3.5">
+            <form onSubmit={handleAddInquiry} className="p-4 sm:p-6 space-y-3.5 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Child Name *</label>
                 <input
@@ -1277,7 +1277,7 @@ const FrontDeskDashboard = () => {
                   className="input text-xs w-full"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Target Class</label>
                   <input
@@ -1323,9 +1323,9 @@ const FrontDeskDashboard = () => {
                   className="input text-xs w-full py-2"
                 />
               </div>
-              <div className="pt-3 flex gap-2 justify-end border-t border-gray-100">
-                <button type="button" onClick={() => setShowInquiryModal(false)} className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                <button type="submit" className="btn-primary text-xs px-5 py-2">Save Inquiry</button>
+              <div className="pt-3 flex flex-col-reverse sm:flex-row gap-2 justify-end border-t border-gray-100">
+                <button type="button" onClick={() => setShowInquiryModal(false)} className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg text-center w-full sm:w-auto">Cancel</button>
+                <button type="submit" className="btn-primary text-xs px-5 py-2 w-full sm:w-auto">Save Inquiry</button>
               </div>
             </form>
           </div>
@@ -1335,8 +1335,8 @@ const FrontDeskDashboard = () => {
       {/* No-Dues & TC Readiness Modal (Receptionist View) */}
       {showClearanceModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-scale-up">
-            <div className="bg-gradient-to-r from-primary to-blue-900 px-6 py-4 flex justify-between items-center text-white">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-scale-up">
+            <div className="bg-gradient-to-r from-primary to-blue-900 px-6 py-4 flex justify-between items-center text-white shrink-0">
               <div className="flex items-center gap-2.5">
                 <span className="text-xl">📜</span>
                 <div>
@@ -1347,18 +1347,18 @@ const FrontDeskDashboard = () => {
               <button onClick={() => setShowClearanceModal(false)} className="text-white hover:text-blue-200 text-lg">✖</button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               {loadingClearance ? (
                 <div className="py-8 flex justify-center"><Loader small /></div>
               ) : clearanceData ? (
                 <div className="space-y-4">
                   {/* Student Snapshot */}
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                       <div className="font-bold text-primary text-sm">{clearanceData.student.name}</div>
                       <div className="text-xs text-gray-500 font-mono">ID: {clearanceData.student.studentId} • {clearanceData.student.className}</div>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold self-start sm:self-auto ${
                       clearanceData.clearance.isAllClear 
                         ? 'bg-emerald-100 text-emerald-800' 
                         : 'bg-rose-100 text-rose-800'
@@ -1414,7 +1414,7 @@ const FrontDeskDashboard = () => {
               ) : null}
 
               <div className="flex justify-end pt-2">
-                <button onClick={() => setShowClearanceModal(false)} className="btn-primary text-xs px-4 py-2">Close</button>
+                <button onClick={() => setShowClearanceModal(false)} className="btn-primary text-xs px-4 py-2 w-full sm:w-auto">Close</button>
               </div>
             </div>
           </div>

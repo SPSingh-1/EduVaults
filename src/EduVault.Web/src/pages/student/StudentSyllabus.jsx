@@ -199,25 +199,25 @@ export const StudentSyllabus = () => {
 
       {/* Syllabus Viewer Modal */}
       {previewFile && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-4 animate-fadeIn">
           <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
-            <div className="bg-primary text-white p-4 px-6 flex justify-between items-center">
+            <div className="bg-primary text-white p-4 sm:p-5 px-4 sm:px-6 flex justify-between items-center shrink-0">
               <div>
                 <span className="text-2xs font-extrabold text-blue-200 uppercase tracking-widest block">
                   {previewFile.subject} • {previewFile.className}
                 </span>
-                <h3 className="font-display font-bold text-lg">{previewFile.title}</h3>
+                <h3 className="font-display font-bold text-base sm:text-lg">{previewFile.title}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewFile(null)}
-                className="text-white hover:text-blue-200 text-xl font-bold"
+                className="text-white hover:text-blue-200 text-xl font-bold shrink-0"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 text-xs text-slate-700">
                 <span className="font-bold text-primary">Uploaded by:</span> {previewFile.teacherName} ({formatDateDDMMYYYY(previewFile.createdAt)})
                 {previewFile.description && <p className="mt-1 text-slate-600">{previewFile.description}</p>}
@@ -226,24 +226,24 @@ export const StudentSyllabus = () => {
               {previewFile.fileType === 'image' || previewFile.fileUrl?.startsWith('data:image/') || previewFile.fileUrl?.match(/\.(jpeg|jpg|png|webp|gif)$/i) ? (
                 <img src={previewFile.fileUrl} alt="Syllabus" className="w-full h-auto rounded-xl border border-slate-200 shadow-sm" />
               ) : (
-                <iframe src={previewFile.fileUrl} title="Syllabus PDF" className="w-full h-[500px] rounded-xl border border-slate-200 shadow-sm" />
+                <iframe src={previewFile.fileUrl} title="Syllabus PDF" className="w-full h-[320px] sm:h-[500px] rounded-xl border border-slate-200 shadow-sm" />
               )}
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center px-6">
+            <div className="p-4 px-4 sm:px-6 bg-slate-50 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-2.5 shrink-0">
               <a
                 href={previewFile.fileUrl}
                 download={`${previewFile.subject}_Syllabus`}
                 target="_blank"
                 rel="noreferrer"
-                className="btn-outline text-xs py-2 px-4 font-bold flex items-center gap-1.5"
+                className="btn-outline text-xs py-2 px-4 font-bold flex items-center justify-center gap-1.5 w-full sm:w-auto text-center"
               >
                 📥 Download Original Document
               </a>
               <button
                 type="button"
                 onClick={() => setPreviewFile(null)}
-                className="btn-primary text-xs py-2 px-5 font-bold"
+                className="btn-primary text-xs py-2 px-5 font-bold w-full sm:w-auto"
               >
                 Close Viewer
               </button>

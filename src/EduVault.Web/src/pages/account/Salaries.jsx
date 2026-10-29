@@ -407,8 +407,8 @@ const Salaries = () => {
               </div>
               <button onClick={() => setEditingSalary(null)} className="text-white/80 hover:text-white">✕</button>
             </div>
-            <form onSubmit={handleUpdateSalary} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleUpdateSalary} className="p-4 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-2xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Manual Bonus / Allowance (₹)</label>
                   <input
@@ -455,9 +455,9 @@ const Salaries = () => {
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setEditingSalary(null)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">Cancel</button>
-                <button type="submit" className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase rounded-xl">Save Changes</button>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-slate-100">
+                <button type="button" onClick={() => setEditingSalary(null)} className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" className="w-full sm:w-auto px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase rounded-xl">Save Changes</button>
               </div>
             </form>
           </div>
@@ -467,7 +467,7 @@ const Salaries = () => {
       {/* Payslip View Modal */}
       {viewingSlip && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl p-6 space-y-6 text-left border border-slate-100">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl p-4 sm:p-6 space-y-4 sm:space-y-6 max-h-[85vh] overflow-y-auto text-left border border-slate-100">
             <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
               <div>
                 <span className="text-3xs font-black text-purple-600 uppercase tracking-widest">Official Salary Payslip</span>
@@ -477,7 +477,7 @@ const Salaries = () => {
               <button onClick={() => setViewingSlip(null)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs">
               <div className="p-3 bg-slate-50 rounded-xl">
                 <span className="text-3xs text-slate-400 font-bold uppercase">Pay Period</span>
                 <div className="font-bold text-slate-800">{new Date(viewingSlip.year, viewingSlip.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}</div>

@@ -199,30 +199,30 @@ export default function StaffDeskModule() {
       )}
 
       {/* Desk Navigation Tabs */}
-      <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200/80 shadow-sm">
+      <div className="flex items-center gap-2 sm:gap-3 bg-white p-1.5 sm:p-2 rounded-2xl border border-slate-200/80 shadow-sm overflow-x-auto scrollbar-none whitespace-nowrap">
         <button
           onClick={() => setActiveTab('attendance')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+          className={`flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm shrink-0 transition-all ${
             activeTab === 'attendance'
               ? 'bg-purple-600 text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
-          <UserCheck className="w-4 h-4" />
-          Daily Staff Attendance Roll Call
+          <UserCheck className="w-4 h-4 shrink-0" />
+          <span>Daily Staff Attendance Roll Call</span>
         </button>
         <button
           onClick={() => setActiveTab('leaves')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+          className={`flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm shrink-0 transition-all ${
             activeTab === 'leaves'
               ? 'bg-purple-600 text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
-          <FileText className="w-4 h-4" />
-          Leave Review & Forwarding Desk
+          <FileText className="w-4 h-4 shrink-0" />
+          <span>Leave Review & Forwarding Desk</span>
           {leaveRequests.filter(r => r.status === 'Pending').length > 0 && (
-            <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+            <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold ml-1">
               {leaveRequests.filter(r => r.status === 'Pending').length}
             </span>
           )}
@@ -233,10 +233,10 @@ export default function StaffDeskModule() {
       {activeTab === 'attendance' && (
         <div className="space-y-6">
           {/* Controls Bar */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                <Calendar className="w-4 h-4 text-purple-600" />
+                <Calendar className="w-4 h-4 text-purple-600 shrink-0" />
                 <input
                   type="date"
                   value={selectedDate}
@@ -246,7 +246,7 @@ export default function StaffDeskModule() {
               </div>
 
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                <Filter className="w-4 h-4 text-slate-400" />
+                <Filter className="w-4 h-4 text-slate-400 shrink-0" />
                 <select
                   value={departmentFilter}
                   onChange={e => setDepartmentFilter(e.target.value)}
@@ -259,8 +259,8 @@ export default function StaffDeskModule() {
                 </select>
               </div>
 
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 w-64">
-                <Search className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 w-full sm:w-64">
+                <Search className="w-4 h-4 text-slate-400 shrink-0" />
                 <input
                   type="text"
                   placeholder="Search staff name or code..."
@@ -363,7 +363,7 @@ export default function StaffDeskModule() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[700px]">
                   <thead className="bg-slate-50/80 border-b border-slate-100 text-slate-500 uppercase font-semibold">
                     <tr>
                       <th className="py-3.5 px-4">Staff Member</th>
@@ -453,14 +453,14 @@ export default function StaffDeskModule() {
       {activeTab === 'leaves' && (
         <div className="space-y-6">
           {/* Filter Bar */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-slate-500 uppercase">Status Filter:</span>
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto scrollbar-none whitespace-nowrap py-1">
+              <span className="text-xs font-bold text-slate-500 uppercase shrink-0">Status:</span>
               {['ALL', 'Pending', 'ForwardedToAccounts', 'Approved', 'Rejected'].map(st => (
                 <button
                   key={st}
                   onClick={() => setLeaveStatusFilter(st)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition ${
                     leaveStatusFilter === st
                       ? 'bg-purple-600 text-white shadow-sm'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -474,7 +474,7 @@ export default function StaffDeskModule() {
 
             <button
               onClick={fetchLeaves}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition shrink-0 self-end sm:self-auto"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Refresh
@@ -483,7 +483,7 @@ export default function StaffDeskModule() {
 
           {/* Leave Requests Table */}
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-slate-100">
+            <div className="p-4 sm:p-5 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-sm">Staff Leave Applications</h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 School Admin operational review desk. Forward verified requests with recommendation notes to Accounts department for financial clearance.
@@ -498,7 +498,7 @@ export default function StaffDeskModule() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[700px]">
                   <thead className="bg-slate-50/80 border-b border-slate-100 text-slate-500 uppercase font-semibold">
                     <tr>
                       <th className="py-3.5 px-4">Applicant</th>
@@ -614,8 +614,8 @@ export default function StaffDeskModule() {
 
       {/* ─── PUNCH UPDATE MODAL ────────────────────────────────────────────────── */}
       {punchModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xl max-w-md w-full space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="font-bold text-slate-900 text-base">Update Attendance Punch</h3>
@@ -644,7 +644,7 @@ export default function StaffDeskModule() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-600 font-semibold mb-1">Check-In Time</label>
                   <input
@@ -677,17 +677,17 @@ export default function StaffDeskModule() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-3 border-t border-slate-100">
               <button
                 onClick={() => setPunchModal(null)}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition"
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition w-full sm:w-auto"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSavePunch}
                 disabled={savingPunch}
-                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-50"
+                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-50 w-full sm:w-auto"
               >
                 {savingPunch ? 'Saving...' : 'Save Attendance'}
               </button>
@@ -698,8 +698,8 @@ export default function StaffDeskModule() {
 
       {/* ─── FORWARD LEAVE MODAL ──────────────────────────────────────────────── */}
       {forwardModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xl max-w-md w-full space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="font-bold text-slate-900 text-base">Forward to Accounts Department</h3>
@@ -737,17 +737,17 @@ export default function StaffDeskModule() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-3 border-t border-slate-100">
               <button
                 onClick={() => setForwardModal(null)}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition"
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition w-full sm:w-auto"
               >
                 Cancel
               </button>
               <button
                 onClick={handleForwardLeave}
                 disabled={actionLoading}
-                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5 disabled:opacity-50"
+                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center justify-center gap-1.5 disabled:opacity-50 w-full sm:w-auto"
               >
                 <Send className="w-3.5 h-3.5" />
                 {actionLoading ? 'Forwarding...' : 'Forward to Accounts'}
@@ -759,8 +759,8 @@ export default function StaffDeskModule() {
 
       {/* ─── REJECT LEAVE MODAL ───────────────────────────────────────────────── */}
       {rejectModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xl max-w-md w-full space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="font-bold text-rose-700 text-base">Reject Leave Request</h3>
@@ -787,17 +787,17 @@ export default function StaffDeskModule() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-3 border-t border-slate-100">
               <button
                 onClick={() => setRejectModal(null)}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition"
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition w-full sm:w-auto"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRejectLeave}
                 disabled={actionLoading || !rejectReason.trim()}
-                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-50"
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-50 w-full sm:w-auto"
               >
                 {actionLoading ? 'Rejecting...' : 'Confirm Rejection'}
               </button>

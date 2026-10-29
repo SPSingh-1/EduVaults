@@ -156,12 +156,12 @@ export const Remarks = () => {
 
         {showNew && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <form onSubmit={handleSaveRemark} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="font-display font-bold text-primary text-xl">Add New Remark</h3>
+            <form onSubmit={handleSaveRemark} className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[85vh] overflow-y-auto">
+              <div className="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="font-display font-bold text-primary text-lg sm:text-xl">Add New Remark</h3>
                 <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-primary">✖</button>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="p-4 sm:p-6 space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Select Student *</label>
                   <select required value={selectedStudent} onChange={e => setSelectedStudent(e.target.value)} className="input">
@@ -173,7 +173,7 @@ export const Remarks = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-2">Remark Type / Tag</label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {['POSITIVE', 'NEGATIVE', 'URGENT', 'NEUTRAL'].map(t => (
                       <button
                         key={t}
@@ -197,9 +197,9 @@ export const Remarks = () => {
                 </div>
                 <div><label className="block text-xs font-semibold text-gray-600 mb-1.5">Remark Text *</label><textarea required value={remarkText} onChange={e => setRemarkText(e.target.value)} placeholder="Write your remark here..." className="input h-28 resize-none text-sm" /></div>
               </div>
-              <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
-                <button type="button" onClick={() => setShowNew(false)} className="btn-outline text-xs">Cancel</button>
-                <button type="submit" disabled={loading} className="btn-primary text-xs">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
+                <button type="button" onClick={() => setShowNew(false)} className="btn-outline text-xs text-center">Cancel</button>
+                <button type="submit" disabled={loading} className="btn-primary text-xs text-center">
                   {loading ? 'Saving...' : 'Save Remark'}
                 </button>
               </div>

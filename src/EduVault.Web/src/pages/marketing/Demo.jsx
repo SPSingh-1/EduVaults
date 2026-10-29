@@ -271,7 +271,7 @@ export const Demo = () => {
         </div>
 
         {/* Roles Tab Selector */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           {Object.entries(t.roles).map(([roleKey, r]) => (
             <button
               key={roleKey}

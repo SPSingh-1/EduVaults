@@ -486,8 +486,8 @@ export default function Classes() {
       {/* Create New Class Modal with 1-Click Helper Banner */}
       {showNew && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <form onSubmit={handleCreateClass} className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100">
-            <div className="p-6">
+          <form onSubmit={handleCreateClass} className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
               <div className="text-xs font-semibold text-primary/60 uppercase tracking-wider mb-1">⊕ Setup New Academic Unit</div>
               <h3 className="font-display font-bold text-primary text-xl mb-1">Create New Class & Section</h3>
               <p className="text-gray-400 text-xs mb-4 font-light">Configure the classroom environment and set enrollment limits.</p>
@@ -585,9 +585,9 @@ export default function Classes() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4 bg-gray-50/50">
-              <button type="button" onClick={() => setShowNew(false)} className="btn-outline">Cancel</button>
-              <button type="submit" disabled={loading} className="btn-primary">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-4 bg-gray-50/50">
+              <button type="button" onClick={() => setShowNew(false)} className="btn-outline text-center">Cancel</button>
+              <button type="submit" disabled={loading} className="btn-primary text-center">
                 {loading ? 'Creating...' : '⊕ Create Class'}
               </button>
             </div>
@@ -599,9 +599,9 @@ export default function Classes() {
       {showBulkImport && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden border border-slate-200 animate-scale-up max-h-[90vh] flex flex-col">
-            <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
+            <div className="p-4 sm:p-6 bg-slate-900 text-white flex items-center justify-between">
               <div>
-                <h3 className="font-display font-bold text-lg text-white flex items-center gap-2">
+                <h3 className="font-display font-bold text-base sm:text-lg text-white flex items-center gap-2">
                   <FileSpreadsheet className="w-5 h-5 text-amber-400" />
                   <span>Bulk Import Classes & Sections (CSV / Excel)</span>
                 </h3>
@@ -617,7 +617,7 @@ export default function Classes() {
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
               {/* Step 1: Download Template */}
               <div className="bg-blue-50/60 border border-blue-200/80 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
@@ -629,7 +629,7 @@ export default function Classes() {
                 <button
                   type="button"
                   onClick={handleDownloadClassesTemplate}
-                  className="btn-outline text-xs px-3.5 py-1.5 flex items-center gap-1.5 shrink-0 bg-white border-blue-300 text-primary font-bold hover:bg-blue-50 cursor-pointer"
+                  className="btn-outline text-xs px-3.5 py-1.5 flex items-center justify-center gap-1.5 shrink-0 bg-white border-blue-300 text-primary font-bold hover:bg-blue-50 cursor-pointer w-full sm:w-auto"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download Demo CSV</span>
@@ -664,8 +664,8 @@ export default function Classes() {
                     <span className="text-emerald-600 font-semibold">✓ Ready to Ingest</span>
                   </div>
 
-                  <div className="border border-slate-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
-                    <table className="w-full text-left text-xs">
+                  <div className="border border-slate-200 rounded-xl overflow-x-auto max-h-48 overflow-y-auto">
+                    <table className="w-full text-left text-xs min-w-[400px]">
                       <thead className="bg-slate-100 text-slate-600 font-bold sticky top-0">
                         <tr>
                           <th className="p-2">Grade / Class</th>
@@ -697,11 +697,11 @@ export default function Classes() {
               )}
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => setShowBulkImport(false)}
-                className="btn-outline text-xs"
+                className="btn-outline text-xs text-center"
               >
                 Cancel
               </button>
@@ -710,7 +710,7 @@ export default function Classes() {
                 type="button"
                 onClick={handleExecuteClassesImport}
                 disabled={!parsedClasses.length || bulkLoading}
-                className="btn-primary text-xs px-5 py-2 flex items-center gap-1.5 disabled:opacity-50"
+                className="btn-primary text-xs px-5 py-2 flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                 <span>{bulkLoading ? 'Ingesting...' : `Import ${parsedClasses.length} Classes Now`}</span>
@@ -723,9 +723,9 @@ export default function Classes() {
       {/* Assign Teacher Modal */}
       {showAssign && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleAssignTeacher} className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
-            <div className="p-6">
-              <h3 className="font-display font-bold text-primary text-xl mb-3">Assign Class Teacher</h3>
+          <form onSubmit={handleAssignTeacher} className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden max-h-[85vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
+              <h3 className="font-display font-bold text-primary text-lg sm:text-xl mb-3">Assign Class Teacher</h3>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">Select Educator</label>
                 <select required value={selectedTeacherId} onChange={e => setSelectedTeacherId(e.target.value)} className="input">
@@ -736,9 +736,9 @@ export default function Classes() {
                 </select>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
-              <button type="button" onClick={() => setShowAssign(false)} className="btn-outline">Cancel</button>
-              <button type="submit" disabled={loading} className="btn-primary">Confirm Assignment</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
+              <button type="button" onClick={() => setShowAssign(false)} className="btn-outline text-center">Cancel</button>
+              <button type="submit" disabled={loading} className="btn-primary text-center">Confirm Assignment</button>
             </div>
           </form>
         </div>

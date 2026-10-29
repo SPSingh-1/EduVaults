@@ -457,18 +457,18 @@ const SuperAdminDashboard = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="bg-primary px-6 py-5 rounded-t-2xl">
+          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="bg-primary px-5 sm:px-6 py-5 rounded-t-2xl shrink-0">
               <h3 className="font-display font-bold text-white text-lg">Register New School</h3>
               <p className="text-blue-200 text-sm">Enter the required information to onboard a new educational institution.</p>
             </div>
-            <div className="p-6 space-y-4 font-sans text-left">
+            <div className="p-5 sm:p-6 space-y-4 font-sans text-left overflow-y-auto flex-1">
               {errorModal && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{errorModal}</div>}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">School Name *</label>
                 <input value={form.schoolName} onChange={e => setForm(p => ({ ...p, schoolName: e.target.value }))} placeholder="e.g. Greenwood Academy" className="input" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Address *</label>
                   <input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="Street address" className="input" />
@@ -478,7 +478,7 @@ const SuperAdminDashboard = () => {
                   <input value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} placeholder="City, State" className="input" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">School Email Domain *</label>
                   <input value={form.emailDomain} onChange={e => setForm(p => ({ ...p, emailDomain: e.target.value }))} placeholder="e.g. greenwood.edu" className="input" />
@@ -488,7 +488,7 @@ const SuperAdminDashboard = () => {
                   <input value={form.website} onChange={e => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://www.school.edu" className="input" />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="col-span-1">
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Admin Full Name *</label>
                   <input value={form.adminName} onChange={e => setForm(p => ({ ...p, adminName: e.target.value }))} placeholder="e.g. Dr. Jenkins" className="input" />
@@ -523,9 +523,9 @@ const SuperAdminDashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
-              <button onClick={() => setShowModal(false)} className="btn-outline">Cancel</button>
-              <button onClick={handleAddSchool} disabled={loadingModal} className="btn-primary flex items-center gap-1.5">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 px-5 sm:px-6 pb-5 sm:pb-6 border-t border-gray-100 pt-3 shrink-0">
+              <button onClick={() => setShowModal(false)} className="btn-outline w-full sm:w-auto text-center cursor-pointer">Cancel</button>
+              <button onClick={handleAddSchool} disabled={loadingModal} className="btn-primary flex items-center justify-center gap-1.5 w-full sm:w-auto text-center cursor-pointer">
                 {loadingModal ? 'Registering...' : '✓ Register School'}
               </button>
             </div>

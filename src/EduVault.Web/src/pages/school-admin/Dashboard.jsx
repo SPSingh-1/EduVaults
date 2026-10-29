@@ -293,26 +293,29 @@ const SchoolAdminDashboard = () => {
       )}
 
       {/* 🌅 Principal's Morning Briefing Widget */}
-      <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border border-amber-200/60 rounded-2xl p-5 shadow-2xs relative overflow-hidden">
-        <div className="flex items-center justify-between gap-4 mb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+      <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border border-amber-200/60 rounded-2xl p-3.5 sm:p-5 shadow-2xs relative overflow-hidden">
+        <div className="flex items-start justify-between gap-2.5 sm:gap-4 mb-3">
+          <div className="flex items-start gap-2.5 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs shrink-0 mt-0.5">
               <Sun className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900">Principal's Morning Briefing</h3>
-                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-3xs font-bold">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <h3 className="text-sm font-bold text-slate-900 leading-snug">Principal's Morning Briefing</h3>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold whitespace-nowrap self-start border border-amber-200/60 shadow-2xs">
+                  <Calendar className="w-3 h-3 text-amber-700 shrink-0" />
                   {morningBriefing?.date || 'Today'}
                 </span>
               </div>
-              <p className="text-2xs text-slate-500">Live operational snapshot across attendance, leaves, birthdays & finances</p>
+              <p className="text-2xs text-slate-500 mt-0.5 sm:mt-1 leading-normal">
+                Live operational snapshot across attendance, leaves, birthdays & finances
+              </p>
             </div>
           </div>
 
           <button
             onClick={() => setBriefingExpanded(!briefingExpanded)}
-            className="text-2xs text-slate-500 hover:text-slate-800 font-semibold px-2.5 py-1 rounded-lg bg-white/80 border border-slate-200/60 transition"
+            className="text-2xs text-slate-600 hover:text-slate-900 font-semibold px-2.5 py-1 rounded-lg bg-white/90 border border-slate-200 shadow-2xs hover:bg-white transition shrink-0 cursor-pointer mt-0.5"
           >
             {briefingExpanded ? 'Collapse' : 'Expand'}
           </button>
@@ -578,7 +581,7 @@ const SchoolAdminDashboard = () => {
 
       {showOnboardChoice && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6 animate-scale-up">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl p-4 sm:p-6 animate-scale-up">
             <h3 className="font-display font-bold text-primary text-lg mb-1">Register New User / Staff</h3>
             <p className="text-gray-500 text-xs mb-5">Choose which type of user credentials or student admission you want to register for your school.</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

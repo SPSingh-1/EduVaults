@@ -106,7 +106,7 @@ const FeeRules = () => {
         subtitle="Central controller for school fee structures, compartment fee scheduling, late fines, and partial payment rules." 
       />
 
-      <div className="p-6 space-y-6">
+      <div className="p-3 sm:p-6 space-y-6">
         {/* Messages */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
@@ -253,7 +253,7 @@ const FeeRules = () => {
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block font-semibold text-gray-700 mb-1">Fee Per Subject (₹) *</label>
                           <input 
@@ -274,7 +274,7 @@ const FeeRules = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block font-semibold text-gray-700 mb-1">Grace Period (Days)</label>
                           <input 

@@ -122,7 +122,7 @@ const SuperAdminNotices = () => {
       } />
 
       {/* Tabs Selector */}
-      <div className="flex border-b border-gray-200 mb-6 gap-6">
+      <div className="flex overflow-x-auto whitespace-nowrap border-b border-gray-200 mb-6 gap-4 sm:gap-6 no-scrollbar">
         <button 
           onClick={() => setActiveTab('board')} 
           className={`pb-3 font-semibold text-xs transition-all border-b-2 px-1 ${
@@ -342,17 +342,17 @@ const SuperAdminNotices = () => {
       )}
 
       {showNew && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handlePostNotice} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="p-6 text-left">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 sm:p-4">
+          <form onSubmit={handlePostNotice} className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-4 sm:p-6 text-left overflow-y-auto flex-1">
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-display font-bold text-primary text-xl">New Global Broadcast</h3>
+                <h3 className="font-display font-bold text-primary text-lg sm:text-xl">New Global Broadcast</h3>
                 <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
               </div>
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Target School</label>
-                  <select value={targetSchoolId} onChange={e => setTargetSchoolId(e.target.value)} className="input">
+                  <select value={targetSchoolId} onChange={e => setTargetSchoolId(e.target.value)} className="input text-xs sm:text-sm">
                     <option value="ALL">All Schools (Broadcast)</option>
                     {schools.map(s => (
                       <option key={s.id} value={s.id}>{s.name}</option>
@@ -361,13 +361,13 @@ const SuperAdminNotices = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Target Audience</label>
-                  <div className="input bg-gray-50 text-gray-500 flex items-center h-10 select-none cursor-not-allowed">
+                  <div className="input bg-gray-50 text-gray-500 flex items-center h-10 select-none cursor-not-allowed text-xs sm:text-sm">
                     School Administrators
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Category</label>
-                  <select value={type} onChange={e => setType(e.target.value)} className="input">
+                  <select value={type} onChange={e => setType(e.target.value)} className="input text-xs sm:text-sm">
                     <option value="GENERAL">General Notice</option>
                     <option value="URGENT">Urgent Announcement</option>
                     <option value="EVENT">School Event</option>
@@ -375,17 +375,17 @@ const SuperAdminNotices = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Title</label>
-                  <input required placeholder="Enter title..." value={title} onChange={e => setTitle(e.target.value)} className="input" />
+                  <input required placeholder="Enter title..." value={title} onChange={e => setTitle(e.target.value)} className="input text-xs sm:text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Message Body</label>
-                  <textarea required placeholder="Type announcement here..." value={body} onChange={e => setBody(e.target.value)} className="input h-28 resize-none" />
+                  <textarea required placeholder="Type announcement here..." value={body} onChange={e => setBody(e.target.value)} className="input h-28 resize-none text-xs sm:text-sm" />
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
-              <button type="button" onClick={() => setShowNew(false)} className="btn-outline">Cancel</button>
-              <button type="submit" disabled={loading} className="btn-primary">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-3 shrink-0">
+              <button type="button" onClick={() => setShowNew(false)} className="btn-outline w-full sm:w-auto text-center">Cancel</button>
+              <button type="submit" disabled={loading} className="btn-primary w-full sm:w-auto text-center">
                 {loading ? 'Broadcasting...' : 'Broadcast Notice'}
               </button>
             </div>
@@ -394,50 +394,53 @@ const SuperAdminNotices = () => {
       )}
 
       {activatingSchool && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden text-left">
-            <div className="bg-primary px-6 py-5">
-              <h3 className="font-display font-bold text-white text-lg font-sans">Generate Credentials</h3>
-              <p className="text-blue-200 text-xs mt-0.5 font-sans">Activate {activatingSchool.name} and configure their admin credentials.</p>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden text-left max-h-[90vh] flex flex-col">
+            <div className="bg-primary px-4 sm:px-6 py-4 sm:py-5 shrink-0 flex justify-between items-center">
+              <div>
+                <h3 className="font-display font-bold text-white text-base sm:text-lg font-sans">Generate Credentials</h3>
+                <p className="text-blue-200 text-2xs sm:text-xs mt-0.5 font-sans">Activate {activatingSchool.name} and configure admin login.</p>
+              </div>
+              <button onClick={() => setActivatingSchool(null)} className="text-white hover:text-blue-100 text-lg">✖</button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5 font-sans">Admin Email * (For login)</label>
-                <input type="email" value={actEmail} onChange={e => setActEmail(e.target.value)} placeholder="admin@school.com" className="input text-black font-sans" />
+                <input type="email" value={actEmail} onChange={e => setActEmail(e.target.value)} placeholder="admin@school.com" className="input text-black font-sans text-xs sm:text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5 font-sans">Admin Password *</label>
-                <input type="password" value={actPassword} onChange={e => setActPassword(e.target.value)} placeholder="Minimum 6 characters" className="input text-black font-sans" />
+                <input type="password" value={actPassword} onChange={e => setActPassword(e.target.value)} placeholder="Minimum 6 characters" className="input text-black font-sans text-xs sm:text-sm" />
               </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setActivatingSchool(null)} className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-4 py-2 rounded-xl transition-all font-sans">Cancel</button>
-                <button 
-                  onClick={async () => {
-                    if (!actEmail || !actPassword) {
-                      toast.warning('Please fill in both email and password.');
-                      return;
-                    }
-                    try {
-                      await apiClient.put(`/super/schools/${activatingSchool.id}/status`, {
-                        status: 'Active',
-                        adminEmail: actEmail,
-                        adminPassword: actPassword
-                      });
-                      setActivatingSchool(null);
-                      setActEmail('');
-                      setActPassword('');
-                      fetchNoticesAndSchools();
-                      toast.success('School credentials generated and activated successfully.');
-                    } catch (err) {
-                      console.error('Error activating school:', err);
-                      toast.error(err.response?.data?.error || 'Failed to activate school.');
-                    }
-                  }} 
-                  className="btn-primary text-xs px-4 py-2 rounded-xl font-sans"
-                >
-                  Activate & Save Credentials
-                </button>
-              </div>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-3 shrink-0">
+              <button onClick={() => setActivatingSchool(null)} className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-4 py-2.5 rounded-xl transition-all font-sans w-full sm:w-auto text-center">Cancel</button>
+              <button 
+                onClick={async () => {
+                  if (!actEmail || !actPassword) {
+                    toast.warning('Please fill in both email and password.');
+                    return;
+                  }
+                  try {
+                    await apiClient.put(`/super/schools/${activatingSchool.id}/status`, {
+                      status: 'Active',
+                      adminEmail: actEmail,
+                      adminPassword: actPassword
+                    });
+                    setActivatingSchool(null);
+                    setActEmail('');
+                    setActPassword('');
+                    fetchNoticesAndSchools();
+                    toast.success('School credentials generated and activated successfully.');
+                  } catch (err) {
+                    console.error('Error activating school:', err);
+                    toast.error(err.response?.data?.error || 'Failed to activate school.');
+                  }
+                }} 
+                className="btn-primary text-xs px-4 py-2.5 rounded-xl font-sans w-full sm:w-auto text-center"
+              >
+                Activate & Save Credentials
+              </button>
             </div>
           </div>
         </div>

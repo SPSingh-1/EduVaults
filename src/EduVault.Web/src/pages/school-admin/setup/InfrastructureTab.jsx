@@ -3,6 +3,7 @@ import { apiClient, expressClient } from '../../../api/apiClient';
 import { UploadCloud, Download, Sparkles, CheckCircle2, FileSpreadsheet, AlertCircle, X, Trash2 } from 'lucide-react';
 import { sortGrades } from '../../../utils/classUtils';
 import { useToast } from '../../../contexts/ToastContext';
+import { ensureArray } from '../../../utils/arrayUtils';
 
 const InfrastructureTab = () => {
   const { toast } = useToast();
@@ -22,6 +23,7 @@ const InfrastructureTab = () => {
   const [newExamType, setNewExamType] = useState('');
   const [newSubName, setNewSubName] = useState('');
 
+  const [loading, setLoading] = useState(false);
   const [loadingSec, setLoadingSec] = useState(false);
   const [loadingRm, setLoadingRm] = useState(false);
   const [loadingGl, setLoadingGl] = useState(false);
@@ -973,8 +975,8 @@ const InfrastructureTab = () => {
                 </button>
               </form>
 
-              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
-                <table className="w-full text-left">
+              <div className="flex-1 overflow-y-auto overflow-x-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left min-w-[240px]">
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="border-b border-gray-100">
                       <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Section Name</th>
@@ -1031,8 +1033,8 @@ const InfrastructureTab = () => {
                 </button>
               </form>
 
-              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
-                <table className="w-full text-left">
+              <div className="flex-1 overflow-y-auto overflow-x-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left min-w-[240px]">
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="border-b border-gray-100">
                       <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Room Name</th>
@@ -1089,8 +1091,8 @@ const InfrastructureTab = () => {
                 </button>
               </form>
 
-              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
-                <table className="w-full text-left">
+              <div className="flex-1 overflow-y-auto overflow-x-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left min-w-[240px]">
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="border-b border-gray-100">
                       <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Grade Name</th>
@@ -1148,8 +1150,8 @@ const InfrastructureTab = () => {
                 </button>
               </form>
 
-              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
-                <table className="w-full text-left">
+              <div className="flex-1 overflow-y-auto overflow-x-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left min-w-[240px]">
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="border-b border-gray-100">
                       <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Student Capacity</th>
@@ -1206,8 +1208,8 @@ const InfrastructureTab = () => {
                 </button>
               </form>
 
-              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
-                <table className="w-full text-left">
+              <div className="flex-1 overflow-y-auto overflow-x-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left min-w-[240px]">
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="border-b border-gray-100">
                       <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Department Name</th>
@@ -1274,8 +1276,8 @@ const InfrastructureTab = () => {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
-                <table className="w-full text-left">
+              <div className="flex-1 overflow-y-auto overflow-x-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left min-w-[240px]">
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="border-b border-gray-100">
                       <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Subject</th>
@@ -1329,8 +1331,8 @@ const InfrastructureTab = () => {
                 </button>
               </form>
 
-              <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
-                <table className="w-full text-left">
+              <div className="flex-1 overflow-y-auto overflow-x-auto pr-1 scrollbar-thin">
+                <table className="w-full text-left min-w-[240px]">
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="border-b border-gray-100">
                       <th className="py-2 text-xs font-bold text-gray-500 uppercase bg-white">Examination Type</th>

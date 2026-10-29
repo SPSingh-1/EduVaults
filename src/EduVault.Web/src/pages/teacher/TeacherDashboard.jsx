@@ -447,25 +447,25 @@ export const TeacherDashboard = () => {
 
       {/* AI Question Paper Generator Modal */}
       {showAiPaperModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden my-8 border border-slate-100 flex flex-col max-h-[90vh]">
-            <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-700 px-6 py-5 text-white flex items-center justify-between">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden my-auto border border-slate-100 flex flex-col max-h-[90vh]">
+            <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-700 px-4 sm:px-6 py-4 sm:py-5 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <span className="text-xl">✨</span>
                 <div>
-                  <h3 className="font-display font-black text-lg m-0">AI Examination & Worksheet Generator</h3>
-                  <p className="text-xs text-purple-200 mt-0.5">Powered by Gemini AI curriculum intelligence</p>
+                  <h3 className="font-display font-black text-base sm:text-lg m-0">AI Examination & Worksheet Generator</h3>
+                  <p className="text-2xs sm:text-xs text-purple-200 mt-0.5">Powered by Gemini AI curriculum intelligence</p>
                 </div>
               </div>
               <button 
                 onClick={() => { setShowAiPaperModal(false); setGeneratedPaper(null); }}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition text-sm"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition text-sm shrink-0"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
               {!generatedPaper ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -499,7 +499,7 @@ export const TeacherDashboard = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">Total Marks</label>
                       <input 
@@ -548,7 +548,7 @@ export const TeacherDashboard = () => {
                     <button
                       onClick={handleGenerateQuestionPaper}
                       disabled={generatingPaper}
-                      className="px-6 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50"
+                      className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       <span>{generatingPaper ? '🤖 AI is drafting exam paper...' : '🚀 Generate Question Paper'}</span>
                     </button>
@@ -556,13 +556,13 @@ export const TeacherDashboard = () => {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                     <div>
                       <span className="text-3xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md uppercase">Draft Ready</span>
                       <h4 className="font-extrabold text-slate-900 text-base mt-1">{generatedPaper.examTitle}</h4>
                       <p className="text-xs text-slate-400">{generatedPaper.className} • {generatedPaper.subject} • {generatedPaper.totalMarks} Marks ({generatedPaper.durationMinutes} Mins)</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button 
                         onClick={() => setGeneratedPaper(null)}
                         className="btn-outline text-xs"
@@ -580,11 +580,11 @@ export const TeacherDashboard = () => {
                   </div>
 
                   {/* Question Paper Printable Content Area */}
-                  <div id="printable-question-paper" className="bg-slate-50 p-6 rounded-2xl border border-slate-200 text-slate-800 font-serif leading-relaxed text-xs space-y-4">
+                  <div id="printable-question-paper" className="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200 text-slate-800 font-serif leading-relaxed text-xs space-y-4 overflow-x-auto">
                     <div className="text-center border-b-2 border-slate-800 pb-3 mb-4">
                       <h3 className="text-sm font-black uppercase tracking-wider">{generatedPaper.schoolName || 'EduVault Senior Secondary School'}</h3>
                       <div className="text-xs font-bold">{generatedPaper.examTitle}</div>
-                      <div className="flex justify-between font-sans text-[11px] font-semibold mt-2 text-slate-600">
+                      <div className="flex flex-wrap justify-between gap-2 font-sans text-[11px] font-semibold mt-2 text-slate-600">
                         <span>Class: {generatedPaper.className}</span>
                         <span>Subject: {generatedPaper.subject}</span>
                         <span>Max Marks: {generatedPaper.totalMarks}</span>
@@ -617,7 +617,7 @@ export const TeacherDashboard = () => {
                                 <span className="font-bold shrink-0 text-slate-600">[{q.marks}]</span>
                               </div>
                               {q.options && q.options.length > 0 && (
-                                <div className="grid grid-cols-2 gap-1.5 pl-4 font-sans text-[11px] text-slate-600 mt-1">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pl-4 font-sans text-[11px] text-slate-600 mt-1">
                                   {q.options.map((opt, oIdx) => (
                                     <div key={oIdx}>{opt}</div>
                                   ))}

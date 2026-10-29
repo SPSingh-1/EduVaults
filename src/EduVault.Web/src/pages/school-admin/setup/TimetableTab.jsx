@@ -800,8 +800,8 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
 
       {showCellModal && selectedCell && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="bg-primary px-6 py-5 flex justify-between items-center text-white shrink-0">
               <div>
                 <h3 className="font-display font-bold text-base">Schedule: Period {selectedCell.periodNo}</h3>
                 {(() => {
@@ -814,7 +814,7 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
               <button onClick={() => setShowCellModal(false)} className="text-white hover:text-blue-200 text-lg">✖</button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               {modalError && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3">{modalError}</div>}
 
               {/* Assignment Form */}
@@ -869,20 +869,20 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
                   </select>
                 </div>
 
-                <div className="flex justify-between gap-3 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row justify-between gap-2.5 pt-2">
                   {selectedCell.item && (
                     <button
                       type="button"
                       onClick={handleClearSlot}
                       disabled={modalLoading}
-                      className="btn-outline border-rose-200 text-rose-600 hover:bg-rose-50 text-xs py-2 px-4"
+                      className="btn-outline border-rose-200 text-rose-600 hover:bg-rose-50 text-xs py-2 px-4 w-full sm:w-auto"
                     >
                       Clear Slot
                     </button>
                   )}
-                  <div className="flex-1 flex justify-end gap-2">
-                    <button type="button" onClick={() => setShowCellModal(false)} className="btn-outline text-xs py-2">Cancel</button>
-                    <button type="submit" disabled={modalLoading} className="btn-primary text-xs py-2">
+                  <div className="flex-1 flex flex-col-reverse sm:flex-row justify-end gap-2">
+                    <button type="button" onClick={() => setShowCellModal(false)} className="btn-outline text-xs py-2 w-full sm:w-auto">Cancel</button>
+                    <button type="submit" disabled={modalLoading} className="btn-primary text-xs py-2 w-full sm:w-auto">
                       {modalLoading ? 'Saving...' : 'Save Schedule'}
                     </button>
                   </div>
@@ -895,7 +895,7 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
                   <h4 className="font-semibold text-xs text-primary uppercase tracking-wide">⚠️ Teacher Remark / Reschedule Alert</h4>
                   <p className="text-xxs text-gray-400 leading-normal">Simulate a teacher absence notification or class warning alert to prompt school admin coverage workflows.</p>
 
-                  <form onSubmit={handleCellAddRemark} className="flex gap-2">
+                  <form onSubmit={handleCellAddRemark} className="flex flex-col sm:flex-row gap-2">
                     <input
                       value={cellForm.remark}
                       onChange={e => setCellForm(f => ({ ...f, remark: e.target.value }))}
@@ -905,7 +905,7 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
                     <button
                       type="submit"
                       disabled={modalLoading || !cellForm.remark}
-                      className="btn-outline text-xs py-2 whitespace-nowrap"
+                      className="btn-outline text-xs py-2 whitespace-nowrap w-full sm:w-auto"
                     >
                       Post Alert
                     </button>
@@ -919,10 +919,10 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
 
       {showAiTimetableModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200 animate-scale-up flex flex-col">
-            <div className="p-6 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white flex items-center justify-between">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] shadow-2xl overflow-hidden border border-slate-200 animate-scale-up flex flex-col">
+            <div className="p-4 sm:p-6 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white flex items-center justify-between shrink-0">
               <div>
-                <h3 className="font-display font-bold text-lg text-white flex items-center gap-2">
+                <h3 className="font-display font-bold text-base sm:text-lg text-white flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-amber-300" />
                   <span>🤖 AI Smart Timetable Generator</span>
                 </h3>
@@ -939,7 +939,7 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">Scheduling Scope:</label>
                 <div className="space-y-2">
@@ -1012,11 +1012,11 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowAiTimetableModal(false)}
-                className="btn-outline text-xs"
+                className="btn-outline text-xs w-full sm:w-auto"
               >
                 Cancel
               </button>
@@ -1025,7 +1025,7 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
                 type="button"
                 onClick={() => handleGenerateAiTimetable()}
                 disabled={aiGeneratingTimetable}
-                className="btn-primary text-xs px-5 py-2.5 font-bold flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
+                className="btn-primary text-xs px-5 py-2.5 font-bold flex items-center justify-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50 w-full sm:w-auto"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
                 <span>{aiGeneratingTimetable ? 'AI Regenerating...' : '🔄 Regenerate AI Timetable Now'}</span>

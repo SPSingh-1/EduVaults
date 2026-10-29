@@ -625,8 +625,8 @@ const Fees = () => {
 
       {showNewModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleCreateFeeType} className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
-            <div className="p-6">
+          <form onSubmit={handleCreateFeeType} className="bg-white rounded-2xl w-full max-w-sm shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-5 sm:p-6 overflow-y-auto flex-1">
               <h3 className="font-display font-bold text-primary text-xl mb-3">Add New Fee Type</h3>
               {error && <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg p-3 mb-4">{error}</div>}
               <div className="space-y-4">
@@ -652,9 +652,9 @@ const Fees = () => {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
-              <button type="button" onClick={() => setShowNewModal(false)} className="btn-outline">Cancel</button>
-              <button type="submit" disabled={formLoading} className="btn-primary">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 px-5 sm:px-6 pb-5 sm:pb-6 pt-3 border-t border-gray-100 shrink-0">
+              <button type="button" onClick={() => setShowNewModal(false)} className="btn-outline w-full sm:w-auto text-center cursor-pointer">Cancel</button>
+              <button type="submit" disabled={formLoading} className="btn-primary w-full sm:w-auto text-center cursor-pointer">
                 {formLoading ? 'Saving...' : 'Create Fee Type'}
               </button>
             </div>
@@ -664,14 +664,14 @@ const Fees = () => {
 
       {showEditModal && editingFee && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleUpdateFeeType} className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
-            <div className="p-6">
+          <form onSubmit={handleUpdateFeeType} className="bg-white rounded-2xl w-full max-w-sm shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-5 sm:p-6 overflow-y-auto flex-1">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="font-display font-bold text-primary text-xl">Edit Fee Type</h3>
                 <button
                   type="button"
                   onClick={() => handleDeleteFeeType(editingFee.id)}
-                  className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
+                  className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-all cursor-pointer"
                   title="Delete Fee Type"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -703,9 +703,9 @@ const Fees = () => {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 pt-2">
-              <button type="button" onClick={() => { setShowEditModal(false); setEditingFee(null); }} className="btn-outline">Cancel</button>
-              <button type="submit" disabled={formLoading} className="btn-primary">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 px-5 sm:px-6 pb-5 sm:pb-6 pt-3 border-t border-gray-100 shrink-0">
+              <button type="button" onClick={() => { setShowEditModal(false); setEditingFee(null); }} className="btn-outline w-full sm:w-auto text-center cursor-pointer">Cancel</button>
+              <button type="submit" disabled={formLoading} className="btn-primary w-full sm:w-auto text-center cursor-pointer">
                 {formLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>

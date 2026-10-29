@@ -287,8 +287,8 @@ export const TeacherSelfAttendance = () => {
                 {isWithinRadius ? '🎯' : '⚠️'}
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-bold font-display text-white">Daily 300m GPS Punch In / Punch Out</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-lg sm:text-xl font-bold font-display text-white">Daily 300m GPS Punch In / Punch Out</h3>
                   <span className={`px-2.5 py-0.5 text-[10px] font-black rounded-full uppercase tracking-wider ${
                     isWithinRadius ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-400/40' : 'bg-rose-500/30 text-rose-300 border border-rose-400/40'
                   }`}>
@@ -299,9 +299,9 @@ export const TeacherSelfAttendance = () => {
                   School GPS: ({schoolSetting?.latitude || 26.9124}, {schoolSetting?.longitude || 75.7873}) | Geofence Radius: <strong>{radiusLimit} meters</strong>
                 </p>
                 {teacherLocation && (
-                  <div className="text-[11px] text-emerald-300 font-mono mt-1 flex items-center gap-2">
+                  <div className="text-[11px] text-emerald-300 font-mono mt-1 flex flex-wrap items-center gap-2">
                     <span>📍 Your GPS: {teacherLocation.latitude}, {teacherLocation.longitude}</span>
-                    <span className="text-white/60">|</span>
+                    <span className="text-white/60 hidden sm:inline">|</span>
                     <span className="font-bold">Distance: {distance != null ? `${distance} meters` : 'Calculating...'}</span>
                   </div>
                 )}
@@ -360,13 +360,13 @@ export const TeacherSelfAttendance = () => {
           )}
         </div>
       ) : isBiometricEnabled ? (
-        <div className="card bg-gradient-to-r from-slate-900 via-primary to-slate-900 text-white mb-6 p-6 shadow-xl rounded-2xl flex items-center justify-between gap-4">
+        <div className="card bg-gradient-to-r from-slate-900 via-primary to-slate-900 text-white mb-6 p-4 sm:p-6 shadow-xl rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-blue-500/20 border-2 border-blue-400 text-blue-300 flex items-center justify-center text-3xl font-bold shadow-lg">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-500/20 border-2 border-blue-400 text-blue-300 flex items-center justify-center text-2xl sm:text-3xl font-bold shadow-lg shrink-0">
               ☝️
             </div>
             <div>
-              <h3 className="text-xl font-bold font-display text-white flex items-center gap-2">
+              <h3 className="text-lg sm:text-xl font-bold font-display text-white flex items-center gap-2">
                 Biometric Fingerprint Punch Active
               </h3>
               <p className="text-xs text-blue-200 mt-1">
@@ -374,7 +374,7 @@ export const TeacherSelfAttendance = () => {
               </p>
             </div>
           </div>
-          <div className="px-4 py-2 bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 rounded-xl text-xs font-bold whitespace-nowrap">
+          <div className="px-4 py-2 bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 rounded-xl text-xs font-bold whitespace-nowrap self-start sm:self-auto">
             📡 Hardware Synced
           </div>
         </div>

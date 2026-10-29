@@ -309,46 +309,46 @@ export default function Notices() {
 
       {showNew && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <form onSubmit={handlePostNotice} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="p-6 text-left">
-              <div className="flex justify-between items-center mb-3">
+          <form onSubmit={handlePostNotice} className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-5 sm:p-6 pb-2 text-left shrink-0 border-b border-gray-100">
+              <div className="flex justify-between items-center">
                 <h3 className="font-display font-bold text-primary text-xl">Create New Notice</h3>
-                <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-gray-600 text-lg">✖</button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Target Audience</label>
-                  <select value={target} onChange={e => setTarget(e.target.value)} className="input">
-                    <option value="ALL">All Users (ALL)</option>
-                    <option value="TEACHERS">Teachers Only</option>
-                    <option value="STUDENTS">Students Only</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Category</label>
-                  <select value={type} onChange={e => setType(e.target.value)} className="input">
-                    <option value="GENERAL">General Notice</option>
-                    <option value="URGENT">Urgent Announcement</option>
-                    <option value="EVENT">School Event</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Title</label>
-                  <input required placeholder="Enter title..." value={title} onChange={e => setTitle(e.target.value)} className="input" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Message Body</label>
-                  <textarea required placeholder="Type announcement here..." value={body} onChange={e => setBody(e.target.value)} className="input h-28 resize-none" />
-                </div>
-                <div className="flex items-center gap-2 py-1">
-                  <input type="checkbox" id="whatsAppModalAdmin" checked={sendWhatsApp} onChange={e => setSendWhatsApp(e.target.checked)} className="rounded text-primary focus:ring-primary h-4 w-4 cursor-pointer" />
-                  <label htmlFor="whatsAppModalAdmin" className="text-xs font-semibold text-slate-600 cursor-pointer select-none">Send WhatsApp to Parents</label>
-                </div>
+                <button type="button" onClick={() => setShowNew(false)} className="text-gray-400 hover:text-gray-600 text-lg cursor-pointer">✖</button>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 pb-6 border-t border-gray-100 pt-4">
-              <button type="button" onClick={() => setShowNew(false)} className="btn-outline">Cancel</button>
-              <button type="submit" disabled={loading} className="btn-primary">
+            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Target Audience</label>
+                <select value={target} onChange={e => setTarget(e.target.value)} className="input">
+                  <option value="ALL">All Users (ALL)</option>
+                  <option value="TEACHERS">Teachers Only</option>
+                  <option value="STUDENTS">Students Only</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Category</label>
+                <select value={type} onChange={e => setType(e.target.value)} className="input">
+                  <option value="GENERAL">General Notice</option>
+                  <option value="URGENT">Urgent Announcement</option>
+                  <option value="EVENT">School Event</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Notice Title</label>
+                <input required placeholder="Enter title..." value={title} onChange={e => setTitle(e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Message Body</label>
+                <textarea required placeholder="Type announcement here..." value={body} onChange={e => setBody(e.target.value)} className="input h-28 resize-none" />
+              </div>
+              <div className="flex items-center gap-2 py-1">
+                <input type="checkbox" id="whatsAppModalAdmin" checked={sendWhatsApp} onChange={e => setSendWhatsApp(e.target.checked)} className="rounded text-primary focus:ring-primary h-4 w-4 cursor-pointer" />
+                <label htmlFor="whatsAppModalAdmin" className="text-xs font-semibold text-slate-600 cursor-pointer select-none">Send WhatsApp to Parents</label>
+              </div>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 px-5 sm:px-6 py-4 border-t border-gray-100 shrink-0">
+              <button type="button" onClick={() => setShowNew(false)} className="btn-outline w-full sm:w-auto text-center cursor-pointer">Cancel</button>
+              <button type="submit" disabled={loading} className="btn-primary w-full sm:w-auto text-center cursor-pointer">
                 {loading ? 'Publishing...' : 'Publish Notice'}
               </button>
             </div>
@@ -359,20 +359,20 @@ export default function Notices() {
       {/* Declare School Holiday Modal */}
       {showHolidayModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleCreateHoliday} className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-purple-100">
-            <div className="bg-gradient-to-r from-purple-900 via-primary to-purple-900 text-white p-6">
+          <form onSubmit={handleCreateHoliday} className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-purple-100 max-h-[90vh] flex flex-col">
+            <div className="bg-gradient-to-r from-purple-900 via-primary to-purple-900 text-white p-5 sm:p-6 shrink-0">
               <div className="flex justify-between items-center">
                 <h3 className="font-display font-bold text-xl flex items-center gap-2">
                   🎉 Declare School Holiday
                 </h3>
-                <button type="button" onClick={() => setShowHolidayModal(false)} className="text-white/80 hover:text-white text-lg">✖</button>
+                <button type="button" onClick={() => setShowHolidayModal(false)} className="text-white/80 hover:text-white text-lg cursor-pointer">✖</button>
               </div>
               <p className="text-xs text-purple-200 mt-1">
                 Announce an official holiday or vacation break. It will be posted to the student holiday calendar and broadcasted in real-time.
               </p>
             </div>
 
-            <div className="p-6 text-left space-y-4">
+            <div className="p-5 sm:p-6 text-left space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">Holiday Title *</label>
                 <input
@@ -450,9 +450,9 @@ export default function Notices() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 px-6 pb-6 pt-2 border-t border-gray-100">
-              <button type="button" onClick={() => setShowHolidayModal(false)} className="btn-outline text-xs">Cancel</button>
-              <button type="submit" disabled={savingHoliday} className="btn-primary text-xs py-2.5 px-6 font-bold bg-purple-700 hover:bg-purple-800">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 px-5 sm:px-6 pb-5 sm:pb-6 pt-3 border-t border-gray-100 shrink-0">
+              <button type="button" onClick={() => setShowHolidayModal(false)} className="btn-outline text-xs w-full sm:w-auto text-center cursor-pointer">Cancel</button>
+              <button type="submit" disabled={savingHoliday} className="btn-primary text-xs py-2.5 px-6 font-bold bg-purple-700 hover:bg-purple-800 w-full sm:w-auto text-center cursor-pointer">
                 {savingHoliday ? 'Publishing...' : '📢 Declare & Broadcast Holiday'}
               </button>
             </div>
@@ -466,9 +466,9 @@ export default function Notices() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
             {/* Modal Header */}
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+            <div className="px-5 sm:px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center text-xl font-bold">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center text-xl font-bold shrink-0">
                   📅
                 </div>
                 <div>
@@ -483,14 +483,14 @@ export default function Notices() {
                     setShowManageHolidaysModal(false);
                     setShowHolidayModal(true);
                   }}
-                  className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow transition-all"
+                  className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow transition-all cursor-pointer whitespace-nowrap"
                 >
                   + Declare Holiday
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowManageHolidaysModal(false)}
-                  className="text-slate-400 hover:text-white text-lg px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  className="text-slate-400 hover:text-white text-lg px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   ✕
                 </button>
@@ -498,19 +498,19 @@ export default function Notices() {
             </div>
 
             {/* Modal Filters */}
-            <div className="p-4 bg-slate-50 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+            <div className="p-4 bg-slate-50 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <input
                   type="text"
                   placeholder="Search holiday name or detail..."
                   value={holidaySearchQuery}
                   onChange={e => setHolidaySearchQuery(e.target.value)}
-                  className="input text-xs w-64 bg-white"
+                  className="input text-xs w-full sm:w-64 bg-white"
                 />
                 <select
                   value={holidayFilterCategory}
                   onChange={e => setHolidayFilterCategory(e.target.value)}
-                  className="input text-xs w-40 bg-white font-semibold"
+                  className="input text-xs w-full sm:w-40 bg-white font-semibold"
                 >
                   <option value="ALL">All Categories</option>
                   <option value="NATIONAL">🇮🇳 National</option>
@@ -526,13 +526,13 @@ export default function Notices() {
             </div>
 
             {/* Modal Body: Holidays Table */}
-            <div className="p-4 overflow-y-auto flex-1 max-h-[55vh]">
+            <div className="p-4 overflow-x-auto overflow-y-auto flex-1 max-h-[55vh]">
               {loadingDirectory ? (
                 <div className="py-12 text-center text-slate-400 text-xs font-semibold animate-pulse">
                   Loading school holidays directory...
                 </div>
               ) : (
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[620px]">
                   <thead>
                     <tr className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
                       <th className="py-2.5 px-3">Date / Duration</th>
