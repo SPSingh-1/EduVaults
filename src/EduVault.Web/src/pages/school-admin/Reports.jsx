@@ -30,6 +30,7 @@ const getBadgeStyle = (examType) => {
 };
 
 const Reports = () => {
+  const { toast } = useToast();
   const savedUser = localStorage.getItem('eduvault_user');
   const loggedInUser = savedUser ? JSON.parse(savedUser) : null;
   const schoolName = loggedInUser?.schoolName || "EduVault Advanced Academy";

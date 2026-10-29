@@ -183,6 +183,7 @@ const Setup = () => {
               departments={departments}
               periods={periods}
               uniqueGradeClasses={uniqueGradeClasses}
+              onNavigateToTab={handleTabChange}
             />
           )}
           {activeTab === 'substitutions' && (

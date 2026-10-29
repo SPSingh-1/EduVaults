@@ -1,0 +1,22 @@
+export const CLIENT_DEFAULT_HOLIDAYS = [
+  { _id: 'h1', title: 'Republic Day', date: '2026-01-26', endDate: '2026-01-26', category: 'NATIONAL', description: 'National celebration of Republic Day of India. Flag hoisting ceremony.' },
+  { _id: 'h2', title: 'Maha Shivratri', date: '2026-02-15', endDate: '2026-02-15', category: 'FESTIVAL', description: 'School holiday on account of Maha Shivratri.' },
+  { _id: 'h3', title: 'Holi Festival', date: '2026-03-04', endDate: '2026-03-05', category: 'FESTIVAL', description: 'School closed for Holi and Dhulandi celebrations.' },
+  { _id: 'h4', title: 'Eid-ul-Fitr', date: '2026-03-20', endDate: '2026-03-20', category: 'FESTIVAL', description: 'School holiday for Eid-ul-Fitr observance.' },
+  { _id: 'h5', title: 'Good Friday', date: '2026-04-03', endDate: '2026-04-03', category: 'RESTRICTED', description: 'School closed for Good Friday.' },
+  { _id: 'h6', title: 'Ambedkar Jayanti', date: '2026-04-14', endDate: '2026-04-14', category: 'NATIONAL', description: 'Commemoration of Dr. B.R. Ambedkar Jayanti.' },
+  { _id: 'h7', title: 'Mahavir Jayanti', date: '2026-04-15', endDate: '2026-04-15', category: 'FESTIVAL', description: 'School holiday on account of Mahavir Jayanti.' },
+  { _id: 'h8', title: 'Summer Vacation', date: '2026-05-18', endDate: '2026-06-30', category: 'ACADEMIC', description: 'Annual summer vacation for students and faculty.' },
+  { _id: 'h9', title: 'Muharram', date: '2026-06-26', endDate: '2026-06-26', category: 'FESTIVAL', description: 'Gazetted school holiday for Muharram.' },
+  { _id: 'h10', title: 'Independence Day', date: '2026-08-15', endDate: '2026-08-15', category: 'NATIONAL', description: 'Independence Day celebration. Flag hoisting at 8:00 AM.' },
+  { _id: 'h11', title: 'Raksha Bandhan', date: '2026-08-28', endDate: '2026-08-28', category: 'FESTIVAL', description: 'School closed for Raksha Bandhan festival.' },
+  { _id: 'h12', title: 'Janmashtami', date: '2026-09-04', endDate: '2026-09-04', category: 'FESTIVAL', description: 'School holiday on Sri Krishna Janmashtami.' },
+  { _id: 'h13', title: 'Eid-e-Milad', date: '2026-09-25', endDate: '2026-09-25', category: 'FESTIVAL', description: 'School holiday for Milad-un-Nabi.' },
+  { _id: 'h14', title: 'Mahatma Gandhi Jayanti', date: '2026-10-02', endDate: '2026-10-02', category: 'NATIONAL', description: 'National Holiday in honor of Mahatma Gandhi.' },
+  { _id: 'h15', title: 'Dussehra Break', date: '2026-10-20', endDate: '2026-10-23', category: 'FESTIVAL', description: 'School closed for Vijayadashami Dussehra festivities.' },
+  { _id: 'h16', title: 'Diwali & Chhath Vacation', date: '2026-11-08', endDate: '2026-11-15', category: 'FESTIVAL', description: 'Deepawali, Govardhan Puja, Bhai Dooj and Chhath Puja holidays.' },
+  { _id: 'h17', title: 'Guru Nanak Jayanti', date: '2026-11-24', endDate: '2026-11-24', category: 'RESTRICTED', description: 'School holiday on Guru Nanak Gurpurab.' },
+  { _id: 'h18', title: 'Winter Vacation & Christmas', date: '2026-12-25', endDate: '2027-01-05', category: 'ACADEMIC', description: 'Winter break and Christmas holidays.' },
+  { _id: 'h19', title: 'Republic Day', date: '2027-01-26', endDate: '2027-01-26', category: 'NATIONAL', description: 'National celebration of Republic Day of India.' },
+  { _id: 'h20', title: 'Holi Festival', date: '2027-03-23', endDate: '2027-03-24', category: 'FESTIVAL', description: 'Festival of colours holiday.' }
+];

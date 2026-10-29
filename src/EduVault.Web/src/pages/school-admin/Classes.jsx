@@ -29,6 +29,7 @@ const DEFAULT_STANDARD_CLASSES = [
 ];
 
 export default function Classes() {
+  const { toast } = useToast();
   const [classesList, setClassesList] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [showNew, setShowNew] = useState(false);

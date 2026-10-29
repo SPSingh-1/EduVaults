@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../../../api/apiClient';
-import { Sparkles, CheckCircle2, AlertCircle, X, Pencil, UserCheck, Trash2, Calendar, Lock, Unlock } from 'lucide-react';
+import { Sparkles, CheckCircle2, AlertCircle, X, Pencil, UserCheck, Trash2, Calendar, Lock, Unlock, RefreshCw } from 'lucide-react';
 import { formatGrade, formatSection, formatClassLabel, sortClasses, sortGrades } from '../../../utils/classUtils';
 import DateFilterInput from '../../../components/common/DateFilterInput';
 import { useToast } from '../../../contexts/ToastContext';

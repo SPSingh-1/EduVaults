@@ -5,7 +5,7 @@ import { apiClient, expressClient } from '../../api/apiClient';
 import { io } from 'socket.io-client';
 import { useNotifications } from '../../contexts/NotificationContext';
 import DateFilterInput from '../../components/common/DateFilterInput';
-import { getTodayStr } from '../../utils/dateUtils';
+import { getTodayStr, formatDateDDMMYYYY } from '../../utils/dateUtils';
 
 export default function Notices() {
   const { toast } = useToast();

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../../../api/apiClient';
-import { Sparkles, CheckCircle2, AlertCircle, X, Edit2, Pencil, RefreshCw, Clock } from 'lucide-react';
+import { Sparkles, CheckCircle2, AlertCircle, X, Edit2, Pencil, RefreshCw, Clock, Trash2, Download, BookOpen } from 'lucide-react';
 import { formatGrade, formatSection, formatClassLabel } from '../../../utils/classUtils';
 import { useToast } from '../../../contexts/ToastContext';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments = [], uniqueGradeClasses = [] }) => {
+const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments = [], uniqueGradeClasses = [], onNavigateToTab }) => {
   const { toast } = useToast();
   const [periods, setPeriods] = useState([]);
   const [selectedClassId, setSelectedClassId] = useState('');
@@ -72,6 +72,108 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
       fetchClassSchedule(selectedClassId);
     }
   }, [selectedClassId]);
+
+  const getSubjectTheme = (name = '') => {
+    const lower = (name || '').toLowerCase();
+    if (lower.includes('math')) return { bg: 'bg-emerald-50/90 hover:bg-emerald-100/90', border: 'border-emerald-200', text: 'text-emerald-950', badge: 'bg-emerald-100 text-emerald-800', dot: 'bg-emerald-500' };
+    if (lower.includes('sci') || lower.includes('phy') || lower.includes('chem') || lower.includes('bio')) return { bg: 'bg-cyan-50/90 hover:bg-cyan-100/90', border: 'border-cyan-200', text: 'text-cyan-950', badge: 'bg-cyan-100 text-cyan-800', dot: 'bg-cyan-500' };
+    if (lower.includes('eng')) return { bg: 'bg-violet-50/90 hover:bg-violet-100/90', border: 'border-violet-200', text: 'text-violet-950', badge: 'bg-violet-100 text-violet-800', dot: 'bg-violet-500' };
+    if (lower.includes('hin') || lower.includes('sans')) return { bg: 'bg-amber-50/90 hover:bg-amber-100/90', border: 'border-amber-200', text: 'text-amber-950', badge: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500' };
+    if (lower.includes('pe') || lower.includes('phys') || lower.includes('sport')) return { bg: 'bg-orange-50/90 hover:bg-orange-100/90', border: 'border-orange-200', text: 'text-orange-950', badge: 'bg-orange-100 text-orange-800', dot: 'bg-orange-500' };
+    if (lower.includes('art') || lower.includes('draw') || lower.includes('music')) return { bg: 'bg-pink-50/90 hover:bg-pink-100/90', border: 'border-pink-200', text: 'text-pink-950', badge: 'bg-pink-100 text-pink-800', dot: 'bg-pink-500' };
+    if (lower.includes('comp') || lower.includes('it') || lower.includes('tech')) return { bg: 'bg-blue-50/90 hover:bg-blue-100/90', border: 'border-blue-200', text: 'text-blue-950', badge: 'bg-blue-100 text-blue-800', dot: 'bg-blue-500' };
+    if (lower.includes('soc') || lower.includes('hist') || lower.includes('geo') || lower.includes('civ')) return { bg: 'bg-teal-50/90 hover:bg-teal-100/90', border: 'border-teal-200', text: 'text-teal-950', badge: 'bg-teal-100 text-teal-800', dot: 'bg-teal-500' };
+    return { bg: 'bg-indigo-50/70 hover:bg-indigo-100/80', border: 'border-indigo-200', text: 'text-indigo-950', badge: 'bg-indigo-100 text-indigo-800', dot: 'bg-indigo-500' };
+  };
+
+  const handleClearAllTimetable = async () => {
+    if (!selectedClassId) return;
+    const activeGradeGroup = (uniqueGradeClasses || []).find(g => Array.isArray(g.classIds) && g.classIds.includes(selectedClassId));
+    const gradeTitle = activeGradeGroup?.formattedGrade || 'Selected Class';
+    const secInfo = activeGradeGroup && activeGradeGroup.sections?.length > 0 ? ` (Sections: ${activeGradeGroup.sections.join(', ')})` : '';
+
+    if (!window.confirm(`Are you sure you want to clear ALL timetable slots for ${gradeTitle}${secInfo}?`)) return;
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      await apiClient.delete(`/academics/timetable/class/${selectedClassId}`);
+      await fetchClassSchedule(selectedClassId);
+      setSuccess(`🧹 All timetable slots cleared successfully for ${gradeTitle}${secInfo}.`);
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to clear class timetable.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearPeriodRow = async (periodNumber) => {
+    if (!selectedClassId) return;
+    const activeGradeGroup = (uniqueGradeClasses || []).find(g => Array.isArray(g.classIds) && g.classIds.includes(selectedClassId));
+    const gradeTitle = activeGradeGroup?.formattedGrade || 'Selected Class';
+
+    if (!window.confirm(`Are you sure you want to clear all slots for Period ${periodNumber} across all days for ${gradeTitle}?`)) return;
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      await apiClient.delete(`/academics/timetable/class/${selectedClassId}/period/${periodNumber}`);
+      await fetchClassSchedule(selectedClassId);
+      setSuccess(`🧹 All slots for Period ${periodNumber} cleared successfully.`);
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to clear period row.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearDayColumn = async (dayOfWeek) => {
+    if (!selectedClassId) return;
+    const activeGradeGroup = (uniqueGradeClasses || []).find(g => Array.isArray(g.classIds) && g.classIds.includes(selectedClassId));
+    const gradeTitle = activeGradeGroup?.formattedGrade || 'Selected Class';
+
+    if (!window.confirm(`Are you sure you want to clear all period slots on ${dayOfWeek} for ${gradeTitle}?`)) return;
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      await apiClient.delete(`/academics/timetable/class/${selectedClassId}/day/${dayOfWeek}`);
+      await fetchClassSchedule(selectedClassId);
+      setSuccess(`🧹 All periods on ${dayOfWeek} cleared successfully.`);
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to clear day column.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearSingleSlot = async (e, day, periodNumber) => {
+    e.stopPropagation();
+    if (!selectedClassId) return;
+    try {
+      const activeGradeGroup = (uniqueGradeClasses || []).find(g => Array.isArray(g.classIds) && g.classIds.includes(selectedClassId));
+      const targetClassIds = activeGradeGroup?.classIds || [selectedClassId];
+      for (const clsId of targetClassIds) {
+        await apiClient.post('/academics/timetable/schedule', {
+          classId: clsId,
+          dayOfWeek: day,
+          periodNumber: periodNumber,
+          subjectId: null,
+          teacherId: null,
+          remark: ''
+        });
+      }
+      await fetchClassSchedule(selectedClassId);
+    } catch (err) {
+      console.error('Failed to clear slot:', err);
+    }
+  };
 
   const handleAddPeriod = () => {
     let start = "08:00";
@@ -593,9 +695,9 @@ const TimetableTab = ({ classes = [], subjects = [], teachers = [], departments 
                         <button
                           type="button"
                           onClick={() => {
-                            setMappingClassId(selectedClassId);
-                            setActiveTab('class-subjects');
-                            fetchClassSubjectsData();
+                            if (onNavigateToTab) {
+                              onNavigateToTab('class-subjects');
+                            }
                           }}
                           className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-2 shadow-md transition cursor-pointer shrink-0 hover:scale-105 active:scale-95 whitespace-nowrap"
                         >

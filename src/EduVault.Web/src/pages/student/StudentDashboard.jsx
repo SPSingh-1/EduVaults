@@ -11,6 +11,7 @@ import { loadScript } from '../../utils/scriptLoader';
 import { io } from 'socket.io-client';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { useToast } from '../../contexts/ToastContext';
+import StudentHolidays from './StudentHolidays';
 import {
   ResponsiveContainer,
   BarChart,

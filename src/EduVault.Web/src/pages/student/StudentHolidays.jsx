@@ -6,6 +6,7 @@ import Topbar from '../../components/layout/Topbar';
 import Loader from '../../components/common/Loader';
 import { apiClient, expressClient } from '../../api/apiClient';
 import { formatDateDDMMYYYY, formatDateRangeDDMMYYYY, getTodayStr } from '../../utils/dateUtils';
+import { CLIENT_DEFAULT_HOLIDAYS } from '../../utils/holidayDefaults';
 import DateFilterInput from '../../components/common/DateFilterInput';
 import { loadScript } from '../../utils/scriptLoader';
 import { io } from 'socket.io-client';

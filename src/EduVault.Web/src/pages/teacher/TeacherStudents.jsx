@@ -79,6 +79,7 @@ export const TeacherStudents = () => {
 
   // Password Reset Modal State for Teachers
   const [showResetPassModal, setShowResetPassModal] = useState(false);
+  const [resetStudentObj, setResetStudentObj] = useState(null);
   const generateStudentPassword = () => `Stu#${Math.floor(100000 + Math.random() * 900000)}`;
   const [newStudentPassword, setNewStudentPassword] = useState(generateStudentPassword());
   const [resetPassLoading, setResetPassLoading] = useState(false);

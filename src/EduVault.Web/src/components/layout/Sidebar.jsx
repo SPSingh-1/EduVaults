@@ -54,6 +54,7 @@ const Sidebar = ({ links, role }) => {
   const displayName = user ? `${user.firstName} ${user.lastName}` : '';
 
   const handleProfileClick = () => {
+    closeSidebar();
     if (!user) return;
     if (role === 'superadmin') {
       navigate('/super-admin/settings');
@@ -98,7 +99,14 @@ const Sidebar = ({ links, role }) => {
         </div>
         <nav className="flex-1 py-4 space-y-0.5">
           {links.map((l) => (
-            <NavLink key={l.path} {...l} onClick={() => navigate(l.path)} />
+            <NavLink
+              key={l.path}
+              {...l}
+              onClick={() => {
+                closeSidebar();
+                navigate(l.path);
+              }}
+            />
           ))}
         </nav>
         <div className="p-4 border-t border-white/10">

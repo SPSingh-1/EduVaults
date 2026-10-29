@@ -53,8 +53,25 @@ import {
   Eye,
   Download,
   Upload,
-  Check
+  Check,
+  Printer
 } from 'lucide-react';
+
+const CustomTeacherTooltip = ({ active, payload, label, isSalary }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur text-white px-3 py-2 rounded-xl shadow-lg border border-slate-700/50 text-xs">
+        <p className="font-semibold text-slate-200">{label || payload[0]?.payload?.className || payload[0]?.payload?.date || payload[0]?.payload?.month || payload[0]?.name}</p>
+        {payload.map((entry, index) => (
+          <p key={`item-${index}`} className="font-bold font-mono mt-0.5" style={{ color: entry.color || entry.stroke || '#60a5fa' }}>
+            {entry.name}: {isSalary ? `₹${Number(entry.value || 0).toLocaleString()}` : entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 const showToast = (msg, type = 'info') => {
   if (typeof window !== 'undefined' && window.appToast?.[type]) {
